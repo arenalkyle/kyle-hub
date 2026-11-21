@@ -15,7 +15,25 @@ export function isIssuePath(path: string, folder: string): boolean {
   return path.startsWith(prefix) && path.endsWith(".md") && !path.slice(prefix.length).includes("/");
 }
 
+/** True when `path` is a project file directly inside `<folder>/Projects/`. */
+export function isProjectPath(path: string, folder: string): boolean {
+  const root = folder.replace(/^\/+|\/+$/g, "");
+  if (root === "") return false;
+  const prefix = `${root}/Projects/`;
+  return path.startsWith(prefix) && path.endsWith(".md") && !path.slice(prefix.length).includes("/");
+}
+
+export type InterceptTarget = "issue" | "project";
+
+/** Pure decision: which custom view (if any) should replace a `markdown` view state for this file? */
+export function interceptTarget(i: InterceptInput): InterceptTarget | null {
+  if (i.forcedMarkdown) return null;
+  if (isIssuePath(i.path, i.folder)) return "issue";
+  if (isProjectPath(i.path, i.folder)) return "project";
+  return null;
+}
+
 /** Pure decision: should a `markdown` view state for this file become the issue view? */
 export function shouldIntercept(i: InterceptInput): boolean {
-  return !i.forcedMarkdown && isIssuePath(i.path, i.folder);
+  return interceptTarget(i) === "issue";
 }

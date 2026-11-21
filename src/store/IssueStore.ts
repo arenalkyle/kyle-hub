@@ -12,6 +12,7 @@ import {
 } from "../core/issueFile";
 import { fromLink } from "../core/links";
 import { parseProject, serializeProject } from "../core/projectFile";
+import { issueInProject, rewriteProjectLink, validateProjectName } from "../core/projects";
 import type { Issue, Milestone, Project, ProjectStatus } from "../core/types";
 import type { PluginData } from "../data";
 
@@ -32,6 +33,8 @@ export interface MalformedFile {
 }
 
 export interface ProjectPatch {
+  /** Frontmatter `name` only; use `renameProject` to also rename the file and issue links. */
+  name?: string;
   status?: ProjectStatus;
   lead?: string | null;
   target?: string | null;
@@ -154,6 +157,10 @@ export class IssueStore {
     return this.pathById.get(id);
   }
 
+  pathOfProject(name: string): string | undefined {
+    return this.pathByName.get(name);
+  }
+
   getMalformed(): readonly MalformedFile[] {
     return (this.malformedCache ??= [...this.malformed].map(([path, error]) => ({ path, error })));
   }
@@ -263,7 +270,9 @@ export class IssueStore {
   }
 
   async createProject(input: NewProjectInput): Promise<Project> {
-    if (this.pathByName.has(input.name)) throw new Error(`Project "${input.name}" already exists`);
+    const bad = validateProjectName(input.name, this.pathByName.keys());
+    if (bad) throw new Error(bad);
+    input = { ...input, name: input.name.trim() };
     const fileName = `${input.name.replace(/[\\/:*?"<>|]/g, "-").trim()}.md`;
     const path = `${this.dir("Projects")}/${fileName}`;
     const text = buildProjectText(input);
@@ -295,6 +304,35 @@ export class IssueStore {
     this.setProject(path, project);
     this.emit();
     return project;
+  }
+
+  /**
+   * Renames the project file and `name` key, then rewrites every issue's `project` link (idempotent when
+   * Obsidian's link updater already did it). Returns the number of issues rewritten.
+   */
+  async renameProject(oldName: string, newName: string, opts: { onProgress?: (done: number, total: number) => void } = {}): Promise<number> {
+    const target = newName.trim();
+    const bad = validateProjectName(target, this.pathByName.keys(), oldName);
+    if (bad) throw new Error(bad);
+    const path = this.pathByName.get(oldName);
+    const file = path === undefined ? null : this.host.app.vault.getAbstractFileByPath(path);
+    if (path === undefined || !isFile(file)) throw new Error(`Unknown project "${oldName}"`);
+    if (target === oldName) return 0;
+    await this.updateProject(oldName, { name: target });
+    const newPath = `${this.dir("Projects")}/${target}.md`;
+    if (newPath !== path) await this.host.app.fileManager.renameFile(file, newPath);
+    return this.bulkUpdate((i) => issueInProject(i, oldName), (i) => ({ project: rewriteProjectLink(i.project ?? "", oldName, target) }), opts);
+  }
+
+  /** Clears `project` on every issue in it (logged as activity), then trashes the project file. */
+  async deleteProject(name: string, opts: { onProgress?: (done: number, total: number) => void } = {}): Promise<number> {
+    const path = this.pathByName.get(name);
+    const file = path === undefined ? null : this.host.app.vault.getAbstractFileByPath(path);
+    if (path === undefined || !isFile(file)) throw new Error(`Unknown project "${name}"`);
+    const n = await this.bulkUpdate((i) => issueInProject(i, name), { project: null, milestone: null }, opts);
+    await this.host.app.fileManager.trashFile(file);
+    this.onDelete(path);
+    return n;
   }
 
   // ---- vault events ----------------------------------------------------

@@ -47,6 +47,12 @@ function setup() {
       vault,
       metadataCache: { on: (n: string, h: Handler) => vault.on("mc:" + n, h) },
       fileManager: {
+        renameFile: async (f: { path: string }, to: string) => {
+          const text = vault.files.get(f.path)!;
+          vault.files.delete(f.path);
+          vault.files.set(to, text);
+          vault.fire("rename", vault.file(to), f.path);
+        },
         trashFile: async (f: { path: string }) => {
           vault.files.delete(f.path);
           vault.fire("delete", f);
@@ -203,6 +209,28 @@ describe("IssueStore", () => {
     vault.fire("rename", { path: "Elsewhere/TIX-2.md", name: "TIX-2.md", stat: {} }, old);
     await flush();
     expect(store.getIssues().map((i) => i.id)).toEqual(["TIX-1"]);
+  });
+
+  it("renames a project and rewrites issue links; deletes a project and clears them", async () => {
+    const { store, vault } = setup();
+    await store.start();
+    await store.createProject({ name: "Website", status: "started" });
+    const a = await store.createIssue({ title: "A", project: "Website" });
+    await store.createIssue({ title: "B" });
+    await expect(store.createProject({ name: "website" })).rejects.toThrow(/already exists/);
+    await expect(store.createProject({ name: "a/b" })).rejects.toThrow();
+    expect(await store.renameProject("Website", "Web")).toBe(1);
+    await flush();
+    expect(vault.files.has("Tickets/Projects/Website.md")).toBe(false);
+    expect(store.getProject("Web")?.status).toBe("started");
+    expect(store.getProject("Website")).toBeUndefined();
+    expect(store.getIssue(a.id)!.project).toBe("[[Web]]");
+    expect(vault.files.get(store.pathOf(a.id)!)).toContain("[[Web]]");
+    expect(await store.deleteProject("Web")).toBe(1);
+    await flush();
+    expect(store.getProject("Web")).toBeUndefined();
+    expect(store.getIssue(a.id)!.project).toBeUndefined();
+    expect(vault.files.get(store.pathOf(a.id)!)).toMatch(/project/i);
   });
 
   it("notifies subscribers with stable snapshots", async () => {
