@@ -1,3 +1,39 @@
-.kyle-term-root { height: 100%; width: 100%; padding: 4px; box-sizing: border-box; overflow: hidden; }
-.kyle-term-root .xterm { height: 100%; }
+.kyle-term-root { height: 100%; width: 100%; padding: 0; box-sizing: border-box; overflow: hidden; display: flex; }
+.kyle-term-term { height: 100%; width: 100%; padding: 4px; box-sizing: border-box; }
+.kyle-term-term .xterm { height: 100%; }
 .kyle-term-message { padding: 16px; color: var(--text-error); white-space: pre-wrap; }
+.kyle-term-message.kt-empty { color: var(--text-muted); }
+
+.kt-sidebar { display: flex; flex-direction: column; flex: none; min-width: 0; border-right: 1px solid var(--background-modifier-border); background: var(--background-secondary); }
+.kt-sidebar.kt-collapsed { width: 32px; }
+.kt-sidebar.kt-collapsed .kt-btn-new, .kt-sidebar.kt-collapsed .kt-btn-plus, .kt-sidebar.kt-collapsed .kt-list { display: none; }
+.kt-resizer { flex: none; width: 4px; margin-left: -2px; cursor: col-resize; z-index: 1; }
+.kt-resizer:hover { background: var(--interactive-accent); }
+.kt-term-area { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+
+.kt-header { display: flex; gap: 4px; padding: 6px; align-items: center; }
+.kt-sidebar.kt-collapsed .kt-header { padding: 6px 2px; justify-content: center; }
+.kt-btn-new { flex: 1; }
+.kt-btn-collapse { padding: 4px 6px; background: transparent; box-shadow: none; }
+.kt-list { flex: 1; overflow-y: auto; }
+
+.kt-row { display: flex; cursor: pointer; border-bottom: 1px solid var(--background-modifier-border); }
+.kt-row:hover { background: var(--background-modifier-hover); }
+.kt-row.is-active { background: var(--background-modifier-active-hover); }
+.kt-row.is-exited { opacity: 0.55; }
+.kt-row.kt-drop { box-shadow: inset 0 2px 0 var(--interactive-accent); }
+.kt-stripe { flex: none; width: 4px; }
+.kt-main { flex: 1; min-width: 0; padding: 6px 8px; }
+.kt-top { display: flex; align-items: center; gap: 6px; }
+.kt-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kt-rename { flex: 1; min-width: 0; }
+.kt-pin { flex: none; display: flex; color: var(--text-muted); }
+.kt-pin svg { width: 12px; height: 12px; }
+.kt-age { flex: none; font-size: var(--font-ui-smaller); color: var(--text-faint); }
+/* Phase 3 slots: empty until then, no layout cost. */
+.kt-slot:empty { display: none; }
+.kt-slot-light { flex: none; }
+.kt-slot-count { flex: none; }
+.kt-exit { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: var(--font-ui-smaller); }
+.kt-exit-code { flex: 1; color: var(--text-muted); }
+.kt-exit button { padding: 2px 8px; height: auto; font-size: var(--font-ui-smaller); }
