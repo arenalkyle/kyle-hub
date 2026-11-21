@@ -31,17 +31,22 @@ src/
     ids.ts          ID allocation (prefix + counter, max(existing)+1 guard)
     query.ts        filter, group, sub-group, order (pure functions over Issue[])
     defaults.ts     default statuses, priorities, settings
+    ops.ts          shared text ops (patch, comment, link PR, JSON) used by IssueStore and kt
+    filters.ts, milestones.ts, projects.ts, pr.ts, prMatch.ts, intercept.ts, around.ts, agentsDoc.ts
+                    pure helpers (filter chips, milestone progress, project rules, PR url/ID matching,
+                    file-open interception decision, method wrapper, AGENTS.md renderer)
   store/
     IssueStore.ts   indexes the vault folder, watches changes, write API, activity diffing
   views/
     MainView.tsx    ribbon target: sidebar + List/Board
     IssueView.tsx   Linear issue page for a ticket file
-    ProjectView.tsx project page
+    ProjectView.tsx project page for directly opened project files (ADR-0004); also hosted in MainView
     components/     pickers, chips, Display popover, filter bar, cards, rows
   settings/        settings tab + setup modal
-  github/          gh CLI runner + PR cache
+  github/          gh CLI runner (gh.ts), PrService (cache + refresh), AutoLinker (auto-link)
   main.ts          plugin entry: ribbon, commands, view registration, file-open interception
-cli/kt.ts          Node CLI over src/core (built to cli/kt.js)
+cli/kt.ts, cli/cli.ts  Node CLI over src/core (kt.ts is the entry, built to cli/kt.js; cli.ts holds the commands)
+skills/kyle-tickets/SKILL.md  Claude Code skill
 ```
 
 `IssueStore` is the only module that writes ticket files from the plugin. Views subscribe to it (a small event emitter + React hook `useIssues()`).
@@ -96,6 +101,7 @@ Rules:
 - `priority`: `none | urgent | high | medium | low` (default `none`).
 - `tags` are **labels**. Label colors live in plugin settings (auto-assigned on first sight).
 - `parent` links make sub-issues. `project` links a project note; `milestone` is a milestone name from that project.
+- A body line that already starts with a backslash followed by a structural prefix gets one more backslash, so the escaping round-trips losslessly.
 - Everything below the first `## Activity` heading is the activity feed. A **comment** is a `### @author · YYYY-MM-DD HH:mm` heading plus a Markdown body (until the next `###` or EOF). An **event** is a single bullet `- YYYY-MM-DD HH:mm · @author <text>`. Feed entries keep file order (chronological; new entries are appended). **Escaping**: when a comment is written, any body line starting with `###` or an event-bullet prefix (`- YYYY-MM-DD HH:mm `) gets one leading `\`; the parser removes one leading `\` from such lines, so bodies round-trip exactly and cannot break feed parsing.
 - Unknown frontmatter keys and unknown body content are preserved on save (round-trip safe).
 - Times are local time; `created`/`updated` ISO without zone.
@@ -140,11 +146,11 @@ The category drives the icon (Linear's dashed/empty/half/checked/✕ circles), "
 
 ### IDs
 
-`<prefix>-<n>`; prefix set at setup (default `TIX`). The counter lives in plugin data and only increases. On load and before every allocation it is raised to `max(existing n) + 1`, so files created outside the plugin (e.g. by the `kt` CLI) never collide. Deleted numbers are never reused.
+`<prefix>-<n>`; prefix set at setup (default `TIX`). The counter lives in plugin data (`idCounter`, also honoured by `kt`) and only increases. On load and before every allocation it is raised to `max(existing n) + 1`, so files created outside the plugin (e.g. by the `kt` CLI) never collide. Deleted numbers are never reused.
 
 ### Plugin data (`data.json`)
 
-Settings (folder, prefix, display name for `@author`, statuses, label colors, gh repos, PR refresh interval), the ID counter, per-view display/filter state, and the PR cache.
+Settings (folder, prefix, display name for `@author`, statuses, default status, label colors, gh repos, auto-link flag, unlinked PRs, PR refresh interval, gh path), the ID counter, per-view display/filter state, and the PR cache.
 
 ## Feature spec
 
@@ -159,30 +165,32 @@ Settings (folder, prefix, display name for `@author`, statuses, label colors, gh
 - **List**: grouped sections with collapsible headers and counts; each row shows priority icon, ID, status icon, title, then right-aligned display-property chips (labels, project, milestone, due, PRs, assignee, created). Sub-issues optional.
 - **Board**: one column per group; sub-grouping renders horizontal swimlanes. Cards (the "short preview card"): ID, title, status icon, priority, and enabled property chips. Dragging a card between columns/swimlanes updates the grouped property; dragging within a column with Manual ordering updates `sortOrder`.
 - **Display popover** (saved per sidebar view): layout; grouping (Status, Priority, Project, Assignee, Label, Milestone, None); sub-grouping (same); ordering (Manual, Priority, Updated, Created, Due date); toggles: show sub-issues, completed issues (All / Past week / None), show empty groups; display-property chips: ID, Status, Priority, Project, Due date, Milestone, Labels, Created, Pull requests, Assignee.
-- **Filter bar**: "+ Filter" adds AND-ed conditions on Status, Priority, Project, Label, Assignee, Milestone, Due (overdue / this week / none). Saved per view. No saved custom views in v1.
-- **Keyboard** (only when a kyle-tickets view is focused): `C` new issue, `J/K` move selection, `Enter` open, `Esc` back/close, `S` status, `P` priority, `L` labels, `A` assignee, `Ctrl+Enter` post comment.
+- **Filter bar**: "+ Filter" adds AND-ed conditions on Status, Priority, Project, Label, Assignee, Milestone, Due (overdue / this week / none). Saved per view, one chip per field, values picked with one multi-select picker. No saved custom views in v1.
+- **Keyboard** (only when a kyle-tickets view is focused): `C` new issue, `J/K` or arrows move selection (Board walks cards column by column; no `H/L`), `Enter` open, `Esc` back/close, `S` status, `P` priority, `L` labels, `A` assignee, `F` filter, `Ctrl+Shift+B` toggle layout, `Ctrl+Enter` post comment.
 
 ### Issue view (Linear issue page)
-- Ticket files inside the folder open in `IssueView` instead of the Markdown editor (file-open interception like the Kanban plugin). Header button + command switch to raw Markdown and back. Files outside the folder are untouched.
-- Main column: breadcrumb `Project › TIX-12` (+ parent link for sub-issues), large inline-editable title, description rendered with `MarkdownRenderer` (links/embeds work); click → CM6 Markdown editor, save on blur/`Esc`. **Sub-issues** list (status, ID, title, assignee) with "+ Add sub-issue". **Activity** feed: events as compact lines, comments as cards with author, relative time, rendered Markdown; comment box at the bottom.
+- Ticket files inside the folder open in `IssueView` instead of the Markdown editor (file-open interception like the Kanban plugin). Header button + command switch to raw Markdown and back (the forced-Markdown flag is per leaf and does not survive a restart). Interception uses a small in-repo `around()` helper, not the `monkey-around` package. Changing a ticket's project clears its milestone (in the store, for every caller). Files outside the folder are untouched.
+- Main column: breadcrumb `Project › TIX-12` (+ parent link for sub-issues), large inline-editable title, description rendered with `MarkdownRenderer` (links/embeds work); click → CM6 Markdown editor, save on blur/`Esc`/`Ctrl+Enter` (no activity event; `updated` is bumped). `@codemirror/lang-markdown` is bundled (Obsidian does not ship it); other CM6 packages stay external. **Sub-issues** list (status, ID, title, assignee) with "+ Add sub-issue". **Activity** feed: events as compact lines, comments as cards with author, relative time, rendered Markdown; comment box at the bottom. Long feeds mount the newest 50 entries with a "Show earlier" button.
 - Right sidebar: Status, Priority, Assignee, Labels, Project, Milestone, Due date, Created, Updated, Pull requests — each opens the shared picker.
 
 ### Projects
 - Project page: name/icon/color, status, lead, target date, editable description, milestone list with progress (done/total issues) and target dates, and the project's issues in List/Board with the same Display/Filter controls.
-- Create/rename/delete projects and milestones from the UI.
+- Create/rename/delete projects and milestones from the UI. Renaming rewrites issue links; deleting a project clears `project` and `milestone` on its issues (logged). Milestones can be reordered by drag; clicking one toggles the Milestone filter. Completed/canceled projects show under "Archived" in the sidebar. The project page always embeds the issue list (List/Board, saved under `project:<name>`).
 
 ### Activity diffing
+- PR links are logged as `linked PR owner/repo#N`; `unlinkedPrs` in settings records PRs the user removed so auto-link never re-adds them.
 - Writes through `IssueStore` append events (status, priority, assignee, project, milestone, labels, due, parent changes) attributed to the display name.
-- External edits (frontmatter changed in the raw file or by an agent) are detected by diffing against the last indexed snapshot and logged as events attributed to `updatedBy` if present, else `@external`. Debounced; never loops on its own writes.
+- External edits (frontmatter changed in the raw file or by an agent) are detected by diffing against the last indexed snapshot and logged as events attributed to `updatedBy` if present, else `@external`. Debounced; never loops on its own writes. When a file's feed grew since its snapshot, the writer already logged its events, so nothing is logged twice (this is how `kt` writes avoid duplicate `@external` events).
 
 ### Pull requests
 - `pullRequests:` holds PR URLs. The properties sidebar lists them (repo#number, title, state); cards/rows show a PR chip with state color.
-- Live state via the `gh` CLI (`gh pr view <url> --json number,title,state,isDraft,url`), run with `child_process.execFile`. Cached in plugin data; refreshed when an issue opens and every N minutes (setting). If `gh` is missing/unauthenticated, PRs show as plain links and settings shows why.
-- Auto-link: for repos listed in settings, `gh pr list --repo <r> --state all --search "<PREFIX>-" --json ...` finds PRs whose title or branch contains an issue ID and adds them to that issue.
+- Live state via the `gh` CLI (`gh pr view <url> --json number,title,state,isDraft,url`; `repository` is not requested because gh 2.97 rejects it, owner/repo come from the URL; github.com only; optional `ghPath` setting), run with `child_process.execFile`. Cached in plugin data; refreshed when an issue opens and every N minutes (setting). Max 4 concurrent `gh` calls, 1-minute tick judged against the refresh setting. If `gh` is missing/unauthenticated, PRs show as plain links, `gh` calls stop until **Re-check**, and settings shows why.
+- Auto-link: for repos listed in settings, `gh pr list --repo <r> --state all --search "<PREFIX>-" --json ...` finds PRs whose title contains an issue ID, plus an open-PR list matched on branch names, and links them via `store.linkPr` as author `github`. Matching is exact (`TIX-1` does not match `TIX-12`). The last sync result lives in plugin data; a manual re-link clears an unlink block.
 
 ### Agent tooling
-- `kt` CLI (Node, built from `cli/kt.ts`, uses `src/core`): `kt new "<title>" [--status] [--priority] [--project] [--parent] [--label ...]`, `kt set <ID> <field> <value>`, `kt comment <ID> --as <author> "<text>"`, `kt list [--status] [--project] [--json]`, `kt show <ID> [--json]`. Finds the tickets folder via `--dir`, `KT_DIR`, or a `.kyle-tickets.json` marker written at setup.
-- `AGENTS.md` in the tickets folder (written at setup, regenerated on settings change) and a Claude Code skill in the repo describing the file format and CLI.
+- `kt` CLI (Node, built from `cli/kt.ts`, uses `src/core`): `kt new "<title>" [--status] [--priority] [--project] [--parent] [--label ...]`, `kt set <ID> <field> <value>`, `kt comment <ID> --as <author> "<text>"`, `kt list [--status] [--project] [--json]`, `kt show <ID> [--json]`. Also `kt pr <ID> <url>`; `kt comment` takes text or `-` for stdin. Finds the tickets folder via `--dir`, `KT_DIR`, or by walking up for the `.kyle-tickets.json` marker / a `Tickets/` child / the plugin's configured folder; settings come from the vault's plugin `data.json` (read-only). Writes are temp file + rename. Exit codes: 0 ok, 1 usage, 2 not found, 3 validation. `new`/`set` validate that project, milestone and parent exist; a no-op `set` prints `unchanged` and leaves the file alone. Default author: `--as`, else `KT_AUTHOR`, else the display name.
+- `AGENTS.md` in the tickets folder: rendered by the pure `renderAgentsDoc(settings)` (`src/core/agentsDoc.ts`) with the vault's real prefix, folder, display name and statuses; written at setup and on startup, and regenerated whenever settings are saved if the output changed. It starts with `<!-- generated by kyle-tickets -->`; a file without that marker is user-edited and never overwritten.
+- Claude Code skill in `skills/kyle-tickets/SKILL.md` (copy or symlink to `~/.claude/skills/`).
 
 ### Bases bonus
 - `All Issues.base`: a table over `Issues/` with id, title, status, priority, project, due, tags, created. The plugin does not depend on it ([ADR-0002](ADR/0002-custom-views-over-bases.md)).
@@ -229,4 +237,4 @@ Each phase is split into two sub-phases (`N.1`, `N.2`); each sub-phase is one Li
 
 ### Phase 9 — Agent tooling
 - **9.1 kt CLI**: `cli/kt.ts` over `src/core` (new/set/comment/list/show, `--json`), folder discovery, built by esbuild to `cli/kt.js`, `npm link`-able. Tests for argument parsing and command effects on a temp folder.
-- **9.2 Agent docs + end-to-end**: `AGENTS.md` template written to the tickets folder, Claude Code skill in `skills/kyle-tickets/SKILL.md`, README usage, and an end-to-end check: create via CLI → appears in Obsidian with correct ID → status change in UI → comment via CLI shows in Issue view.
+- **9.2 Agent docs + end-to-end** (done): `AGENTS.md` template written to the tickets folder, Claude Code skill in `skills/kyle-tickets/SKILL.md`, README usage, and an end-to-end check: create via CLI → appears in Obsidian with correct ID → status change in UI → comment via CLI shows in Issue view.
