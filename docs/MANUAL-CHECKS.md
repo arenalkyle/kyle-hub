@@ -36,3 +36,12 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Same without `--dry-run`: ~58 tickets with `linearId`, sub-issues nested, comments present. Run again: 0 created. (Linear "In Review" state lands on "In Progress" — status maps by state type.)
 - [ ] Missing `LINEAR_API_KEY` → exit code 2.
 - [ ] **Cutover:** disable the old kyle-tickets and kyle-term plugins in the vault, confirm kyle-hub covers everything, then archive the old repos.
+
+## 3.1 Ticket schema + agent gates — LOCK-47
+
+- [ ] Terminal with `KH_AGENT=1`: `kh tickets new "Test proposal" --type proposal` → ticket lands in Triage with `source: agent:...` in the file.
+- [ ] Run the same command again: no new file; a "seen again (+1)" comment on the first ticket.
+- [ ] `KH_AGENT=1 kh tickets set <id> labels +agent-ready` is refused; without `KH_AGENT` it works.
+- [ ] Back-date an old triage ticket's `updated` by 15 days, run `kh tickets expire`: it becomes Canceled with an "expired" event line.
+- [ ] kyle-hub loads in Obsidian with no console errors (core settings now include `repos` and `flood`).
+- [ ] Known gap: plugin-side gates use default flood limits (not the `core.flood` override) and dedupe/caps/expiry are CLI-only.
