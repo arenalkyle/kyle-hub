@@ -3,6 +3,7 @@ import type { HubModule } from "../../core";
 import { ticketsSettings } from "./src/schema";
 import TicketsHost from "./src/main";
 import { migrateLegacyTickets } from "./src/migrate";
+import { DEFAULT_FLOOD, type FloodSettings } from "../../core/domain/flood";
 
 export { ticketsSettings };
 
@@ -19,7 +20,7 @@ export const ticketsModule: HubModule = {
       console.error("kyle-hub: kyle-tickets settings migration failed", e);
     }
     host = new TicketsHost(hub, ctx);
-    hub.services.register("tickets", createTicketService(host.store));
+    hub.services.register("tickets", createTicketService(host.store, () => ({ ...DEFAULT_FLOOD, ...(hub.settings.module("core").flood as Partial<FloodSettings> | undefined) })));
     unregister = () => hub.services.unregister("tickets");
     host.start();
   },

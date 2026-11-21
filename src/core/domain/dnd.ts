@@ -1,3 +1,4 @@
+import { parseType } from "./fields";
 import type { GroupBy } from "./display";
 import type { IssuePatch } from "./issueFile";
 import { OTHER_GROUP_KEY } from "./query";
@@ -53,6 +54,10 @@ function addDimension(
       return true;
     case "milestone":
       patch.milestone = to.value;
+      return true;
+    case "type":
+      if (to.value === null || !parseType(to.value)) return false;
+      patch.type = parseType(to.value)!;
       return true;
     case "label": {
       const from = parseKey("label", fromKey);

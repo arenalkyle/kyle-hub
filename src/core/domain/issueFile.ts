@@ -295,6 +295,18 @@ export function materializeCommentId(issue: Issue, id: string, newId: string): s
   return rewriteComment(issue, id, (c) => ({ meta: { ...metaOf(c), id: newId } }));
 }
 
+/** Removes one comment (head through body). Throws when `id` is unknown. Returns file text. */
+export function removeCommentText(issue: Issue, id: string): string {
+  const comments = issue.feed.filter((f): f is Comment => f.type === "comment");
+  const idx = comments.findIndex((c) => c.id === id);
+  const loc = idx >= 0 && issue.raw.feedRaw !== null ? locateComment(issue.raw.feedRaw, idx) : null;
+  if (!loc) throw new Error(`No comment with id ${id}.`);
+  let end = loc.end;
+  while (end < loc.lines.length && loc.lines[end]!.trim() === "") end++;
+  const feed = loc.lines.slice(0, loc.start).join("") + loc.lines.slice(end).join("");
+  return assemble(serializeFrontmatterOnly(issue), issue.raw.eol, renderBody(issue).description + feed);
+}
+
 /** Append an event bullet; returns the new file text. */
 export function appendEvent(
   issue: Issue,

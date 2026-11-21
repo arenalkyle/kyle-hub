@@ -98,3 +98,47 @@ export function useShortcuts(
     return () => el.removeEventListener("keydown", onKey);
   }, [rootRef, handler]);
 }
+
+export type TriageKeyAction = "next" | "prev" | "open" | "accept" | "ready" | "decline" | "undo";
+
+const TRIAGE_LETTERS: Record<string, TriageKeyAction> = {
+  j: "next", k: "prev", a: "accept", r: "ready", d: "decline", u: "undo",
+};
+
+/** Triage keymap: j/k/Enter/a/r/d/u. Null while typing, with modifiers, or on a button (Enter keeps its native meaning). */
+export function triageKeyToAction(e: KeyInfo): TriageKeyAction | null {
+  if (e.editable || e.ctrlKey || e.altKey || e.metaKey) return null;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (k === "ArrowDown") return "next";
+  if (k === "ArrowUp") return "prev";
+  if (k === "Enter") return e.interactive ? null : "open";
+  return TRIAGE_LETTERS[k] ?? null;
+}
+
+/** Same scope pattern as {@link useShortcuts}: a native listener on the view root, never inside text inputs. */
+export function useTriageKeys(
+  rootRef: RefObject<HTMLElement | null>,
+  handler: (action: TriageKeyAction) => boolean,
+): void {
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const onKey = (e: KeyboardEvent) => {
+      const action = triageKeyToAction({
+        key: e.key,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
+        editable: isEditableTarget(e.target),
+        interactive: isInteractiveTarget(e.target),
+      });
+      if (action && handler(action)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    el.addEventListener("keydown", onKey);
+    return () => el.removeEventListener("keydown", onKey);
+  }, [rootRef, handler]);
+}

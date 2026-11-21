@@ -1,9 +1,10 @@
 import { DEFAULT_STATUSES } from "./defaults";
 import { fromLink } from "./links";
+import { effectiveType } from "./fields";
 import { formatDate } from "./time";
 import type { Issue, Settings } from "./types";
 
-export const FILTER_FIELDS = ["status", "priority", "project", "label", "assignee", "milestone", "due"] as const;
+export const FILTER_FIELDS = ["status", "priority", "project", "label", "assignee", "milestone", "due", "type"] as const;
 export type FilterField = (typeof FILTER_FIELDS)[number];
 export type FilterOp = "in" | "notIn";
 
@@ -21,7 +22,7 @@ export interface Filter {
 
 export const FILTER_FIELD_LABELS: Record<FilterField, string> = {
   status: "Status", priority: "Priority", project: "Project", label: "Label", assignee: "Assignee",
-  milestone: "Milestone", due: "Due date",
+  milestone: "Milestone", due: "Due date", type: "Type",
 };
 
 export const DUE_LABELS: Record<DueValue, string> = {
@@ -66,6 +67,8 @@ function hasAny(issue: Issue, f: Filter, now: Date, closed: boolean): boolean {
       return vals.includes(issue.status);
     case "priority":
       return vals.includes(issue.priority);
+    case "type":
+      return vals.includes(effectiveType(issue));
     case "project": {
       const p = issue.project ? fromLink(issue.project) : "";
       return p ? names.has(lc(p)) : none;

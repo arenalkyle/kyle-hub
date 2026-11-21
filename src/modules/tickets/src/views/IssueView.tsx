@@ -59,7 +59,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
 
   const update = useCallback(
     (patch: IssuePatch) => {
-      void plugin.store.updateIssue(id, patch).catch((e) => {
+      void plugin.updateIssue(id, patch).catch((e) => {
         console.error("kyle-tickets: update failed", e);
         new Notice("Could not save the change.");
       });
@@ -193,7 +193,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
               children={children}
               settings={settings}
               onOpen={(c, newTab) => plugin.openIssue(c.id, newTab)}
-              onStatus={(c, status) => void plugin.store.updateIssue(c.id, { status })}
+              onStatus={(c, status) => void plugin.updateIssue(c.id, { status }).catch((e) => console.error("kyle-tickets: update failed", e))}
               onAdd={() => plugin.openNewIssue({ parent: id })}
             />
             <ActivityFeed feed={issue.feed} sourcePath={path} actions={commentActions} />

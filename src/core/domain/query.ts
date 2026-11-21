@@ -1,12 +1,13 @@
 import { DEFAULT_STATUSES, PRIORITY_LABELS, PRIORITY_ORDER } from "./defaults";
 import type { CompletedMode, DisplayState, GroupBy, OrderBy } from "./display";
 import { applyFilters, type Filter } from "./filters";
+import { effectiveType, TICKET_TYPES } from "./fields";
 import { fromLink } from "./links";
 import type { Issue, Project, Settings, StatusDef } from "./types";
 
 export type { GroupBy, OrderBy, CompletedMode };
 
-export type ViewId = "all" | "active" | "backlog" | `project:${string}`;
+export type ViewId = "all" | "active" | "backlog" | "triage" | `project:${string}`;
 
 /** One List section / Board column. */
 export interface Group {
@@ -48,6 +49,8 @@ export function viewTitle(viewId: string): string {
       return "Active";
     case "backlog":
       return "Backlog";
+    case "triage":
+      return "Triage";
     default:
       return viewId.startsWith("project:") ? viewId.slice("project:".length) : viewId;
   }
@@ -66,7 +69,7 @@ export function selectView(
     return issues.filter((i) => i.project !== undefined && fromLink(i.project).toLowerCase() === name);
   }
   if (viewId === "all") return [...issues];
-  const cats = viewId === "active" ? ["unstarted", "started"] : viewId === "backlog" ? ["backlog"] : null;
+  const cats = viewId === "active" ? ["unstarted", "started"] : viewId === "backlog" ? ["backlog"] : viewId === "triage" ? ["triage"] : null;
   if (!cats) return [...issues];
   const statuses = settings?.statuses ?? DEFAULT_STATUSES;
   const catOf = new Map(statuses.map((s) => [s.name, s.category]));
@@ -128,6 +131,8 @@ export function orderIssues(issues: readonly Issue[], orderBy: OrderBy): Issue[]
       return out.sort(byKey((i) => stamp(i.created), -1));
     case "due":
       return out.sort(byKey((i) => i.due, 1));
+    case "type":
+      return out.sort((a, b) => TICKET_TYPES.indexOf(effectiveType(a)) - TICKET_TYPES.indexOf(effectiveType(b)) || compareDefault(a, b));
     default:
       return out.sort(compareDefault);
   }
@@ -182,6 +187,14 @@ export function groupIssues(
       issues: sorted.filter((i) => i.status === s.name),
     }));
     groups.push({ key: OTHER_GROUP_KEY, label: "Other", issues: sorted.filter((i) => !known.has(i.status)) });
+  } else if (groupBy === "type") {
+    groups = TICKET_TYPES.map((t) => ({
+      key: `type:${t}`,
+      label: t.charAt(0).toUpperCase() + t.slice(1),
+      field: "type" as const,
+      value: t,
+      issues: sorted.filter((i) => effectiveType(i) === t),
+    }));
   } else if (groupBy === "priority") {
     groups = PRIORITY_ORDER.map((p) => ({
       key: `priority:${p}`,

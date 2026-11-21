@@ -17,6 +17,7 @@ export interface SidebarProps {
 }
 
 const NAV: { id: string; label: string; icon: string }[] = [
+  { id: "triage", label: "Triage", icon: "filter" },
   { id: "all", label: "All Issues", icon: "layers" },
   { id: "active", label: "Active", icon: "circle-dot" },
   { id: "backlog", label: "Backlog", icon: "inbox" },

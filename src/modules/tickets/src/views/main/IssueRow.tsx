@@ -1,8 +1,8 @@
-import { memo, type MouseEvent } from "react";
+import { memo, type MouseEvent, type ReactNode } from "react";
 import type { PropKey } from "../../../../../core/domain/display";
 import type { Issue, Settings } from "../../../../../core/domain/types";
 import {
-  AssigneeChip, CreatedChip, DueChip, LabelChip, MilestoneChip, ProjectChip, PullRequestChip, SubIssuesChip,
+  AssigneeChip, CreatedChip, DueChip, LabelChip, MilestoneChip, ProjectChip, PullRequestChip, SubIssuesChip, TypeChip,
 } from "../components/chips";
 import { PriorityIcon, StatusIcon } from "../components/icons";
 
@@ -15,13 +15,15 @@ export interface IssueRowProps {
   /** Indented under a sub-group header. */
   sub?: boolean;
   selected?: boolean;
+  /** Extra chips shown before the standard ones (Triage: source, repo, age, +N seen). */
+  extra?: ReactNode;
   onOpen: (issue: Issue, newTab: boolean) => void;
   onStatus: (issue: Issue, anchor: HTMLElement) => void;
   onPriority: (issue: Issue, anchor: HTMLElement) => void;
 }
 
 export const IssueRow = memo(function IssueRow({
-  issue, settings, properties: p, subCount, sub, selected, onOpen, onStatus, onPriority,
+  issue, settings, properties: p, subCount, sub, selected, extra, onOpen, onStatus, onPriority,
 }: IssueRowProps) {
   const def = settings.statuses.find((s) => s.name === issue.status);
   const stop = (fn: (anchor: HTMLElement) => void) => (e: MouseEvent<HTMLButtonElement>) => {
@@ -47,6 +49,8 @@ export const IssueRow = memo(function IssueRow({
       )}
       <span className="kh-tickets-row-title">{issue.title}</span>
       <span className="kh-tickets-row-chips">
+        {extra}
+        {p.type && <TypeChip type={issue.type} />}
         {subCount ? <SubIssuesChip count={subCount} /> : null}
         {p.labels && issue.tags.map((t) => <LabelChip key={t} label={t} color={settings.labelColors[t]} />)}
         {p.project && issue.project && <ProjectChip project={issue.project} />}

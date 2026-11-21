@@ -558,3 +558,15 @@
 .kh-term-diff-add { color: var(--text-success, var(--color-green)); }
 .kh-term-diff-del { color: var(--text-error, var(--color-red)); }
 .kh-term-diff-same { color: var(--text-muted); }
+
+/* Triage view, type chip, issue-page fields (LOCK-48) */
+.kh-tickets-triage .kh-tickets-list > div { position: relative; }
+.kh-tickets-triage-hint { color: var(--text-faint); font-size: var(--font-ui-smaller); }
+.kh-tickets-triage-decline { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 var(--size-4-4); background: var(--background-primary); z-index: 1; }
+.kh-tickets-triage-decline input { width: 100%; }
+.kh-tickets-type { text-transform: capitalize; }
+.kh-tickets-type-bug { color: var(--text-error); }
+.kh-tickets-type-proposal, .kh-tickets-type-plan { color: var(--interactive-accent); }
+.kh-tickets-type-question, .kh-tickets-type-finding { color: var(--text-warning); }
+.kh-tickets-prop-readonly { display: flex; justify-content: space-between; gap: var(--size-4-2); padding: var(--size-4-1) var(--size-4-2); color: var(--text-muted); font-size: var(--font-ui-small); }
+.kh-tickets-prop-static { color: var(--text-normal); }

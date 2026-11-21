@@ -2,6 +2,8 @@ import { patchIssueText } from "../../../../core/domain/ops";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultData } from "../data";
 import { IssueStore } from "./IssueStore";
+import { createTicketService } from "../service";
+import { runTriage, undoTriage } from "../triageActions";
 
 type Handler = (...a: any[]) => void;
 
@@ -338,5 +340,27 @@ describe("IssueStore", () => {
     expect(cb).toHaveBeenCalled();
     expect(store.getIssues()).not.toBe(s1);
     off();
+  });
+
+  it("triage keys end to end: accept, accept + agent-ready, decline, undo", async () => {
+    const { store, data } = setup();
+    await store.start();
+    const svc = createTicketService(store);
+    const mk = (title: string) => svc.create({ title, tags: [] }, { agent: true, author: "t" });
+    const [a, b, c] = [await mk("Alpha finding"), await mk("Bravo finding"), await mk("Charlie finding")];
+    expect([a.status, b.status, c.status]).toEqual(["Triage", "Triage", "Triage"]);
+    const cfg = { statuses: data.settings.statuses, defaultStatus: data.settings.defaultStatus };
+    await runTriage(svc, a.id, "accept", cfg);
+    await runTriage(svc, b.id, "ready", cfg);
+    const declined = await runTriage(svc, c.id, "decline", cfg, "not useful");
+    expect(svc.get(a.id)).toMatchObject({ status: "Backlog", tags: [] });
+    expect(svc.get(a.id)!.feed.some((f) => f.type === "event" && f.text === "accepted")).toBe(true);
+    expect(svc.get(b.id)).toMatchObject({ status: "Backlog", tags: ["agent-ready"] });
+    expect(svc.get(c.id)!.status).toBe("Canceled");
+    expect(svc.get(c.id)!.feed.some((f) => f.type === "comment" && f.body === "Declined: not useful")).toBe(true);
+    await undoTriage(svc, declined!);
+    const after = svc.get(c.id)!;
+    expect(after.status).toBe("Triage");
+    expect(after.feed.some((f) => f.type === "comment")).toBe(false);
   });
 });

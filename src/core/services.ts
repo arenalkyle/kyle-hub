@@ -29,6 +29,10 @@ export interface TicketService {
   create(input: NewIssueInput, actor?: TicketActor): Promise<Issue>;
   update(id: string, patch: IssuePatch, actor?: TicketActor): Promise<Issue>;
   comment(id: string, body: string, actor?: Pick<TicketActor, "author">): Promise<Issue>;
+  /** Appends an activity event with no field change. */
+  logEvent(id: string, text: string, actor?: Pick<TicketActor, "author">): Promise<Issue>;
+  /** Removes a comment by id. */
+  removeComment(id: string, commentId: string): Promise<Issue>;
   childrenOf(id: string): Issue[];
   /** Called after every index change; returns an unsubscribe function. */
   subscribe(cb: () => void): () => void;

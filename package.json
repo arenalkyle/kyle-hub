@@ -15,7 +15,8 @@
     "test": "vitest run",
     "lint": "eslint .",
     "check-size": "node scripts/check-size.mjs",
-    "smoke": "node scripts/cdp-smoke.mjs"
+    "smoke": "node scripts/cdp-smoke.mjs",
+    "smoke:triage": "node scripts/cdp-triage-smoke.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

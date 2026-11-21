@@ -8,6 +8,7 @@ import { useProjects } from "../store/hooks";
 import { PluginContext, usePlugin } from "./PluginContext";
 import { ProjectPage } from "./project/ProjectPage";
 import { Icon } from "./components/icons";
+import { TriageView } from "./main/TriageView";
 import { IssueCollection } from "./main/IssueCollection";
 import { Sidebar } from "./main/Sidebar";
 
@@ -77,6 +78,10 @@ function MainApp() {
             }}
             onDeleted={() => commit({ ...plugin.data.main, view: "all" })}
           />
+        </div>
+      ) : view === "triage" ? (
+        <div className="kh-tickets-content">
+          <TriageView sidebarCollapsed={ui.sidebarCollapsed} onToggleSidebar={() => commit({ ...ui, sidebarCollapsed: !ui.sidebarCollapsed })} />
         </div>
       ) : (
       <div className="kh-tickets-content">

@@ -1,6 +1,7 @@
 import { findProjectByLink } from "../../../../../core/domain/projects";
 import { fromLink } from "../../../../../core/domain/links";
 import { bestState, prLabel, prLabelOfUrl, type PrState } from "../../../../../core/domain/pr";
+import { effectiveType, type TicketType } from "../../../../../core/domain/fields";
 import { formatDate } from "../../../../../core/domain/time";
 import { useProjects, usePrs } from "../../store/hooks";
 import { Avatar } from "./Avatar";
@@ -104,6 +105,16 @@ export function SubIssuesChip({ count }: { count: number }) {
     <span className="kh-tickets-chip" title={`${count} sub-issue${count === 1 ? "" : "s"}`}>
       <Icon name="list-tree" size={12} />
       <span className="kh-tickets-chip-text">{count} sub-issues</span>
+    </span>
+  );
+}
+
+/** Ticket type chip (`task` is the default type and shows too, so every ticket reads the same). */
+export function TypeChip({ type }: { type?: TicketType }) {
+  const t = effectiveType({ type });
+  return (
+    <span className={`kh-tickets-chip kh-tickets-type kh-tickets-type-${t}`} title={`Type: ${t}`} data-kh-tickets-type={t}>
+      <span className="kh-tickets-chip-text">{t}</span>
     </span>
   );
 }

@@ -108,7 +108,7 @@ export function ListView({ groups, display, subCounts, issues, viewId, project, 
   const closePicker = useCallback(() => setPicker(null), []);
 
   const update = (id: string, patch: { status?: string; priority?: Priority }) =>
-    void plugin.store.updateIssue(id, patch).catch((e) => console.error("kyle-tickets: update failed", e));
+    void plugin.updateIssue(id, patch).catch((e) => console.error("kyle-tickets: update failed", e));
 
   const start = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN);
   const end = Math.min(items.length, Math.ceil((scrollTop + height) / ITEM_HEIGHT) + OVERSCAN);

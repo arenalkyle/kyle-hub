@@ -62,12 +62,22 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
   }, [storeIssues, optimistic]);
 
   const onMove = useCallback(
-    (moves: BoardMove[]) => {
-      const pending = Object.fromEntries(moves.map((m) => [m.id, m.patch]));
-      setOptimistic((o) => ({ ...o, ...pending }));
+    (allMoves: BoardMove[]) => {
       void (async () => {
+        // Done gate: ask before the card is shown moved; a declined move is dropped.
+        const gates = new Map<string, { ok: boolean; note?: string }>();
+        const moves: BoardMove[] = [];
+        for (const m of allMoves) {
+          const g = await plugin.confirmStatus(m.id, m.patch);
+          if (!g.ok) continue;
+          gates.set(m.id, g);
+          moves.push(m);
+        }
+        if (moves.length === 0) return;
+        const pending = Object.fromEntries(moves.map((m) => [m.id, m.patch]));
+        setOptimistic((o) => ({ ...o, ...pending }));
         try {
-          for (const m of moves) await plugin.store.updateIssue(m.id, m.patch);
+          for (const m of moves) await plugin.updateIssue(m.id, m.patch, gates.get(m.id));
         } catch (e) {
           console.error("kyle-tickets: board move failed", e);
           new Notice("Could not move the card; the change was reverted.");
@@ -192,7 +202,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
         case "status":
         case "priority":
         case "assignee":
-          void plugin.store.updateIssue(issue.id, { [a.type]: a.value }).catch((err) => console.error("kyle-tickets: update failed", err));
+          void plugin.updateIssue(issue.id, { [a.type]: a.value }).catch((err) => console.error("kyle-tickets: update failed", err));
           break;
         case "picker": {
           const anchor = document.body.createEl("span");
@@ -221,7 +231,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
   };
   const spIssue = sp ? issues.find((i) => i.id === sp.id) : undefined;
   const spUpdate = (patch: IssuePatch) => {
-    if (sp) void plugin.store.updateIssue(sp.id, patch).catch((e) => console.error("kyle-tickets: update failed", e));
+    if (sp) void plugin.updateIssue(sp.id, patch).catch((e) => console.error("kyle-tickets: update failed", e));
   };
 
   return (

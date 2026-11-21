@@ -6,6 +6,7 @@ import {
   materializeCommentId,
   newCommentId,
   parseIssue,
+  removeCommentText,
   serializeIssue,
 } from "./issueFile";
 import type { IssuePatch } from "./issueFile";
@@ -103,4 +104,16 @@ export function issueToJson(i: Issue): Record<string, unknown> {
     description: i.description,
     feed: i.feed.map((f) => (f.type === "comment" ? { type: "comment", id: f.id, replyTo: f.replyTo ?? null, edited: f.edited === true, author: f.author, time: f.time, body: f.body } : { type: "event", author: f.author, time: f.time, text: f.text })),
   };
+}
+
+/** Comment removed with `updated` bumped. Throws when `id` is unknown. */
+export function removeCommentIssueText(text: string, fileName: string, id: string, now: Date): string {
+  const removed = parseIssue(removeCommentText(parseIssue(text, fileName), id), fileName);
+  return serializeIssue(applyPatch(removed, {}, now));
+}
+
+/** Event bullet appended with `updated` bumped. */
+export function eventIssueText(text: string, fileName: string, author: string, event: string, now: Date): string {
+  const bumped = parseIssue(serializeIssue(applyPatch(parseIssue(text, fileName), {}, now)), fileName);
+  return appendEvent(bumped, { author: strip(author), text: event }, now);
 }

@@ -1,28 +1,28 @@
 import { sanitizeHidden, type HiddenGroups } from "./hidden";
 
-export type GroupBy = "none" | "status" | "priority" | "project" | "assignee" | "label" | "milestone";
-export type OrderBy = "manual" | "priority" | "updated" | "created" | "due";
+export type GroupBy = "none" | "status" | "priority" | "project" | "assignee" | "label" | "milestone" | "type";
+export type OrderBy = "manual" | "priority" | "updated" | "created" | "due" | "type";
 export type CompletedMode = "all" | "week" | "none";
 export type Layout = "list" | "board";
 
 export const PROP_KEYS = [
-  "id", "status", "priority", "project", "due", "milestone", "labels", "created", "pullRequests", "assignee",
+  "id", "status", "priority", "project", "due", "milestone", "labels", "created", "pullRequests", "assignee", "type",
 ] as const;
 export type PropKey = (typeof PROP_KEYS)[number];
 
 export const PROP_LABELS: Record<PropKey, string> = {
   id: "ID", status: "Status", priority: "Priority", project: "Project", due: "Due date", milestone: "Milestone",
-  labels: "Labels", created: "Created", pullRequests: "Pull requests", assignee: "Assignee",
+  labels: "Labels", created: "Created", pullRequests: "Pull requests", assignee: "Assignee", type: "Type",
 };
 
 export const GROUP_BY_LABELS: Record<GroupBy, string> = {
   none: "No grouping", status: "Status", priority: "Priority", project: "Project", assignee: "Assignee",
-  label: "Label", milestone: "Milestone",
+  label: "Label", milestone: "Milestone", type: "Type",
 };
 export const GROUP_BY_OPTIONS = Object.keys(GROUP_BY_LABELS) as GroupBy[];
 
 export const ORDER_BY_LABELS: Record<OrderBy, string> = {
-  manual: "Manual", priority: "Priority", updated: "Updated", created: "Created", due: "Due date",
+  manual: "Manual", priority: "Priority", updated: "Updated", created: "Created", due: "Due date", type: "Type",
 };
 export const ORDER_BY_OPTIONS = Object.keys(ORDER_BY_LABELS) as OrderBy[];
 
@@ -53,7 +53,7 @@ export function defaultDisplay(): DisplayState {
     hiddenGroups: {},
     properties: {
       id: true, status: true, priority: true, project: true, due: true, milestone: false,
-      labels: true, created: true, pullRequests: true, assignee: true,
+      labels: true, created: true, pullRequests: true, assignee: true, type: true,
     },
   };
 }

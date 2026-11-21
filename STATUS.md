@@ -13,6 +13,8 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 - **Also in review**: Phase 2.1 (LOCK-45) built locally: term module on core (`SessionService`, `session:*` bus events, kyle-term settings migration, `kh-term-` CSS, macOS paths removed, Install/Uninstall hooks with diff modal). Not pushed. CDP smoke (`npm run smoke`) needs a manual run in Obsidian.
 - **Also in review**: Phase 2.2 (LOCK-46) built locally: `kh` CLI (`cli/`, `kh tickets …`), `kt` shim, `kh import linear` (recorded-fixture tests). Not pushed. Cutover checklist and Linear import run are manual.
 
+- **Also in review**: Phase 3.2 (LOCK-48) built locally: Triage view (`j k Enter a r d u`), type chip + Display type option, new fields in the properties sidebar, Done gate (`plugin.updateIssue`), generated `Triage/Queue/Proposals/Blocked.base`. Not pushed. `npm run smoke:triage` needs a manual run in a throwaway vault.
+
 | Phase | Sub-phases | Ticket | Model | State |
 |---|---|---|---|---|
 | 1 Foundation | 1.1 · 1.2 | LOCK-43 · LOCK-44 | S · S | 1.1 · 1.2 in review |

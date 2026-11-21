@@ -3,6 +3,7 @@ import { PRIORITY_LABELS, PRIORITY_ORDER } from "../../../../../core/domain/defa
 import {
   DUE_LABELS, DUE_VALUES, FILTER_FIELDS, FILTER_FIELD_LABELS, NONE_VALUE, type FilterField,
 } from "../../../../../core/domain/filters";
+import { TICKET_TYPES } from "../../../../../core/domain/fields";
 import { fromLink } from "../../../../../core/domain/links";
 import { useIssues, useProjects } from "../../store/hooks";
 import { usePlugin } from "../PluginContext";
@@ -65,6 +66,8 @@ export function ValuePicker({
         return [none("No label"), ...uniq([...Object.keys(colors), ...issues.flatMap((i) => i.tags)]).map((n) => ({
           key: n, label: n, node: <Dot color={colors[n] ?? "var(--text-faint)"} />,
         }))];
+      case "type":
+        return TICKET_TYPES.map((t) => ({ key: t, label: t.charAt(0).toUpperCase() + t.slice(1) }));
       case "due":
         return DUE_VALUES.map((v) => ({ key: v, label: DUE_LABELS[v] }));
     }
@@ -95,6 +98,7 @@ export function ValuePicker({
 /** Human label for a stored filter value. */
 export function valueLabel(field: FilterField, v: string): string {
   if (v === NONE_VALUE) return `No ${field === "due" ? "due date" : field}`;
+  if (field === "type") return v.charAt(0).toUpperCase() + v.slice(1);
   if (field === "priority") return PRIORITY_LABELS[v as keyof typeof PRIORITY_LABELS] ?? v;
   if (field === "due") return DUE_LABELS[v as keyof typeof DUE_LABELS] ?? v;
   return field === "project" || field === "milestone" ? fromLink(v) : v;

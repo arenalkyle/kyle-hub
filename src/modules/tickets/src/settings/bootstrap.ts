@@ -1,5 +1,7 @@
 import type { DataAdapter } from "obsidian";
 import { AGENTS_NAME, isGeneratedAgentsDoc, renderAgentsDoc } from "../../../../core/domain/agentsDoc";
+import { baseSlices } from "../../../../core/domain/bases";
+import { DEFAULT_STATUSES } from "../../../../core/domain/defaults";
 import type { Settings } from "../../../../core/domain/types";
 
 export const MARKER_NAME = ".kyle-tickets.json";
@@ -39,11 +41,25 @@ async function ensureFile(adapter: DataAdapter, path: string, content: string): 
 }
 
 /** Idempotent: creates only what is missing; never overwrites. */
-export async function bootstrapFolder(adapter: DataAdapter, folder: string, prefix: string): Promise<void> {
+export async function bootstrapFolder(adapter: DataAdapter, folder: string, prefix: string, statuses?: Settings["statuses"]): Promise<void> {
   await ensureFolder(adapter, `${folder}/Issues`);
   await ensureFolder(adapter, `${folder}/Projects`);
   await ensureFile(adapter, `${folder}/${BASE_NAME}`, baseFileContent(folder));
   await ensureFile(adapter, `${folder}/${MARKER_NAME}`, markerContent(prefix));
+  await ensureBaseSlices(adapter, { folder, statuses: statuses ?? DEFAULT_STATUSES });
+}
+
+/** Creates `Triage/Queue/Proposals/Blocked.base` when missing; existing files (user edits) are never touched. */
+export async function ensureBaseSlices(adapter: DataAdapter, settings: Pick<Settings, "folder" | "statuses">): Promise<string[]> {
+  if (!(await adapter.exists(settings.folder))) return [];
+  const created: string[] = [];
+  for (const [name, content] of Object.entries(baseSlices(settings.folder, settings.statuses))) {
+    const path = `${settings.folder}/${name}`;
+    if (await adapter.exists(path)) continue;
+    await adapter.write(path, content);
+    created.push(name);
+  }
+  return created;
 }
 
 /** Writes `AGENTS.md`; a file without the generated marker (user-edited) is never overwritten. */

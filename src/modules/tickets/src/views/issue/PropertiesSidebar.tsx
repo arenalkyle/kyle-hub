@@ -15,6 +15,7 @@ import { MilestonePicker } from "../components/pickers/MilestonePicker";
 import { PriorityPicker } from "../components/pickers/PriorityPicker";
 import { ProjectPicker } from "../components/pickers/ProjectPicker";
 import { StatusPicker } from "../components/pickers/StatusPicker";
+import { FieldsSection } from "./FieldsSection";
 import { RelatedSection } from "./RelatedSection";
 
 export type PropKind = "status" | "priority" | "assignee" | "labels" | "project" | "milestone" | "due";
@@ -208,6 +209,8 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
           <Empty text="Add to project" />
         )}
       </Row>
+
+      <FieldsSection issue={issue} settings={settings} onUpdate={onUpdate} onOpenIssue={onOpenIssue} />
 
       <RelatedSection issue={issue} settings={settings} onOpenIssue={onOpenIssue} onAdd={onAddRelated} onRemove={onRemoveRelated} />
 

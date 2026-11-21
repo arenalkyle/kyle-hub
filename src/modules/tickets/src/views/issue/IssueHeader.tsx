@@ -1,6 +1,7 @@
 import { Menu } from "obsidian";
 import type { Issue } from "../../../../../core/domain/types";
 import { fromLink } from "../../../../../core/domain/links";
+import { TypeChip } from "../components/chips";
 import { Icon } from "../components/icons";
 
 export interface IssueHeaderProps {
@@ -39,6 +40,7 @@ export function IssueHeader(p: IssueHeaderProps) {
           </>
         )}
         <span className="kh-tickets-crumb is-current">{issue.id}</span>
+        <TypeChip type={issue.type} />
       </nav>
       <span className="kh-tickets-spacer" />
       <button type="button" className="clickable-icon" title="Open as Markdown" aria-label="Open as Markdown" onClick={p.onOpenMarkdown}>

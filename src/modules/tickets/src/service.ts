@@ -3,7 +3,7 @@ import { fromLink } from "../../../core/domain/links";
 import type { IssuePatch } from "../../../core/domain/issueFile";
 import type { Issue } from "../../../core/domain/types";
 import { planAgentCreate } from "../../../core/domain/agentCreate";
-import { DEFAULT_FLOOD } from "../../../core/domain/flood";
+import { DEFAULT_FLOOD, type FloodSettings } from "../../../core/domain/flood";
 import { checkAgentLabels, checkAgentStatus, GATE_EXIT } from "../../../core/domain/gates";
 import type { TicketActor, TicketQuery, TicketService } from "../../../core";
 import type { IssueStore } from "./store/IssueStore";
@@ -37,7 +37,7 @@ const refuseIfAgent = (r: { ok: true } | { ok: false; exitCode: number; message:
 };
 
 /** `TicketService` over `IssueStore`, which stays the only writer. `actor.agent` applies the same gates as `kh`. */
-export function createTicketService(store: IssueStore): TicketService {
+export function createTicketService(store: IssueStore, flood: () => FloodSettings = () => DEFAULT_FLOOD): TicketService {
   const sourceOf = (actor: TicketActor): `agent:${string}` => `agent:${actor.author ?? "session"}`;
   return {
     get: (id) => store.getIssue(id),
@@ -47,7 +47,7 @@ export function createTicketService(store: IssueStore): TicketService {
       const source = sourceOf(actor);
       const plan = planAgentCreate(
         { title: input.title, type: input.type, repo: input.repo, tags: input.tags },
-        { statuses: store.getStatuses(), issues: store.getIssues(), source, flood: DEFAULT_FLOOD },
+        { statuses: store.getStatuses(), issues: store.getIssues(), source, flood: flood() },
       );
       if (!plan.ok) throw new AgentRefusal(plan.message, plan.exitCode);
       if (plan.duplicate) return store.addComment(plan.duplicate.id, `seen again (+1) from ${source}`, source);
@@ -63,6 +63,8 @@ export function createTicketService(store: IssueStore): TicketService {
       return store.updateIssue(id, patch, actor.author);
     },
     comment: (id, body, actor = {}) => store.addComment(id, body, actor.author),
+    logEvent: (id, text, actor = {}) => store.logEvent(id, text, actor.author),
+    removeComment: (id, commentId) => store.removeComment(id, commentId),
     childrenOf: (id) => store.childrenOf(id),
     subscribe: (cb) => store.on("change", cb),
   };

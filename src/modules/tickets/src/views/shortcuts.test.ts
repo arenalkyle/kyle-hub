@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keyToAction, moveSelection, type KeyInfo } from "./shortcuts";
+import { keyToAction, moveSelection, triageKeyToAction, type KeyInfo } from "./shortcuts";
 
 const k = (key: string, o: Partial<KeyInfo> = {}): KeyInfo => ({
   key, ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, editable: false, ...o,
@@ -42,5 +42,16 @@ describe("moveSelection", () => {
     expect(moveSelection(ids, "a", 1)).toBe("b");
     expect(moveSelection(ids, "zzz", 1)).toBe("a");
     expect(moveSelection([], "a", 1)).toBeNull();
+  });
+});
+
+describe("triageKeyToAction", () => {
+  it("maps j/k/Enter/a/r/d/u and ignores typing and modifiers", () => {
+    const map: Record<string, string> = { j: "next", k: "prev", Enter: "open", a: "accept", r: "ready", d: "decline", u: "undo", ArrowDown: "next" };
+    for (const [key, action] of Object.entries(map)) expect(triageKeyToAction(k(key))).toBe(action);
+    for (const key of Object.keys(map)) expect(triageKeyToAction(k(key, { editable: true }))).toBeNull();
+    expect(triageKeyToAction(k("a", { ctrlKey: true }))).toBeNull();
+    expect(triageKeyToAction(k("Enter", { interactive: true }))).toBeNull();
+    expect(triageKeyToAction(k("s"))).toBeNull();
   });
 });

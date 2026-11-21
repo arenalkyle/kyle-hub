@@ -6,9 +6,12 @@ import type { Settings } from "../../../core/domain/types";
 import type { PluginData } from "./data";
 import { dataFromNamespace } from "./migrate";
 import { KyleTicketsSettingTab } from "./settings/SettingsTab";
+import { guardStatusChange, doneConfirmMessage, overrideEventText } from "../../../core/domain/transition";
+import type { IssuePatch } from "../../../core/domain/issueFile";
+import { confirmModal } from "./settings/modals";
 import { SetupModal } from "./settings/SetupModal";
 import { renderAgentsDoc } from "../../../core/domain/agentsDoc";
-import { bootstrapFolder, syncAgentsDoc } from "./settings/bootstrap";
+import { bootstrapFolder, ensureBaseSlices, syncAgentsDoc } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
 import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";
 import { IssueStore } from "./store/IssueStore";
@@ -101,7 +104,10 @@ export default class TicketsHost {
     });
 
     this.app.workspace.onLayoutReady(() => {
-      if (this.data.setupDone) void this.syncAgents();
+      if (this.data.setupDone) {
+        void this.syncAgents();
+        void ensureBaseSlices(this.app.vault.adapter, this.data.settings).catch((e) => console.error("kyle-tickets: could not write .base files", e));
+      }
       void this.store.start().then(() => {
         void this.prs.refreshAll();
         void this.autoLinker.tick();
@@ -188,8 +194,35 @@ export default class TicketsHost {
 
   async bootstrap(): Promise<void> {
     const { folder, prefix } = this.data.settings;
-    await bootstrapFolder(this.app.vault.adapter, folder, prefix);
+    await bootstrapFolder(this.app.vault.adapter, folder, prefix, this.data.settings.statuses);
     await this.syncAgents();
+  }
+
+  /** Repo map from the hub's core settings (key = a ticket's `repo`). */
+  repoKeys(): string[] {
+    return Object.keys((this.hub.settings.module("core").repos as Record<string, unknown> | undefined) ?? {}).sort();
+  }
+
+  /**
+   * Done gate (ADR-0005) for UI status changes: resolves `{ ok: false }` when the user cancels the
+   * confirm, else `{ ok: true, note }` where `note` is the override event to log after the write.
+   */
+  async confirmStatus(id: string, patch: IssuePatch): Promise<{ ok: boolean; note?: string }> {
+    const issue = this.store.getIssue(id);
+    if (!issue || patch.status === undefined || patch.status === null) return { ok: true };
+    const g = guardStatusChange(issue, patch.status, this.data.settings.statuses);
+    if (g.ok) return { ok: true };
+    const yes = await confirmModal(this.app, "Unchecked criteria", doneConfirmMessage(g), "Mark done", true);
+    return yes ? { ok: true, note: overrideEventText(g.unchecked) } : { ok: false };
+  }
+
+  /** The single UI path for ticket updates: applies the Done gate, writes, logs an override. False when cancelled. */
+  async updateIssue(id: string, patch: IssuePatch, gate?: { ok: boolean; note?: string }): Promise<boolean> {
+    const g = gate ?? (await this.confirmStatus(id, patch));
+    if (!g.ok) return false;
+    await this.store.updateIssue(id, patch);
+    if (g.note) await this.store.logEvent(id, g.note);
+    return true;
   }
 
   /** Opens the New issue window; `defaults` pre-fill status/project/parent. */

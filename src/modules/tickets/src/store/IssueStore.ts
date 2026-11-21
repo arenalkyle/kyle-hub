@@ -12,7 +12,7 @@ import {
 } from "../../../../core/domain/issueFile";
 import { fromLink } from "../../../../core/domain/links";
 import { issueInMilestone, milestoneAfterProjectChange, reorderMilestones, validateMilestoneName } from "../../../../core/domain/milestones";
-import { addReplyText, editCommentIssueText, patchIssueText } from "../../../../core/domain/ops";
+import { addReplyText, editCommentIssueText, eventIssueText, patchIssueText, removeCommentIssueText } from "../../../../core/domain/ops";
 import { addRelatedList, removeRelatedLists } from "../../../../core/domain/related";
 import { parsePrUrl, prLabelOfUrl } from "../../../../core/domain/pr";
 import { clearUnlinked, markUnlinked } from "../../../../core/domain/prMatch";
@@ -366,6 +366,17 @@ export class IssueStore {
   /** Replace a comment's body and mark it edited. */
   async editComment(id: string, commentId: string, body: string): Promise<Issue> {
     return this.rewriteText(id, (text, name, now) => editCommentIssueText(text, name, commentId, body, now));
+  }
+
+  /** Removes a comment (used by triage undo). */
+  async removeComment(id: string, commentId: string): Promise<Issue> {
+    return this.rewriteText(id, (text, name, now) => removeCommentIssueText(text, name, commentId, now));
+  }
+
+  /** Appends an activity event with no field change. */
+  async logEvent(id: string, text: string, author?: string): Promise<Issue> {
+    const who = author ?? this.host.data.settings.displayName;
+    return this.rewriteText(id, (t, name, now) => eventIssueText(t, name, who, text, now));
   }
 
   private async rewriteText(id: string, fn: (text: string, fileName: string, now: Date) => string): Promise<Issue> {
