@@ -1,5 +1,6 @@
 import { runImport } from "./commands/import/linear";
 import { runLogs } from "./commands/logs/cli";
+import { runRetro } from "./commands/retro/cli";
 import { defaultOpsDeps, runDoctor, runMaintain, runSchedule } from "./commands/ops/cli";
 import { EXIT, KtError, run as runTickets, type Io } from "./commands/tickets/cli";
 import type { LinearTransport } from "./commands/import/linear";
@@ -9,6 +10,7 @@ const MAIN = [
   "  tickets <new|set|comment|list|show|pr|relate|unrelate|expire> [...]   same as kt (see kt --help)",
   "  import linear --team <key> [--project <name>] [--dry-run] [--update]",
   "  logs <ingest|runs|show|sweep> [...]   transcript ingest, run index, retention (kh logs --help)",
+  "  retro detect [--profile home|work] [--json]   dry-run retro clusters (writes nothing)",
   "  maintain                            ingest -> sweep -> tickets expire (run by the scheduled task)",
   "  schedule <install|uninstall|status> [--yes]   Task Scheduler task kyle-hub-maintain (no admin)",
   "  doctor                              cleanupPeriodDays, hooks, scheduled task, log dirs",
@@ -32,6 +34,14 @@ export async function runKh(argv: string[], io: Io, transport?: LinearTransport)
   if (cmd === "logs") {
     try {
       return await runLogs(argv.slice(1), io);
+    } catch (e) {
+      io.err(`kh: ${(e as Error).message}`);
+      return e instanceof KtError ? e.code : EXIT.remote;
+    }
+  }
+  if (cmd === "retro") {
+    try {
+      return await runRetro(argv.slice(1), io);
     } catch (e) {
       io.err(`kh: ${(e as Error).message}`);
       return e instanceof KtError ? e.code : EXIT.remote;
