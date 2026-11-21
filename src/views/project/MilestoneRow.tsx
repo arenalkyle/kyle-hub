@@ -75,8 +75,10 @@ export function MilestoneRow({ milestone, progress, overdue, color, active, onTo
           </div>
         ) : (
           <button type="button" className="kt-ms-name" title="Filter issues to this milestone" onClick={onToggleFilter}>
-            {milestone.name}
-            {milestone.description && <span className="kt-ms-desc">{milestone.description}</span>}
+            <span className="kt-ms-text">
+              <span className="kt-ms-title">{milestone.name}</span>
+              {milestone.description && <span className="kt-ms-desc">{milestone.description}</span>}
+            </span>
           </button>
         )}
         <button type="button" className="kt-prop-btn kt-ms-date" title="Target date" onClick={(e) => setDateAnchor(e.currentTarget)}>

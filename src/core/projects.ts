@@ -78,3 +78,10 @@ export function splitArchived(projects: readonly Project[]): { active: Project[]
   const sorted = sortProjects(projects);
   return { active: sorted.filter((p) => !isArchivedStatus(p.status)), archived: sorted.filter((p) => isArchivedStatus(p.status)) };
 }
+
+/** Project named by an issue's `project` link (`[[Name]]`, `[[Name|alias]]`), matched case-insensitively. */
+export function findProjectByLink(projects: readonly Project[], link: string | undefined): Project | undefined {
+  if (link === undefined) return undefined;
+  const name = fromLink(link).toLowerCase();
+  return projects.find((p) => p.name.trim().toLowerCase() === name);
+}

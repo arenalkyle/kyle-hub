@@ -3,10 +3,11 @@ import type { IssuePatch } from "../../core/issueFile";
 import { fromLink } from "../../core/links";
 import { prLabel, prLabelOfUrl } from "../../core/pr";
 import { relativeTime } from "../../core/time";
-import { usePrs } from "../../store/hooks";
+import { useProjects, usePrs } from "../../store/hooks";
+import { findProjectByLink } from "../../core/projects";
 import type { Issue, Settings } from "../../core/types";
 import { DueChip, LabelChip, PrStateIcon, shortDate } from "../components/chips";
-import { Icon, PriorityIcon, StatusIcon } from "../components/icons";
+import { Icon, PriorityIcon, ProjectGlyph, StatusIcon } from "../components/icons";
 import { AssigneePicker } from "../components/pickers/AssigneePicker";
 import { DatePicker } from "../components/pickers/DatePicker";
 import { LabelPicker } from "../components/pickers/LabelPicker";
@@ -132,6 +133,7 @@ function PullRequests({ urls, onLink, onUnlink }: { urls: readonly string[]; onL
 export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUpdate, onLinkPr, onUnlinkPr }: PropertiesSidebarProps) {
   const def = settings.statuses.find((s) => s.name === issue.status);
   const project = issue.project ? fromLink(issue.project) : undefined;
+  const projectDef = findProjectByLink(useProjects(), issue.project);
   const anchor = open?.anchor ?? null;
   return (
     <aside className="kt-issue-side">
@@ -168,7 +170,7 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
       <Row kind="project" label="Project" onOpen={onOpen}>
         {project ? (
           <>
-            <Icon name="box" size={14} />
+            <ProjectGlyph icon={projectDef?.icon} color={projectDef?.color} size={14} />
             <span>{project}</span>
           </>
         ) : (
@@ -178,7 +180,9 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
       <Row kind="milestone" label="Milestone" onOpen={onOpen}>
         {issue.milestone ? (
           <>
-            <Icon name="milestone" size={14} />
+            <span className="kt-icon kt-ms-icon" style={projectDef?.color ? { color: projectDef.color } : undefined}>
+              <Icon name="milestone" size={14} />
+            </span>
             <span>{issue.milestone}</span>
           </>
         ) : (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_STATUSES } from "./defaults";
-import { projectProgress, rewriteProjectLink, sortProjects, splitArchived, validateProjectName } from "./projects";
+import { findProjectByLink, projectProgress, rewriteProjectLink, sortProjects, splitArchived, validateProjectName } from "./projects";
 import type { Issue, Project } from "./types";
 
 const issue = (id: string, status: string, project?: string) => ({ id, status, project }) as unknown as Issue;
@@ -58,5 +58,19 @@ describe("project ordering", () => {
     const { active, archived } = splitArchived(ps);
     expect(active.map((p) => p.name)).toEqual(["D", "A", "C"]);
     expect(archived.map((p) => p.name)).toEqual(["B", "E"]);
+  });
+});
+
+describe("findProjectByLink", () => {
+  const mk = (name: string): Project => ({ name } as Project);
+  const projects = [mk("Test Project"), mk("Other")];
+  it("resolves a wikilink to its project regardless of case or alias", () => {
+    expect(findProjectByLink(projects, "[[Test Project]]")?.name).toBe("Test Project");
+    expect(findProjectByLink(projects, "[[test project|TP]]")?.name).toBe("Test Project");
+    expect(findProjectByLink(projects, "other")?.name).toBe("Other");
+  });
+  it("returns undefined for missing, unknown or undefined links", () => {
+    expect(findProjectByLink(projects, undefined)).toBeUndefined();
+    expect(findProjectByLink(projects, "[[Nope]]")).toBeUndefined();
   });
 });
