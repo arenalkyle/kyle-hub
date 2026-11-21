@@ -38,3 +38,13 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 4. Assignee: type a free-text name → accepted; reopen → recent names listed. Parent picker: search by ID and by title; "No parent" clears it.
 5. Toggle "Create more" → after creating, the window stays open with title/description cleared and other properties kept.
 6. Switch light/dark theme → icons, chips and popovers stay readable.
+
+## 3.2 Main view sidebar and List view — LOCK-16
+
+1. Create about 6 issues across several statuses and priorities, two of them in a project (create the project via the console if needed: `app.plugins.plugins['kyle-tickets'].store.createProject({ name: 'Demo' })`).
+2. Open kyle-tickets → left sidebar shows All Issues, Active, Backlog, then Projects. All Issues lists groups in status order (Triage → Duplicate) with correct counts; empty groups are hidden. Active hides Backlog/Done; the project entry shows only its issues.
+3. Rows: priority icon · ID · status icon · title · chips (coloured labels, project, due — red when overdue, assignee, created). Click a row → opens the file; Ctrl+click → new tab.
+4. Click a row's status icon → pick a new status → the row moves to the right group and the file gets an activity event. Same for the priority icon.
+5. Group header "+" → New issue preset to that status (and project, in a project view). Header **New issue** works; List|Board toggle disabled; Filter/Display are placeholders.
+6. Collapse a group, drag the sidebar edge wider, select a project view, reload Obsidian → selection, width and collapsed group persist. The header toggle hides/shows the sidebar.
+7. Empty view shows "No issues" + New issue button. Check light and dark themes.
