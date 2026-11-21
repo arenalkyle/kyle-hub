@@ -235,9 +235,9 @@ PATH: ${this.plugin.resolvedPath ?? process.env.PATH ?? ""}`)
     }
     new Setting(el)
       .setName("Font family")
-      .setDesc("CSS font list; monospace fallbacks recommended.")
+      .setDesc("Leave empty to use Obsidian's monospace font (Appearance → Font). Otherwise a CSS font list.")
       .addText((t) =>
-        t.setPlaceholder(DEFAULT_FONT_FAMILY).setValue(a.fontFamily).onChange((v) => { a.fontFamily = v.trim() || DEFAULT_FONT_FAMILY; apply(); }),
+        t.setPlaceholder("Obsidian monospace font").setValue(a.fontFamily === DEFAULT_FONT_FAMILY ? "" : a.fontFamily).onChange((v) => { a.fontFamily = v.trim(); apply(); }),
       );
     new Setting(el)
       .setName("Font size")

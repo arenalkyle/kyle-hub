@@ -49,12 +49,32 @@ export function deploy() {
       fs.rmSync(path.join(dest, d), { recursive: true, force: true });
       fs.cpSync(path.join(root, d), path.join(dest, d), { recursive: true });
     }
-    for (const dep of deps) {
-      const target = path.join(dest, "node_modules", dep);
-      fs.rmSync(target, { recursive: true, force: true });
-      fs.cpSync(path.join(root, "node_modules", dep), target, { recursive: true });
-    }
+    for (const dep of deps) syncDir(path.join(root, "node_modules", dep), path.join(dest, "node_modules", dep));
     console.log(`deployed -> ${dest}`);
+  }
+}
+
+/**
+ * Copy a folder file by file, skipping files that are already identical (same size and mtime).
+ * While Obsidian runs, the helper holds native `.node` files open (EPERM on Windows); those are
+ * left alone if unchanged, and reported if they differ (restart Obsidian, then deploy again).
+ */
+function syncDir(src, dst) {
+  fs.mkdirSync(dst, { recursive: true });
+  for (const e of fs.readdirSync(src, { withFileTypes: true })) {
+    const s = path.join(src, e.name);
+    const d = path.join(dst, e.name);
+    if (e.isDirectory()) { syncDir(s, d); continue; }
+    const ss = fs.statSync(s);
+    const ds = fs.existsSync(d) ? fs.statSync(d) : null;
+    if (ds && ds.size === ss.size && Math.abs(ds.mtimeMs - ss.mtimeMs) < 2000) continue;
+    try {
+      fs.copyFileSync(s, d);
+      fs.utimesSync(d, ss.atime, ss.mtime);
+    } catch (err) {
+      if (err.code !== "EPERM" && err.code !== "EBUSY") throw err;
+      console.warn(`skipped locked file (close Obsidian and redeploy if it changed): ${d}`);
+    }
   }
 }
 

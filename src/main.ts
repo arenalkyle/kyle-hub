@@ -17,7 +17,7 @@ import { SessionManager, type Session } from "./session-manager";
 import { detectProfiles, pickProfileId, type ShellProfile } from "./shells";
 import { XtermSession, type TermLook } from "./xterm-session";
 import {
-  blurPx, buildXtermTheme, DEFAULT_APPEARANCE, mergeAppearance, obsidianPalette, resolvePalette, shouldUseWebgl, toHex, type Palette,
+  blurPx, buildXtermTheme, mergeAppearance, resolveFontFamily, obsidianPalette, resolvePalette, shouldUseWebgl, toHex, type Palette,
 } from "./appearance";
 import fs from "node:fs";
 import { orphanFiles, parsePersisted, PERSIST_VERSION, scrollbackFile, type PersistedSession } from "./persist";
@@ -58,6 +58,8 @@ export default class KyleTermPlugin extends Plugin {
       console.error("[kyle-term] hook server failed to start", e);
     }
     this.registerEvent(this.app.workspace.on("css-change", () => this.applyAppearance()));
+    // Re-measure cells once web fonts finish loading, or glyph spacing can be off.
+    void document.fonts?.ready.then(() => this.applyAppearance());
     this.registerView(VIEW_TYPE, (leaf) => new KyleTermView(leaf, this));
     this.addRibbonIcon("terminal", "Open kyle-term", () => void this.activateView());
     this.addCommand({ id: "open", name: "Open terminal", callback: () => void this.activateView() });
@@ -164,6 +166,16 @@ export default class KyleTermPlugin extends Plugin {
     return c;
   }
 
+  /** Obsidian's resolved monospace (code) font list, e.g. from Appearance → Monospace font. */
+  private readObsidianMono(): string {
+    const probe = document.body.createDiv();
+    probe.style.fontFamily = "var(--font-monospace)";
+    probe.style.display = "none";
+    const f = getComputedStyle(probe).fontFamily;
+    probe.remove();
+    return f;
+  }
+
   currentPalette(): Palette {
     return resolvePalette(this.settings.appearance, obsidianPalette((v) => this.readCssColor(v)));
   }
@@ -172,7 +184,7 @@ export default class KyleTermPlugin extends Plugin {
     const a = this.settings.appearance;
     return {
       theme: buildXtermTheme(this.currentPalette(), a.terminalOpacity),
-      fontFamily: a.fontFamily || DEFAULT_APPEARANCE.fontFamily,
+      fontFamily: resolveFontFamily(a.fontFamily, this.readObsidianMono()),
       fontSize: a.fontSize,
       webgl: shouldUseWebgl(a.terminalOpacity),
     };

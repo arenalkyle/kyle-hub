@@ -30,7 +30,8 @@ export class XtermSession implements TermLike {
       fontFamily: l.fontFamily,
       fontSize: l.fontSize,
       theme: l.theme,
-      allowTransparency: true,
+      // Transparency disables crisp (subpixel) text, so only enable it when the background is see-through.
+      allowTransparency: !l.webgl,
       cursorBlink: true,
       allowProposedApi: true,
       scrollback: 5000,
@@ -93,6 +94,7 @@ export class XtermSession implements TermLike {
     this.term.options.theme = l.theme;
     this.term.options.fontFamily = l.fontFamily;
     this.term.options.fontSize = this.zoom ?? l.fontSize;
+    this.term.options.allowTransparency = !l.webgl;
     this.syncWebgl();
     this.fit();
   }

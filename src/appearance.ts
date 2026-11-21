@@ -77,10 +77,20 @@ export const DEFAULT_FONT_FAMILY = "Consolas, 'Cascadia Mono', Menlo, 'DejaVu Sa
 export const MIN_FONT = 8;
 export const MAX_FONT = 32;
 
+/**
+ * Font family for xterm. Empty setting (or the old hard-coded default, from earlier saves)
+ * follows Obsidian's monospace font; anything else is the user's own font list.
+ */
+export function resolveFontFamily(setting: string, obsidianMono: string): string {
+  const s = setting.trim();
+  if (s && s !== DEFAULT_FONT_FAMILY) return s;
+  return obsidianMono.trim() || DEFAULT_FONT_FAMILY;
+}
+
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
   theme: THEME_FOLLOW,
   custom: structuredClone(PRESETS[0]!.palette),
-  fontFamily: DEFAULT_FONT_FAMILY,
+  fontFamily: "",
   fontSize: 14,
   bgImage: "",
   imageOpacity: 60,
