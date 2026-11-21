@@ -5,6 +5,7 @@ import { KyleTicketsSettingTab } from "./settings/SettingsTab";
 import { SetupModal } from "./settings/SetupModal";
 import { bootstrapFolder } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
+import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";
 import { IssueStore } from "./store/IssueStore";
 
 export default class KyleTicketsPlugin extends Plugin {
@@ -25,7 +26,7 @@ export default class KyleTicketsPlugin extends Plugin {
     this.addCommand({
       id: "new-issue",
       name: "New issue",
-      callback: () => new Notice("kyle-tickets: New issue is coming in 3.1"),
+      callback: () => this.openNewIssue(),
     });
     this.addSettingTab(new KyleTicketsSettingTab(this.app, this));
 
@@ -47,6 +48,11 @@ export default class KyleTicketsPlugin extends Plugin {
   async bootstrap(): Promise<void> {
     const { folder, prefix } = this.data.settings;
     await bootstrapFolder(this.app.vault.adapter, folder, prefix);
+  }
+
+  /** Opens the New issue window; `defaults` pre-fill status/project/parent. */
+  openNewIssue(defaults: NewIssueDefaults = {}): void {
+    new NewIssueModal(this, defaults).open();
   }
 
   async activateMainView(): Promise<void> {
