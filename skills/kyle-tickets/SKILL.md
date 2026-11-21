@@ -17,6 +17,7 @@ Tickets are Markdown files in a vault folder (usually `Tickets/`), managed by th
 6. Report progress with `kt comment <ID> --as <agent-name> "<text>"`. For longer text, pass `-` and pipe it on stdin.
 7. When the work is finished, run `kt set <ID> status "In Review" --as <agent-name>`. Never set Done or Canceled; the owner does that.
 8. Link a pull request with `kt pr <ID> <url> --as <agent-name>`.
+   Mark related issues with `kt relate <ID> <OTHER-ID>` (frontmatter `related: [TIX-7]`, shown symmetrically); `kt unrelate` removes it.
 
 ## Rules
 

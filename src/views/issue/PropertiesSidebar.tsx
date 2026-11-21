@@ -15,6 +15,7 @@ import { MilestonePicker } from "../components/pickers/MilestonePicker";
 import { PriorityPicker } from "../components/pickers/PriorityPicker";
 import { ProjectPicker } from "../components/pickers/ProjectPicker";
 import { StatusPicker } from "../components/pickers/StatusPicker";
+import { RelatedSection } from "./RelatedSection";
 
 export type PropKind = "status" | "priority" | "assignee" | "labels" | "project" | "milestone" | "due";
 
@@ -29,6 +30,9 @@ export interface PropertiesSidebarProps {
   /** Links a PR url; rejects with a user-facing message when invalid. */
   onLinkPr: (url: string) => Promise<void>;
   onUnlinkPr: (url: string) => void;
+  onOpenIssue: (id: string) => void;
+  onAddRelated: (otherId: string) => void;
+  onRemoveRelated: (otherId: string) => void;
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -128,7 +132,7 @@ function PullRequests({ urls, onLink, onUnlink }: { urls: readonly string[]; onL
   );
 }
 
-export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUpdate, onLinkPr, onUnlinkPr }: PropertiesSidebarProps) {
+export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUpdate, onLinkPr, onUnlinkPr, onOpenIssue, onAddRelated, onRemoveRelated }: PropertiesSidebarProps) {
   const def = settings.statuses.find((s) => s.name === issue.status);
   const project = issue.project ? fromLink(issue.project) : undefined;
   const projectDef = findProjectByLink(useProjects(), issue.project);
@@ -217,6 +221,8 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
           <Empty text="Add to project" />
         )}
       </Row>
+
+      <RelatedSection issue={issue} settings={settings} onOpenIssue={onOpenIssue} onAdd={onAddRelated} onRemove={onRemoveRelated} />
 
       <div className="kt-prop-group-title">Details</div>
       <TimeRow label="Created" value={issue.created} />

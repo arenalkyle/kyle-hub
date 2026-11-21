@@ -39,6 +39,7 @@ function fieldsFromFm(fm: Fields, fileName: string): Fields {
     due: str(fm.due),
     parent: str(fm.parent),
     pullRequests: strList(fm.pullRequests),
+    related: strList(fm.related),
     created: str(fm.created),
     updated: str(fm.updated),
     updatedBy: str(fm.updatedBy),
@@ -200,7 +201,7 @@ function serializeFrontmatterOnly(issue: Issue): string {
   const baseline = fieldsFromFm(fmToJs(raw.doc), issue.fileName);
   return syncFrontmatter(raw.doc, raw.frontmatterText, issueFields(issue), baseline, {
     priority: "none",
-  }, ["aliases", "tags"]);
+  }, ["aliases", "tags", "related"]);
 }
 
 /** Append a comment; returns the new file text. Pure: pass `now` explicitly. */
@@ -286,7 +287,7 @@ export function appendEvent(
 }
 
 export type IssuePatch = Partial<
-  Pick<Issue, "title" | "status" | "priority" | "tags" | "pullRequests" | "description" | "sortOrder">
+  Pick<Issue, "title" | "status" | "priority" | "tags" | "pullRequests" | "related" | "description" | "sortOrder">
 > & {
   assignee?: string | null;
   project?: string | null;
@@ -299,7 +300,7 @@ export type IssuePatch = Partial<
 
 /** Returns a new issue with fields changed, `updated` bumped and `aliases` synced to `title`. */
 export function applyPatch(issue: Issue, patch: IssuePatch, now: Date): Issue {
-  const next: Issue = { ...issue, tags: [...issue.tags], pullRequests: [...issue.pullRequests] };
+  const next: Issue = { ...issue, tags: [...issue.tags], pullRequests: [...issue.pullRequests], related: [...issue.related] };
   const bag = next as unknown as Fields;
   for (const [k, v] of Object.entries(patch)) {
     if (v === undefined) continue;

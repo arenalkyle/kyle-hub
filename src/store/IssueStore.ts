@@ -13,6 +13,7 @@ import {
 import { fromLink } from "../core/links";
 import { issueInMilestone, milestoneAfterProjectChange, reorderMilestones, validateMilestoneName } from "../core/milestones";
 import { addReplyText, editCommentIssueText, patchIssueText } from "../core/ops";
+import { addRelatedList, removeRelatedLists } from "../core/related";
 import { parsePrUrl, prLabelOfUrl } from "../core/pr";
 import { clearUnlinked, markUnlinked } from "../core/prMatch";
 import { parseProject, serializeProject } from "../core/projectFile";
@@ -210,6 +211,26 @@ export class IssueStore {
     this.setIssue(path, issue, true);
     this.emit();
     return issue;
+  }
+
+  /** Adds `other` to this issue's `related` (only this file is written); logs "added related ID". */
+  async addRelated(id: string, other: string, author?: string): Promise<Issue> {
+    const list = addRelatedList(this.requireIssue(id), other, this.getIssues());
+    return list ? this.updateIssue(id, { related: list }, author) : this.requireIssue(id);
+  }
+
+  /** Removes the relation from whichever file(s) hold it; logs "removed related ID" in each. */
+  async removeRelated(id: string, other: string, author?: string): Promise<void> {
+    const a = this.requireIssue(id);
+    const b = this.getIssue(other);
+    const lists = b ? removeRelatedLists(a, b) : a.related.includes(other) ? [{ id, related: a.related.filter((x) => x !== other) }] : [];
+    for (const l of lists) await this.updateIssue(l.id, { related: l.related }, author);
+  }
+
+  private requireIssue(id: string): Issue {
+    const i = this.getIssue(id);
+    if (!i) throw new Error(`Issue ${id} not found.`);
+    return i;
   }
 
   /** Adds a GitHub PR url to `pullRequests` (canonicalized, de-duplicated) and logs "linked PR owner/repo#N". */

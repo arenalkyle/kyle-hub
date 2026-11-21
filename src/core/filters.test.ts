@@ -9,7 +9,7 @@ const settings = defaultSettings();
 function mk(id: string, status: string, over: Partial<Issue> = {}): Issue {
   return {
     fileName: `${id}.md`, id, title: id, aliases: [], status, priority: "none", tags: [],
-    pullRequests: [], description: "", feed: [], raw: {} as Issue["raw"], ...over,
+    pullRequests: [], related: [], description: "", feed: [], raw: {} as Issue["raw"], ...over,
   };
 }
 const ids = (l: Issue[]) => l.map((i) => i.id);

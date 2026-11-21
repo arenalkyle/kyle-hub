@@ -78,6 +78,7 @@ milestone: Phase 1
 tags: [bug, frontend]
 due: 2026-12-01
 parent: "[[TIX-3]]"
+related: [TIX-7]
 pullRequests:
   - https://github.com/owner/repo/pull/4
 created: 2026-11-21T10:04:00
@@ -184,6 +185,7 @@ Settings (folder, prefix, display name for `@author`, statuses, default status, 
 
 ### Pull requests
 - `pullRequests:` holds PR URLs. The properties sidebar lists them (repo#number, title, state); cards/rows show a PR chip with state color.
+- `related:` lists issue IDs (omitted when empty). Display is symmetric (own list plus issues listing this one); adding writes only the current file, removing edits whichever file holds it. Sidebar "Related" section; `kt relate` / `kt unrelate`.
 - Live state via the `gh` CLI (`gh pr view <url> --json number,title,state,isDraft,url`; `repository` is not requested because gh 2.97 rejects it, owner/repo come from the URL; github.com only; optional `ghPath` setting), run with `child_process.execFile`. Cached in plugin data; refreshed when an issue opens and every N minutes (setting). Max 4 concurrent `gh` calls, 1-minute tick judged against the refresh setting. If `gh` is missing/unauthenticated, PRs show as plain links, `gh` calls stop until **Re-check**, and settings shows why.
 - Auto-link: for repos listed in settings, `gh pr list --repo <r> --state all --search "<PREFIX>-" --json ...` finds PRs whose title contains an issue ID, plus an open-PR list matched on branch names, and links them via `store.linkPr` as author `github`. Matching is exact (`TIX-1` does not match `TIX-12`). The last sync result lives in plugin data; a manual re-link clears an unlink block.
 

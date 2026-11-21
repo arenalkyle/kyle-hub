@@ -75,6 +75,8 @@ export interface Issue {
   due?: string;
   parent?: string;
   pullRequests: string[];
+  /** IDs of related issues listed by this issue (display is symmetric; see `relatedIds`). */
+  related: string[];
   created?: string;
   updated?: string;
   updatedBy?: string;
