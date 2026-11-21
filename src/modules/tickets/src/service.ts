@@ -48,7 +48,7 @@ export function createTicketService(store: IssueStore, flood: () => FloodSetting
       if (!actor.agent) return store.createIssue(input, actor.author);
       const source = sourceOf(actor);
       const plan = planAgentCreate(
-        { title: input.title, type: input.type, repo: input.repo, tags: input.tags },
+        { title: input.title, type: input.type, repo: input.repo, tags: input.tags, fingerprint: input.fingerprint },
         { statuses: store.getStatuses(), issues: store.getIssues(), source, flood: flood() },
       );
       if (!plan.ok) throw new AgentRefusal(plan.message, plan.exitCode);

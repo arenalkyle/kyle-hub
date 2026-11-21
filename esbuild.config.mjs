@@ -32,7 +32,7 @@ const options = {
   ],
   logLevel: "info",
   sourcemap: watch ? "inline" : false,
-  loader: { ".css": "text" },
+  loader: { ".css": "text", ".md": "text" },
   // React picks its build from NODE_ENV at runtime; Obsidian leaves it unset, so pin production.
   define: watch ? {} : { "process.env.NODE_ENV": "\"production\"" },
   plugins: [

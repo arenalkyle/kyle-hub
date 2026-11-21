@@ -15,8 +15,9 @@ import {
 import { DEFAULT_FLOOD } from "./core/domain/flood";
 import { termModule, termSettings } from "./modules/term";
 import { ticketsModule, ticketsSettings } from "./modules/tickets";
+import { brainModule, brainSettings } from "./modules/brain";
 
-const MODULES: HubModule[] = [ticketsModule, termModule];
+const MODULES: HubModule[] = [ticketsModule, termModule, brainModule];
 const MODULE_LABELS: Record<ModuleId, string> = {
   core: "Core (always on)",
   tickets: "Tickets",
@@ -36,7 +37,7 @@ export default class KyleHubPlugin extends Plugin {
     parts.settings.register({ id: "core", defaults: { repos: {}, flood: { ...DEFAULT_FLOOD }, launch: { maxConcurrentRuns: 3, defaultModel: "sonnet" } } });
     parts.settings.register(ticketsSettings);
     parts.settings.register(termSettings);
-    parts.settings.register({ id: "brain", defaults: {}, enabledByDefault: false });
+    parts.settings.register(brainSettings);
     parts.settings.register({ id: "commandCenter", defaults: {}, enabledByDefault: false });
     parts.settings.load(await this.loadData());
     this.hub = { app: this.app, ...parts, save: () => this.saveData(parts.settings.all) };

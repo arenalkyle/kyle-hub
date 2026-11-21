@@ -6,6 +6,7 @@ import { defaultSchtasks, runDoctorChecks, type SchtasksRunner } from "../../../
 import { buildSchtasksArgs, buildTaskXml, formatCommand, TASK_NAME } from "../../../src/core/ops/schedule";
 import { EXIT, KtError, discoverFolder, run as runTickets, type Io } from "../tickets/cli";
 import { serviceFor } from "../logs/cli";
+import { readHubData, runBrainCheck } from "../brain/cli";
 
 export interface OpsDeps {
   /** Runs schtasks.exe; the default spawns the real binary. Tests inject a fake. */
@@ -50,7 +51,15 @@ export async function runMaintain(io: Io): Promise<number> {
     io.out(`tickets expire skipped: ${(e as Error).message}`);
     return EXIT.ok;
   }
-  return runTickets(["expire", "--dir", folder], io);
+  const expire = runTickets(["expire", "--dir", folder], io);
+  if (readHubData(io.env).autoFindings) {
+    try {
+      await runBrainCheck(["--tickets", "--dir", folder], io);
+    } catch (e) {
+      io.out(`brain findings skipped: ${(e as Error).message}`);
+    }
+  }
+  return expire;
 }
 
 /** `kh schedule install|uninstall|status`. `install` prints the exact schtasks command and only registers with --yes. */

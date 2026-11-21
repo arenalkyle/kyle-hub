@@ -147,8 +147,8 @@ export interface RetroService {
   subscribe(cb: () => void): () => void;
 }
 
-/** Stub service interface; the brain module fills it in (7.x). */
-export interface BrainService {}
+import type { BrainService } from "./brain/service";
+export type { BrainService };
 
 /** Typed map of cross-module services. A module's service is absent while that module is off. */
 export interface Services {

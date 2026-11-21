@@ -1,5 +1,6 @@
 import { runImport } from "./commands/import/linear";
 import { runLogs } from "./commands/logs/cli";
+import { runBrain } from "./commands/brain/cli";
 import { runRetro } from "./commands/retro/cli";
 import { defaultOpsDeps, runDoctor, runMaintain, runSchedule } from "./commands/ops/cli";
 import { EXIT, KtError, run as runTickets, type Io } from "./commands/tickets/cli";
@@ -11,6 +12,8 @@ const MAIN = [
   "  import linear --team <key> [--project <name>] [--dry-run] [--update]",
   "  logs <ingest|runs|show|sweep> [...]   transcript ingest, run index, retention (kh logs --help)",
   "  retro detect [--profile home|work] [--json]   dry-run retro clusters (writes nothing)",
+  "  lint docs [--repo <key>|--vault] [--json]     validate doc frontmatter and sections; exit 1 on errors",
+  "  brain check [--repo <key>] [--json] [--tickets]   lint + staleness per repo; --tickets files findings",
   "  maintain                            ingest -> sweep -> tickets expire (run by the scheduled task)",
   "  schedule <install|uninstall|status> [--yes]   Task Scheduler task kyle-hub-maintain (no admin)",
   "  doctor                              cleanupPeriodDays, hooks, scheduled task, log dirs",
@@ -34,6 +37,14 @@ export async function runKh(argv: string[], io: Io, transport?: LinearTransport)
   if (cmd === "logs") {
     try {
       return await runLogs(argv.slice(1), io);
+    } catch (e) {
+      io.err(`kh: ${(e as Error).message}`);
+      return e instanceof KtError ? e.code : EXIT.remote;
+    }
+  }
+  if (cmd === "lint" || cmd === "brain") {
+    try {
+      return await runBrain(cmd, argv.slice(1), io);
     } catch (e) {
       io.err(`kh: ${(e as Error).message}`);
       return e instanceof KtError ? e.code : EXIT.remote;

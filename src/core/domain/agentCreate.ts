@@ -9,6 +9,8 @@ export interface AgentCreateInput {
   type?: TicketType;
   repo?: string;
   tags?: string[];
+  /** Overrides the title-derived fingerprint (brain findings use `brain:<check>:<doc>`). */
+  fingerprint?: string;
 }
 
 export interface AgentCreateContext {
@@ -33,7 +35,7 @@ export function planAgentCreate(input: AgentCreateInput, ctx: AgentCreateContext
   if (!forced.ok) return forced;
   const labels = checkAgentLabels(input.tags ?? []);
   if (!labels.ok) return labels;
-  const fingerprint = fingerprintOf({ type: input.type ?? "task", repo: input.repo, title: input.title });
+  const fingerprint = input.fingerprint ?? fingerprintOf({ type: input.type ?? "task", repo: input.repo, title: input.title });
   const base = { ok: true as const, status: forced.status, source: ctx.source, fingerprint };
   const dup = findDuplicate(ctx.issues, ctx.statuses, fingerprint);
   if (dup) return { ...base, duplicate: dup };

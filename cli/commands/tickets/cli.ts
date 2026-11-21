@@ -384,7 +384,7 @@ function cmdNew(args: string[], io: Io): void {
     parent: { type: "string" }, assignee: { type: "string" }, due: { type: "string" }, label: { type: "string", multiple: true },
     description: { type: "string" }, as: { type: "string" },
     type: { type: "string" }, repo: { type: "string" }, "blocked-by": { type: "string", multiple: true },
-    model: { type: "string" }, agent: { type: "boolean" },
+    model: { type: "string" }, agent: { type: "boolean" }, fingerprint: { type: "string" },
   });
   if (positionals.length !== 1 || positionals[0]!.trim() === "") throw usage('Expected exactly one title: kt new "Title" [options]');
   const ctx = loadCtx(discoverFolder(str(v.dir), io));
@@ -418,7 +418,7 @@ function cmdNew(args: string[], io: Io): void {
   if (isAgentMode(io.env, v.agent === true)) {
     const source = agentSource(io.env);
     const plan = planAgentCreate(
-      { title: input.title, type: input.type, repo: input.repo, tags: input.tags },
+      { title: input.title, type: input.type, repo: input.repo, tags: input.tags, fingerprint: str(v.fingerprint) },
       { statuses: ctx.settings.statuses, issues: loadIssues(ctx), source, flood: ctx.flood },
     );
     if (!plan.ok) throw new KtError(plan.exitCode, plan.message);
