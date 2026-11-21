@@ -80,6 +80,17 @@ function IssueApp({ path, leaf }: IssueAppProps) {
     [plugin, id],
   );
 
+  const relate = useCallback(
+    (other: string, remove: boolean) => {
+      const op = remove ? plugin.store.removeRelated(id, other) : plugin.store.addRelated(id, other);
+      void op.catch((e) => {
+        console.error("kyle-tickets: related failed", e);
+        new Notice("Could not update related issues.");
+      });
+    },
+    [plugin, id],
+  );
+
   // Refresh live PR state when the page opens or the linked PRs change (stale entries only).
   const prKey = issue?.pullRequests.join("\n") ?? "";
   useEffect(() => {
@@ -200,7 +211,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
             />
           </div>
         </div>
-        {sidebarOpen && <PropertiesSidebar issue={issue} settings={settings} open={open} onOpen={openPicker} onClose={closePicker} onUpdate={update} onLinkPr={linkPr} onUnlinkPr={unlinkPr} />}
+        {sidebarOpen && <PropertiesSidebar issue={issue} settings={settings} open={open} onOpen={openPicker} onClose={closePicker} onUpdate={update} onLinkPr={linkPr} onUnlinkPr={unlinkPr} onOpenIssue={(i) => plugin.openIssue(i)} onAddRelated={(o) => relate(o, false)} onRemoveRelated={(o) => relate(o, true)} />}
       </div>
     </div>
   );

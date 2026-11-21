@@ -96,6 +96,7 @@ export function issueToJson(i: Issue): Record<string, unknown> {
     due: i.due ?? null,
     parent: i.parent ? fromLink(i.parent) : null,
     pullRequests: i.pullRequests,
+    related: i.related,
     created: i.created ?? null,
     updated: i.updated ?? null,
     updatedBy: i.updatedBy ?? null,

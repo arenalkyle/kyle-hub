@@ -35,5 +35,7 @@ export function diffToEvents(before: Issue, after: Issue, author: string, now: D
   set("due", before.due, after.due);
   for (const t of after.tags) if (!before.tags.includes(t)) push(`added label: ${t}`);
   for (const t of before.tags) if (!after.tags.includes(t)) push(`removed label: ${t}`);
+  for (const t of after.related) if (!before.related.includes(t)) push(`added related ${t}`);
+  for (const t of before.related) if (!after.related.includes(t)) push(`removed related ${t}`);
   return out;
 }

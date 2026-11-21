@@ -8,6 +8,7 @@ import { appendEvent, parseIssue } from "../src/core/issueFile";
 import type { IssuePatch } from "../src/core/issueFile";
 import { fromLink } from "../src/core/links";
 import { milestoneAfterProjectChange } from "../src/core/milestones";
+import { addRelatedList, relatedIds, removeRelatedLists } from "../src/core/related";
 import { addReplyText, commentIssueText, issueToJson, linkPrText, patchIssueText } from "../src/core/ops";
 import { parseProject } from "../src/core/projectFile";
 import type { Issue, Priority, Project, Settings } from "../src/core/types";
@@ -295,6 +296,7 @@ Commands:
   list                   List issues
   show <ID>              Show an issue
   pr <ID> <url>          Link a GitHub pull request
+  relate <ID> <OTHER>    Mark two issues as related (unrelate removes it)
 
 Global options:
   --dir <path>           Tickets folder (else KT_DIR, else search upward for ${MARKER})
@@ -319,6 +321,8 @@ Use "none" to clear assignee, project, milestone, due or parent.`,
   list: "Usage: kt list [--status <name>] [--project <name>] [--assignee <name>] [--label <name>] [--json]",
   show: "Usage: kt show <ID> [--json]",
   pr: "Usage: kt pr <ID> <github-pr-url> [--as <author>]",
+  relate: "Usage: kt relate <ID> <OTHER-ID> [--as <author>]",
+  unrelate: "Usage: kt unrelate <ID> <OTHER-ID> [--as <author>]",
 };
 
 // ---- commands ------------------------------------------------------------
@@ -489,6 +493,31 @@ function cmdPr(args: string[], io: Io): void {
   io.out(`${issue.id} linked PR`);
 }
 
+function cmdRelate(args: string[], io: Io, remove: boolean): void {
+  const { values: v, positionals } = parse(args, { as: { type: "string" } });
+  const name = remove ? "unrelate" : "relate";
+  if (positionals.length !== 2) throw usage(`Usage: kt ${name} <ID> <OTHER-ID>`);
+  const ctx = loadCtx(discoverFolder(str(v.dir), io));
+  const { issue } = findIssue(ctx, positionals[0]);
+  const { issue: other } = findIssue(ctx, positionals[1]);
+  if (issue.id === other.id) throw invalid("An issue cannot be related to itself.");
+  const who = authorOf(ctx, io, v.as);
+  const all = loadIssues(ctx);
+  const changes = remove
+    ? removeRelatedLists(issue, other)
+    : [addRelatedList(issue, other.id, all)].flatMap((related) => (related ? [{ id: issue.id, related }] : []));
+  if (changes.length === 0) {
+    io.out(`${issue.id} ${remove ? "not related to" : "already related to"} ${other.id}`);
+    return;
+  }
+  for (const c of changes) {
+    const target = all.find((i) => i.id === c.id)!;
+    const file = path.join(ctx.issuesDir, target.fileName);
+    atomicWrite(file, patchIssueText(fs.readFileSync(file, "utf8"), target.fileName, { related: c.related, updatedBy: who }, who, io.now()));
+  }
+  io.out(`${issue.id} ${remove ? "unrelated from" : "related to"} ${other.id}`);
+}
+
 const byId = (a: Issue, b: Issue): number => a.id.localeCompare(b.id, undefined, { numeric: true });
 
 function cmdList(args: string[], io: Io): void {
@@ -539,7 +568,7 @@ function cmdShow(args: string[], io: Io): void {
   }
   const rows: [string, unknown][] = [
     ["Status", j.status], ["Priority", j.priority], ["Assignee", j.assignee], ["Project", j.project], ["Milestone", j.milestone],
-    ["Labels", i.tags.join(", ") || null], ["Due", j.due], ["Parent", j.parent], ["PRs", i.pullRequests.join(", ") || null],
+    ["Labels", i.tags.join(", ") || null], ["Due", j.due], ["Parent", j.parent], ["PRs", i.pullRequests.join(", ") || null], ["Related", relatedIds(i, loadIssues(ctx)).join(", ") || null],
     ["Created", j.created], ["Updated", j.updated],
   ];
   io.out(`${i.id}  ${i.title}`);
@@ -555,7 +584,7 @@ function cmdShow(args: string[], io: Io): void {
 }
 
 const COMMANDS: Record<string, (args: string[], io: Io) => void> = {
-  new: cmdNew, set: cmdSet, comment: cmdComment, list: cmdList, show: cmdShow, pr: cmdPr,
+  new: cmdNew, set: cmdSet, comment: cmdComment, list: cmdList, show: cmdShow, pr: cmdPr, relate: (a, io) => cmdRelate(a, io, false), unrelate: (a, io) => cmdRelate(a, io, true),
 };
 
 /** Runs the CLI; returns the process exit code. */

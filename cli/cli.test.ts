@@ -183,7 +183,7 @@ describe("list and show", () => {
     const j = JSON.parse(out[0]!) as Record<string, unknown>;
     expect(Object.keys(j)).toEqual([
       "id", "title", "status", "priority", "assignee", "project", "milestone", "labels", "due", "parent",
-      "pullRequests", "created", "updated", "updatedBy", "description", "feed",
+      "pullRequests", "related", "created", "updated", "updatedBy", "description", "feed",
     ]);
     expect(j.project).toBe("Web");
     expect(j.labels).toEqual(["bug"]);

@@ -45,6 +45,7 @@ milestone: Phase 1
 tags: [bug, frontend]
 due: 2026-12-01
 parent: "[[${P}-3]]"
+related: [${P}-7]
 pullRequests:
   - https://github.com/owner/repo/pull/4
 created: 2026-11-21T10:04:00
@@ -96,6 +97,7 @@ kt comment ${P}-12 --as claude --reply-to c1a2b3 "Thanks"   # reply in a thread 
 kt list --status Todo --project Website --json
 kt show ${P}-12
 kt pr ${P}-12 https://github.com/owner/repo/pull/4 --as claude
+kt relate ${P}-12 ${P}-7 --as claude   # related issues (shown symmetrically); kt unrelate removes
 \`\`\`
 
 Use \`none\` to clear assignee, project, milestone, due or parent. Exit codes: 0 ok, 1 usage, 2 not found, 3 validation (the message lists valid values).
