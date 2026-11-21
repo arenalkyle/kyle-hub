@@ -5,7 +5,8 @@ import type { Settings } from "./core/types";
 import { mergeData, type PluginData } from "./data";
 import { KyleTicketsSettingTab } from "./settings/SettingsTab";
 import { SetupModal } from "./settings/SetupModal";
-import { bootstrapFolder } from "./settings/bootstrap";
+import { renderAgentsDoc } from "./core/agentsDoc";
+import { bootstrapFolder, syncAgentsDoc } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
 import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";
 import { IssueStore } from "./store/IssueStore";
@@ -57,6 +58,7 @@ export default class KyleTicketsPlugin extends Plugin {
     this.addSettingTab(new KyleTicketsSettingTab(this.app, this));
 
     this.app.workspace.onLayoutReady(() => {
+      if (this.data.setupDone) void this.syncAgents();
       void this.store.start().then(() => {
         void this.prs.refreshAll();
         void this.autoLinker.tick();
@@ -121,11 +123,28 @@ export default class KyleTicketsPlugin extends Plugin {
 
   async savePluginData(): Promise<void> {
     await this.saveData(this.data);
+    void this.syncAgents();
+  }
+
+  private lastAgentsKey = "";
+
+  /** Regenerates `<folder>/AGENTS.md` (no-op when unchanged or user-edited). */
+  async syncAgents(): Promise<void> {
+    if (!this.data.setupDone && !(await this.app.vault.adapter.exists(`${this.data.settings.folder}/Issues`))) return;
+    const key = renderAgentsDoc(this.data.settings) + this.data.settings.folder;
+    if (key === this.lastAgentsKey) return;
+    this.lastAgentsKey = key;
+    try {
+      await syncAgentsDoc(this.app.vault.adapter, this.data.settings);
+    } catch (e) {
+      console.error("kyle-tickets: could not write AGENTS.md", e);
+    }
   }
 
   async bootstrap(): Promise<void> {
     const { folder, prefix } = this.data.settings;
     await bootstrapFolder(this.app.vault.adapter, folder, prefix);
+    await this.syncAgents();
   }
 
   /** Opens the New issue window; `defaults` pre-fill status/project/parent. */
