@@ -1,5 +1,6 @@
 import { DEFAULT_STATUSES, PRIORITY_LABELS, PRIORITY_ORDER } from "./defaults";
 import type { CompletedMode, DisplayState, GroupBy, OrderBy } from "./display";
+import { applyFilters, type Filter } from "./filters";
 import { fromLink } from "./links";
 import type { Issue, Project, Settings, StatusDef } from "./types";
 
@@ -294,12 +295,13 @@ export function buildView(
   projects: readonly Project[],
   settings: Settings,
   display: DisplayState,
-  filters: IssueFilter | undefined,
+  filters: IssueFilter | readonly Filter[] | undefined,
   now: Date,
 ): BuiltView {
   let list = selectView(issues, viewId, projects, settings);
   list = filterCompleted(list, display.completed, now, settings);
-  if (filters) list = list.filter(filters);
+  if (typeof filters === "function") list = list.filter(filters);
+  else if (filters) list = applyFilters(list, filters, now, settings);
   const subCounts = display.showSubIssues ? new Map<string, number>() : subIssueCounts(list);
   if (!display.showSubIssues) list = hideSubIssues(list);
   const opts: GroupOptions = {
