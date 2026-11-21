@@ -166,3 +166,14 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 6. Set "gh path" to a bad value → Sync now → red "Error: …" status. Restore it.
 7. Turn Auto-link off → the background interval no longer links anything.
 8. Afterwards, close/delete the test PR and branch on GitHub.
+
+## 9.1 kt CLI — LOCK-27
+
+1. In the repo: `npm run build && npm link`, then `where kt` → shows the `kt.cmd` shim. `kt --help` and `kt new --help` print usage.
+2. With Obsidian open: `cd C:\Development\locked-away` → `kt new "CLI test" --status Todo` → prints the next ID; the issue appears in the main view within about a second.
+3. `kt set <ID> status "In Progress" --as claude` → the issue page shows exactly one `@claude` event and no extra `@external`/duplicate line (plugin double-log guard).
+4. `kt comment <ID> --as claude "hello"` → a comment card appears. `echo "from stdin" | kt comment <ID> --as claude -` also works.
+5. `kt show <ID>`, `kt list --status Todo --json`, `kt set <ID> labels +bug`, `kt pr <ID> https://github.com/o/r/pull/1` → PR chip and "linked PR" event appear.
+6. `kt set <ID> status Bogus` → exit code 3 with the valid list; `kt show TIX-9999` → exit code 2.
+7. Close Obsidian, `kt new "offline"`, reopen, create an issue from the UI → IDs don't collide.
+8. Delete the test tickets you created.
