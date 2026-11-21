@@ -596,7 +596,7 @@
 .kh-term-draft-diff { max-height: 300px; overflow: auto; white-space: pre; font-family: var(--font-monospace); font-size: var(--font-smallest); padding: 8px; background: var(--background-secondary); border-radius: 4px; }
 
 /* Command center (kh-command-center-) */
-.kh-command-center { padding: 16px 20px; max-width: 1100px; margin: 0 auto; }
+.kh-command-center { padding: 16px 24px; }
 .kh-command-center-title { margin: 0 0 16px; font-size: var(--font-ui-large); }
 .kh-command-center h4 { margin: 0 0 8px; font-size: var(--font-ui-small); font-weight: var(--font-semibold); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .kh-command-center-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -606,13 +606,13 @@
 .kh-command-center-tile-detail { font-size: var(--font-ui-smaller); color: var(--text-muted); }
 .kh-command-center-tile-disabled .kh-command-center-tile-value,
 .kh-command-center-tile-error .kh-command-center-tile-value { color: var(--text-faint); font-weight: 400; font-size: var(--font-ui-medium); }
-.kh-command-center-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
+.kh-command-center-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; align-items: start; }
 .kh-command-center-card { background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 12px 14px; margin: 0; }
 .kh-command-center-card .kh-usage-tile { margin: 0; }
 .kh-command-center-list { margin: 0; padding: 0; list-style: none; }
 .kh-command-center-list li { padding: 5px 0; border-top: 1px solid var(--background-modifier-border); font-size: var(--font-ui-small); }
 .kh-command-center-list li:first-child { border-top: none; }
-.kh-command-center-row { cursor: default; }
+.kh-command-center-row { cursor: pointer; }
 .kh-command-center-row:hover { color: var(--text-accent); }
 .kh-command-center-run { display: flex; align-items: center; gap: 8px; }
 .kh-command-center-run-id { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-monospace); font-size: var(--font-ui-smaller); }

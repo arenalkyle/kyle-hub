@@ -45,6 +45,8 @@ export interface TicketService {
   userName(): string;
   /** Called after every index change; returns an unsubscribe function. */
   subscribe(cb: () => void): () => void;
+  /** Opens the ticket in the UI (absent when no UI host is attached). */
+  open?(id: string, newTab?: boolean): void;
 }
 
 /** Agent state of a terminal session. `exited` covers both an ended process and a restored (stopped) row. */

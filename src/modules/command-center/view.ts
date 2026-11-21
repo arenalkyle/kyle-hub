@@ -106,7 +106,10 @@ export class CommandCenterView extends ItemView {
 
     this.paintSection(grid, "Open proposals", m.proposals, (list, rows) => {
       if (rows.length === 0) list.createEl("li", { text: "None" });
-      for (const p of rows) list.createEl("li", { cls: "kh-command-center-row", text: `${p.id} · ${p.title}` });
+      for (const p of rows) {
+        const li = list.createEl("li", { cls: "kh-command-center-row", text: `${p.id} · ${p.title}` });
+        li.addEventListener("click", (e) => this.hub.services.get("tickets")?.open?.(p.id, e.ctrlKey || e.metaKey));
+      }
     });
 
     const spark = grid.createDiv({ cls: "kh-command-center-spend kh-command-center-card" });

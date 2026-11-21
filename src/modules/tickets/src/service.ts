@@ -39,7 +39,7 @@ const refuseIfAgent = (r: { ok: true } | { ok: false; exitCode: number; message:
 };
 
 /** `TicketService` over `IssueStore`, which stays the only writer. `actor.agent` applies the same gates as `kh`. */
-export function createTicketService(store: IssueStore, flood: () => FloodSettings = () => DEFAULT_FLOOD, user: () => string = () => "me"): TicketService {
+export function createTicketService(store: IssueStore, flood: () => FloodSettings = () => DEFAULT_FLOOD, user: () => string = () => "me", open?: (id: string, newTab?: boolean) => void): TicketService {
   const sourceOf = (actor: TicketActor): `agent:${string}` => `agent:${actor.author ?? "session"}`;
   return {
     get: (id) => store.getIssue(id),
@@ -81,5 +81,6 @@ export function createTicketService(store: IssueStore, flood: () => FloodSetting
     },
     userName: () => user().replace(/^@/, ""),
     subscribe: (cb) => store.on("change", cb),
+    ...(open ? { open } : {}),
   };
 }
