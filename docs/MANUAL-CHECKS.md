@@ -118,3 +118,14 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 6. In a terminal, append `### @claude · 2026-11-21 12:00` plus a body to the ticket file → appears on the page within about a second.
 7. Issue with 50+ feed entries → "Show earlier" button appears; scrolling stays smooth.
 8. Description editor and comment box look Obsidian-native in light and dark themes (Markdown highlighting, no console errors about duplicate CodeMirror instances).
+
+## 7.1 Project pages — LOCK-23
+
+1. Sidebar → **+** next to Projects → create "Website" with icon, color, status and target date → it appears in the sidebar and `Projects/Website.md` exists.
+2. Click it → project page in the main view content area: edit title, description, status, lead, target date, color and icon inline. Progress bar = completed / (total − canceled). "View issues" shows its issue list; "Project page" goes back.
+3. Rename it to "Web" via the title → file renamed; an issue's `project:` reads `[[Web]]` (try with Obsidian's "Automatically update internal links" both on and off).
+4. "…" → Delete, confirm → file trashed; its issues lose `project` (and `milestone`) with activity lines.
+5. Open a project file from the file explorer → project page. "…" → Open as Markdown → raw file; header button "Open in kyle-tickets view" switches back.
+6. On an issue page, click the breadcrumb project → project page opens.
+7. Set a project to Completed or Canceled → it moves under "Archived" in the sidebar. Sidebar shows icons and colors, ordered by status then name; status icons are Linear-style (dashed, empty, half, pause, check, x).
+8. Invalid or duplicate names (`a/b`, an existing name) → notice; nothing created or renamed.
