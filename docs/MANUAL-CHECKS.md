@@ -107,3 +107,14 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 9. Restart Obsidian with an issue tab open → it reopens as the issue page (a tab forced to Markdown also reopens as the issue page).
 10. With the page open, edit `priority:` in the raw file in another pane → the sidebar updates within about a second.
 11. With another plugin that patches leaves (e.g. Kanban) installed, disable and re-enable kyle-tickets → files open normally while disabled, issue page again after re-enabling.
+
+## 6.2 Issue page description, sub-issues, activity and comments — LOCK-22
+
+1. Open an issue, click the description, type a few lines including `[[SomeNote]]`, click away → it renders and the link opens the note. `Esc` and `Ctrl+Enter` also save. Raw file: frontmatter and `## Activity` unchanged, `updated` bumped.
+2. Empty description shows a muted "Add description…" placeholder. Embeds, tasks and code blocks render.
+3. `C` on the issue page (or "+ Add sub-issue") opens New issue with the parent preset. Add two sub-issues → listed with "0/2"; change one's status from its icon → count updates. Clicking a sub-issue opens it.
+4. Post a multi-line comment with a code block and a line starting with `### ` via `Ctrl+Enter`, then another via the button → each shows as a card (avatar initial, rendered Markdown, full time on hover). Raw file shows `### @<name> · <time>` with the body's `###` line escaped as `\###`.
+5. Change status or add a label from the sidebar → feed shows "@kyle changed status from Todo to In Progress"-style lines.
+6. In a terminal, append `### @claude · 2026-11-21 12:00` plus a body to the ticket file → appears on the page within about a second.
+7. Issue with 50+ feed entries → "Show earlier" button appears; scrolling stays smooth.
+8. Description editor and comment box look Obsidian-native in light and dark themes (Markdown highlighting, no console errors about duplicate CodeMirror instances).
