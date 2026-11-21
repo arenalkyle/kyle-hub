@@ -143,3 +143,15 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 9. New issue window: pick a project → the Milestone picker lists only that project's milestones.
 10. Open the project file from the file explorer → same milestones and issues.
 11. Main view List/Board/Display/Filter behave exactly as before (IssueCollection refactor; collapsed groups still remembered).
+
+## 8.1 Live pull request status — LOCK-25
+
+1. Settings → kyle-tickets → GitHub shows "gh 2.x — logged in as <user>"; **Re-check** refreshes it.
+2. Issue page → Pull requests → **Link PR** → paste a real PR URL (a `/files` suffix is fine) → within a few seconds it shows `owner/repo#N · Title` with a state badge. Check Open (green), Draft (gray), Merged (purple), Closed (red) where you have examples (public PRs on e.g. github.com/cli/cli work too).
+3. Clicking the PR opens it in the browser; a "linked PR owner/repo#N" line appears in Activity.
+4. Paste an invalid or non-github.com URL → inline error, nothing linked.
+5. ✕ unlinks ("unlinked PR" event). Relinking the same PR doesn't duplicate it.
+6. Display → turn on "Pull requests" → list rows and board cards show a PR icon colored by the best state (merged > open > draft > closed); a count only with 2+ PRs.
+7. Add a URL to `pullRequests:` in frontmatter by hand → live state appears.
+8. Change the refresh interval (1–1440 min) → re-opening an issue page refreshes state; open PRs refresh in the background.
+9. Set "gh path" to `C:\nope\gh.exe` (or take gh off PATH) → Re-check → reason shown in red; PRs show as plain `owner/repo#N` links; no console error spam. Restore → Re-check → live state returns.
