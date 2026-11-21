@@ -15,12 +15,14 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 
 - **Also in review**: Phase 3.2 (LOCK-48) built locally: Triage view (`j k Enter a r d u`), type chip + Display type option, new fields in the properties sidebar, Done gate (`plugin.updateIssue`), generated `Triage/Queue/Proposals/Blocked.base`. Not pushed. `npm run smoke:triage` needs a manual run in a throwaway vault.
 
+- **Also in review**: Phase 4.1 (LOCK-49) built locally: `LogService` in `src/core/logs/` (incremental transcript ingest, derived redacted records, hook spool merge), `kh logs ingest`. Not pushed. Not yet registered on the hub; no real-log run in the repo (manual checklist in the ticket).
+
 | Phase | Sub-phases | Ticket | Model | State |
 |---|---|---|---|---|
 | 1 Foundation | 1.1 · 1.2 | LOCK-43 · LOCK-44 | S · S | 1.1 · 1.2 in review |
 | 2 Term + cutover | 2.1 · 2.2 | LOCK-45 · LOCK-46 | S · H | 2.1 · 2.2 in review |
 | 3 Schema + triage | 3.1 · 3.2 | LOCK-47 · LOCK-48 | H · S | 3.1 in review · 3.2 not started |
-| 4 Logs | 4.1 · 4.2 | LOCK-49 · LOCK-50 | H · H | Not started |
+| 4 Logs | 4.1 · 4.2 | LOCK-49 · LOCK-50 | H · H | 4.1 in review · 4.2 not started |
 | 5 Bridge | 5.1 · 5.2 | LOCK-51 · LOCK-52 | S · S | Not started |
 | 6 Retro | 6.1 · 6.2 | LOCK-53 · LOCK-54 | H · S | Not started |
 | 7 Brain | 7.1 · 7.2 | LOCK-55 · LOCK-56 | H · H | Not started |
