@@ -11,6 +11,7 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 - **In progress**: Phase 1.2 (LOCK-44) built locally and in review: tickets module on core, `TicketService`, bus events, settings migration, `kh-tickets-` CSS. Not pushed. Phase 1.1 (LOCK-43) in review.
 - **Also in review**: Phase 7.2 (LOCK-56) built locally: rule-based doc selection in context packs (`core/brain/selectDocs`, `core/domain/packDocs`, budget 8k tokens, "Docs included" section), `kh status draft`, brain health score + `brain:health-changed`, style-convention templates. Not pushed.
 - **Also in review**: Phase 7.1 (LOCK-55) built locally: `core/brain/` (doc types, `lintDoc`, six pure staleness checks, rg-or-Node scan, `New doc` helpers), brain module (`BrainService`, New doc command, templates), `kh lint docs`, `kh brain check [--tickets]`, `brain.autoFindings` in `kh maintain`. Not pushed. Not yet run inside Obsidian (New doc modal needs a manual check).
+- **Also in review**: Phase 8.1 (LOCK-57) built locally: `command-center` module (read-only custom view: tiles, needs-attention / recent runs / open proposals lists, inline SVG 30-day spend sparkline, degrades per disabled module, 60s + bus refresh), `kh-command-center-` CSS, `scripts/cdp-command-center-smoke.mjs`. Not pushed.
 - **Next**: review + push 1.1, 1.2, 2.1, 2.2 → Phase 3.1 (LOCK-47).
 - **Also in review**: Phase 2.1 (LOCK-45) built locally: term module on core (`SessionService`, `session:*` bus events, kyle-term settings migration, `kh-term-` CSS, macOS paths removed, Install/Uninstall hooks with diff modal). Not pushed. CDP smoke (`npm run smoke`) needs a manual run in Obsidian.
 - **Also in review**: Phase 2.2 (LOCK-46) built locally: `kh` CLI (`cli/`, `kh tickets …`), `kt` shim, `kh import linear` (recorded-fixture tests). Not pushed. Cutover checklist and Linear import run are manual.
@@ -36,5 +37,5 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 | 5 Bridge | 5.1 · 5.2 | LOCK-51 · LOCK-52 | S · S | 5.1 in review · 5.2 not started |
 | 6 Retro | 6.1 · 6.2 | LOCK-53 · LOCK-54 | H · S | 6.1 in review · 6.2 in review |
 | 7 Brain | 7.1 · 7.2 | LOCK-55 · LOCK-56 | H · H | 7.1 in review · 7.2 in review |
-| 8 Command center + profiles | 8.1 · 8.2 | LOCK-57 · LOCK-58 | H · S | Not started |
+| 8 Command center + profiles | 8.1 · 8.2 | LOCK-57 · LOCK-58 | H · S | 8.1 in review · 8.2 not started |
 | 9 Accounts + usage | 9.1 · 9.2 | LOCK-59 · LOCK-60 | S · S | Not started |
