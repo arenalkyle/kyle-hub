@@ -5,9 +5,12 @@ import { KyleTicketsSettingTab } from "./settings/SettingsTab";
 import { SetupModal } from "./settings/SetupModal";
 import { bootstrapFolder } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
+import { IssueStore } from "./store/IssueStore";
 
 export default class KyleTicketsPlugin extends Plugin {
   data: PluginData = mergeData(null);
+  /** Public for debugging: `app.plugins.plugins["kyle-tickets"].store`. */
+  readonly store = new IssueStore(this);
 
   override async onload(): Promise<void> {
     this.data = mergeData(await this.loadData());
@@ -27,11 +30,13 @@ export default class KyleTicketsPlugin extends Plugin {
     this.addSettingTab(new KyleTicketsSettingTab(this.app, this));
 
     this.app.workspace.onLayoutReady(() => {
+      void this.store.start();
       if (!this.data.setupDone) this.openSetup();
     });
   }
 
   override onunload(): void {
+    this.store.stop();
     // Views, commands, ribbon icons and the settings tab are cleaned up by Plugin.
   }
 

@@ -2,12 +2,19 @@ import { ItemView, type WorkspaceLeaf } from "obsidian";
 import { StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type KyleTicketsPlugin from "../main";
+import { useIssues } from "../store/hooks";
 import { PluginContext } from "./PluginContext";
 
 export const VIEW_TYPE_MAIN = "kyle-tickets-main";
 
 function MainApp() {
-  return <h2 className="kt-main-heading">kyle-tickets</h2>;
+  const issues = useIssues();
+  return (
+    <>
+      <h2 className="kt-main-heading">kyle-tickets</h2>
+      <p className="kt-main-count">{issues.length} issues</p>
+    </>
+  );
 }
 
 export class MainView extends ItemView {
