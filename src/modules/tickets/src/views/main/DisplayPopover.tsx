@@ -32,9 +32,9 @@ function Dropdown<T extends string>(props: {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const current = props.options.find((o) => o.value === props.value);
   return (
-    <div className="kt-disp-row">
-      <span className="kt-disp-label">{props.label}</span>
-      <button type="button" className="kt-disp-select" onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}>
+    <div className="kh-tickets-disp-row">
+      <span className="kh-tickets-disp-label">{props.label}</span>
+      <button type="button" className="kh-tickets-disp-select" onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}>
         {current?.label ?? props.value}
         <Icon name="chevrons-up-down" size={12} />
       </button>
@@ -46,7 +46,7 @@ function Dropdown<T extends string>(props: {
           getSearch={(o) => [o.label]}
           selectedKeys={[props.value]}
           placeholder={`${props.label}...`}
-          renderItem={(o) => <span className="kt-picker-label">{o.label}</span>}
+          renderItem={(o) => <span className="kh-tickets-picker-label">{o.label}</span>}
           onSelect={(o) => props.onChange(o.value)}
           onClose={() => setAnchor(null)}
         />
@@ -57,16 +57,16 @@ function Dropdown<T extends string>(props: {
 
 function Switch(props: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div className="kt-disp-row">
-      <span className="kt-disp-label">{props.label}</span>
+    <div className="kh-tickets-disp-row">
+      <span className="kh-tickets-disp-label">{props.label}</span>
       <button
         type="button"
         role="switch"
         aria-checked={props.checked}
-        className={`kt-switch${props.checked ? " is-on" : ""}`}
+        className={`kh-tickets-switch${props.checked ? " is-on" : ""}`}
         onClick={() => props.onChange(!props.checked)}
       >
-        <span className="kt-switch-knob" />
+        <span className="kh-tickets-switch-knob" />
       </button>
     </div>
   );
@@ -88,7 +88,7 @@ export function DisplayPopover({ anchor, display, groups = [], onChange, onReset
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       const t = e.target as Element;
-      if (ref.current?.contains(t) || anchor?.contains(t) || t.closest?.(".kt-picker")) return;
+      if (ref.current?.contains(t) || anchor?.contains(t) || t.closest?.(".kh-tickets-picker")) return;
       onClose();
     };
     document.addEventListener("mousedown", onDown, true);
@@ -103,7 +103,7 @@ export function DisplayPopover({ anchor, display, groups = [], onChange, onReset
   return createPortal(
     <div
       ref={ref}
-      className="kt-display-popover"
+      className="kh-tickets-display-popover"
       style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? "visible" : "hidden" }}
       onKeyDown={(e) => {
         e.stopPropagation();
@@ -129,7 +129,7 @@ export function DisplayPopover({ anchor, display, groups = [], onChange, onReset
         options={ORDER_BY_OPTIONS.map((v) => ({ value: v, label: ORDER_BY_LABELS[v] }))}
         onChange={(orderBy) => set({ orderBy })}
       />
-      <div className="kt-disp-sep" />
+      <div className="kh-tickets-disp-sep" />
       <Switch label="Show sub-issues" checked={display.showSubIssues} onChange={(showSubIssues) => set({ showSubIssues })} />
       <Dropdown<CompletedMode>
         label="Completed issues"
@@ -138,18 +138,18 @@ export function DisplayPopover({ anchor, display, groups = [], onChange, onReset
         onChange={(completed) => set({ completed })}
       />
       <Switch label="Show empty groups" checked={display.showEmptyGroups} onChange={(showEmptyGroups) => set({ showEmptyGroups })} />
-      <div className="kt-disp-sep" />
+      <div className="kh-tickets-disp-sep" />
       {display.groupBy !== "none" && groups.length > 0 && (
         <>
-          <div className="kt-disp-heading">Hidden columns</div>
-          <div className="kt-disp-chips">
+          <div className="kh-tickets-disp-heading">Hidden columns</div>
+          <div className="kh-tickets-disp-chips">
             {groups.map((g) => {
               const hidden = hiddenFor(display.hiddenGroups, display.groupBy).includes(g.key);
               return (
                 <button
                   key={g.key}
                   type="button"
-                  className={`kt-disp-chip${hidden ? "" : " is-on"}`}
+                  className={`kh-tickets-disp-chip${hidden ? "" : " is-on"}`}
                   title={hidden ? "Hidden - click to show" : "Shown - click to hide"}
                   onClick={() => set({ hiddenGroups: toggleHidden(display.hiddenGroups, display.groupBy, g.key, !hidden) })}
                 >
@@ -158,24 +158,24 @@ export function DisplayPopover({ anchor, display, groups = [], onChange, onReset
               );
             })}
           </div>
-          <div className="kt-disp-sep" />
+          <div className="kh-tickets-disp-sep" />
         </>
       )}
-      <div className="kt-disp-heading">Display properties</div>
-      <div className="kt-disp-chips">
+      <div className="kh-tickets-disp-heading">Display properties</div>
+      <div className="kh-tickets-disp-chips">
         {PROP_KEYS.map((k) => (
           <button
             key={k}
             type="button"
-            className={`kt-disp-chip${display.properties[k] ? " is-on" : ""}`}
+            className={`kh-tickets-disp-chip${display.properties[k] ? " is-on" : ""}`}
             onClick={() => set({ properties: { ...display.properties, [k]: !display.properties[k] } })}
           >
             {PROP_LABELS[k]}
           </button>
         ))}
       </div>
-      <div className="kt-disp-footer">
-        <button type="button" className="kt-link-btn" onClick={onReset}>
+      <div className="kh-tickets-disp-footer">
+        <button type="button" className="kh-tickets-link-btn" onClick={onReset}>
           Reset
         </button>
       </div>

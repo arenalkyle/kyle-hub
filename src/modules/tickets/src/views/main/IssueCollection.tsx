@@ -126,7 +126,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
   }, [embedded]);
   useEffect(() => {
     if (current === null || display.layout !== "board") return;
-    rootRef.current?.querySelector(`[data-kt-id="${CSS.escape(current)}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    rootRef.current?.querySelector(`[data-kh-tickets-id="${CSS.escape(current)}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [current, display.layout]);
 
   const onShortcut = useCallback(
@@ -157,8 +157,8 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
           if (current === null) return false;
           const root = rootRef.current;
           const anchor =
-            root?.querySelector<HTMLElement>(`[data-kt-id="${CSS.escape(current)}"]`) ??
-            root?.querySelector<HTMLElement>(".kt-header") ??
+            root?.querySelector<HTMLElement>(`[data-kh-tickets-id="${CSS.escape(current)}"]`) ??
+            root?.querySelector<HTMLElement>(".kh-tickets-header") ??
             null;
           setSp({ kind: action, id: current, anchor });
           return true;
@@ -181,7 +181,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
     };
   }, [sp?.anchor]);
   const onContextMenu = (e: React.MouseEvent) => {
-    const el = (e.target as HTMLElement).closest<HTMLElement>("[data-kt-id]");
+    const el = (e.target as HTMLElement).closest<HTMLElement>("[data-kh-tickets-id]");
     const issue = el ? issues.find((i) => i.id === el.dataset.ktId) : undefined;
     if (!issue) return;
     e.preventDefault();
@@ -226,7 +226,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
 
   return (
     <div
-      className="kt-collection"
+      className="kh-tickets-collection"
       ref={rootRef}
       tabIndex={-1}
       onContextMenu={onContextMenu}
@@ -252,7 +252,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
       <FilterBar filters={filters} onChange={setFilters} />
       {notice}
       {visible.length === 0 && !display.showEmptyGroups ? (
-        <div className="kt-empty">
+        <div className="kh-tickets-empty">
           <div>No issues</div>
           <button type="button" className="mod-cta" onClick={newIssue}>
             New issue

@@ -115,30 +115,30 @@ export function ListView({ groups, display, subCounts, issues, viewId, project, 
   const pickedIssue = picker ? issues.find((i) => i.id === picker.id) : undefined;
 
   return (
-    <div className="kt-list" ref={scrollRef} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}>
-      <div className="kt-list-spacer" style={{ height: items.length * ITEM_HEIGHT }}>
+    <div className="kh-tickets-list" ref={scrollRef} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}>
+      <div className="kh-tickets-list-spacer" style={{ height: items.length * ITEM_HEIGHT }}>
         {items.slice(start, end).map((item, n) => {
           const style = { top: (start + n) * ITEM_HEIGHT, height: ITEM_HEIGHT };
           if (item.kind === "row") {
             return (
-              <div key={item.issue.id} className="kt-item" style={style}>
+              <div key={item.issue.id} className="kh-tickets-item" style={style}>
                 <IssueRow issue={item.issue} settings={settings} properties={display.properties} sub={item.depth === 1} selected={item.issue.id === selectedId} subCount={subCounts.get(item.issue.id)} onOpen={open} onStatus={onStatus} onPriority={onPriority} />
               </div>
             );
           }
           const g = item.group;
           return (
-            <div key={`h:${g.key}`} className="kt-item" style={style}>
-              <div className={`kt-group-header${item.depth === 1 ? " is-sub" : ""}`} onClick={() => onToggleGroup(g.key)}>
-                <span className={`kt-chevron${item.collapsed ? " is-collapsed" : ""}`}>
+            <div key={`h:${g.key}`} className="kh-tickets-item" style={style}>
+              <div className={`kh-tickets-group-header${item.depth === 1 ? " is-sub" : ""}`} onClick={() => onToggleGroup(g.key)}>
+                <span className={`kh-tickets-chevron${item.collapsed ? " is-collapsed" : ""}`}>
                   <Icon name="chevron-down" size={14} />
                 </span>
                 {g.status ? <StatusIcon category={g.status.category} color={g.status.color} /> : null}
-                <span className="kt-group-name">{g.label}</span>
-                <span className="kt-group-count">{g.issues.length}</span>
+                <span className="kh-tickets-group-name">{g.label}</span>
+                <span className="kh-tickets-group-count">{g.issues.length}</span>
                 <button
                   type="button"
-                  className="kt-group-add"
+                  className="kh-tickets-group-add"
                   title={`New issue in ${g.label}`}
                   onClick={(e) => {
                     e.stopPropagation();

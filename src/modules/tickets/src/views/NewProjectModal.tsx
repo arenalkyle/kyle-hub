@@ -63,7 +63,7 @@ function NewProjectForm({ close }: { close: () => void }) {
 
   return (
     <div
-      className="kt-new-issue kt-new-project"
+      className="kh-tickets-new-issue kh-tickets-new-project"
       onKeyDown={(e) => {
         if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
@@ -71,13 +71,13 @@ function NewProjectForm({ close }: { close: () => void }) {
         }
       }}
     >
-      <div className="kt-new-project-name">
-        <button type="button" className="kt-project-icon-btn" title="Icon" onClick={(e) => toggle("icon", e.currentTarget)}>
+      <div className="kh-tickets-new-project-name">
+        <button type="button" className="kh-tickets-project-icon-btn" title="Icon" onClick={(e) => toggle("icon", e.currentTarget)}>
           <ProjectGlyph icon={icon} color={color} size={22} />
         </button>
         <input
           ref={nameRef}
-          className={`kt-new-title${error ? " kt-invalid" : ""}`}
+          className={`kh-tickets-new-title${error ? " kh-tickets-invalid" : ""}`}
           placeholder="Project name"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -89,27 +89,27 @@ function NewProjectForm({ close }: { close: () => void }) {
           }}
         />
       </div>
-      {error && <div className="kt-field-error">{error}</div>}
-      <textarea className="kt-new-desc" placeholder="Add description…" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
-      <div className="kt-prop-row">
-        <button type="button" className={`kt-prop-btn${open?.kind === "status" ? " is-active" : ""}`} onClick={(e) => toggle("status", e.currentTarget)}>
+      {error && <div className="kh-tickets-field-error">{error}</div>}
+      <textarea className="kh-tickets-new-desc" placeholder="Add description…" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
+      <div className="kh-tickets-prop-row">
+        <button type="button" className={`kh-tickets-prop-btn${open?.kind === "status" ? " is-active" : ""}`} onClick={(e) => toggle("status", e.currentTarget)}>
           <ProjectStatusIcon status={status} />
           <span>{PROJECT_STATUS_LABELS[status]}</span>
         </button>
-        <label className="kt-prop-btn" title="Lead">
+        <label className="kh-tickets-prop-btn" title="Lead">
           <Icon name="user" />
-          <input className="kt-project-lead-input" placeholder="Lead" value={lead} onChange={(e) => setLead(e.target.value)} />
+          <input className="kh-tickets-project-lead-input" placeholder="Lead" value={lead} onChange={(e) => setLead(e.target.value)} />
         </label>
-        <button type="button" className={`kt-prop-btn${open?.kind === "target" ? " is-active" : ""}`} onClick={(e) => toggle("target", e.currentTarget)}>
+        <button type="button" className={`kh-tickets-prop-btn${open?.kind === "target" ? " is-active" : ""}`} onClick={(e) => toggle("target", e.currentTarget)}>
           <Icon name="calendar" />
           <span>{target ?? "Target date"}</span>
         </button>
-        <label className="kt-prop-btn kt-project-color" title="Color">
+        <label className="kh-tickets-prop-btn kh-tickets-project-color" title="Color">
           <Icon name="palette" />
-          <input type="color" className="kt-set-color" value={color} onChange={(e) => setColor(e.target.value)} />
+          <input type="color" className="kh-tickets-set-color" value={color} onChange={(e) => setColor(e.target.value)} />
         </label>
       </div>
-      <div className="kt-new-footer">
+      <div className="kh-tickets-new-footer">
         <span />
         <button type="button" className="mod-cta" disabled={busy} onClick={() => void create()}>
           Create project
@@ -130,9 +130,9 @@ export class NewProjectModal extends Modal {
   }
 
   override onOpen(): void {
-    this.modalEl.addClass("kt-new-issue-modal");
+    this.modalEl.addClass("kh-tickets-new-issue-modal");
     this.titleEl.setText("New project");
-    this.contentEl.addClass("kt-root");
+    this.contentEl.addClass("kh-tickets-root");
     this.root = createRoot(this.contentEl);
     this.root.render(
       <StrictMode>

@@ -66,7 +66,7 @@ export class SetupModal extends Modal {
         });
         new FolderSuggest(this.app, t.inputEl);
       });
-    folderErr = folderSetting.descEl.createDiv({ cls: "kt-error" });
+    folderErr = folderSetting.descEl.createDiv({ cls: "kh-tickets-error" });
 
     const prefixSetting = new Setting(contentEl)
       .setName("ID prefix")
@@ -77,7 +77,7 @@ export class SetupModal extends Modal {
           refresh();
         }),
       );
-    prefixErr = prefixSetting.descEl.createDiv({ cls: "kt-error" });
+    prefixErr = prefixSetting.descEl.createDiv({ cls: "kh-tickets-error" });
 
     new Setting(contentEl)
       .setName("Display name")

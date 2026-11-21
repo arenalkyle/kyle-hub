@@ -26,7 +26,7 @@ export function Description({ description, sourcePath, onSave }: DescriptionProp
   if (editing) {
     return (
       <MarkdownEditor
-        className="kt-desc-editor"
+        className="kh-tickets-desc-editor"
         value={description}
         autoFocus
         placeholder="Add description…"
@@ -38,7 +38,7 @@ export function Description({ description, sourcePath, onSave }: DescriptionProp
   }
   return (
     <div
-      className="kt-desc"
+      className="kh-tickets-desc"
       tabIndex={0}
       onClick={(e) => {
         if (!(e.target as HTMLElement).closest("a, input, button, summary")) begin();
@@ -48,7 +48,7 @@ export function Description({ description, sourcePath, onSave }: DescriptionProp
       }}
     >
       {description.trim() === "" ? (
-        <div className="kt-desc-empty">Add description…</div>
+        <div className="kh-tickets-desc-empty">Add description…</div>
       ) : (
         <Markdown md={description} sourcePath={sourcePath} />
       )}

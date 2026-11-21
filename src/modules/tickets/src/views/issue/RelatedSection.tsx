@@ -32,19 +32,19 @@ export function RelatedSection({ issue, settings, onOpenIssue, onAdd, onRemove }
   const addRef = useRef<HTMLButtonElement>(null);
   return (
     <>
-      <div className="kt-prop-group-title">Related</div>
+      <div className="kh-tickets-prop-group-title">Related</div>
       {related.map((r) => (
-        <div key={r.id} className="kt-related-row">
-          <button type="button" className="kt-prop-value kt-related-open" title={`${r.id} ${r.title}`} onClick={() => onOpenIssue(r.id)}>
+        <div key={r.id} className="kh-tickets-related-row">
+          <button type="button" className="kh-tickets-prop-value kh-tickets-related-open" title={`${r.id} ${r.title}`} onClick={() => onOpenIssue(r.id)}>
             <StatusOf issue={r} settings={settings} />
             <span>{r.title}</span>
           </button>
-          <button type="button" className="kt-related-remove clickable-icon" aria-label={`Remove related ${r.id}`} title="Remove" onClick={() => onRemove(r.id)}>
+          <button type="button" className="kh-tickets-related-remove clickable-icon" aria-label={`Remove related ${r.id}`} title="Remove" onClick={() => onRemove(r.id)}>
             ×
           </button>
         </div>
       ))}
-      <button ref={addRef} type="button" className="kt-prop-value kt-related-add" onClick={() => setPicking(true)}>
+      <button ref={addRef} type="button" className="kh-tickets-prop-value kh-tickets-related-add" onClick={() => setPicking(true)}>
         <Icon name="plus" size={14} />
         <span>Add related</span>
       </button>
@@ -57,8 +57,8 @@ export function RelatedSection({ issue, settings, onOpenIssue, onAdd, onRemove }
           placeholder="Add related issue..."
           renderItem={(i) => (
             <>
-              <span className="kt-picker-icon"><StatusOf issue={i} settings={settings} /></span>
-              <span className="kt-picker-label">{i.id} {i.title}</span>
+              <span className="kh-tickets-picker-icon"><StatusOf issue={i} settings={settings} /></span>
+              <span className="kh-tickets-picker-label">{i.id} {i.title}</span>
             </>
           )}
           onSelect={(i) => onAdd(i.id)}

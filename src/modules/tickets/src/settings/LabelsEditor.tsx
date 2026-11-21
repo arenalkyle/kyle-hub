@@ -62,18 +62,18 @@ export function LabelsEditor() {
   };
 
   return (
-    <div className="kt-set-editor">
-      {labels.length === 0 && <div className="kt-set-empty">No labels yet. Labels appear here once an issue uses one.</div>}
+    <div className="kh-tickets-set-editor">
+      {labels.length === 0 && <div className="kh-tickets-set-empty">No labels yet. Labels appear here once an issue uses one.</div>}
       {labels.map(([name, count]) => (
-        <div key={name} className="kt-set-row">
+        <div key={name} className="kh-tickets-set-row">
           <ColorInput value={settings.labelColors[name] ?? FALLBACK_COLOR} title="Color" onCommit={(c) => setColor(name, c)} />
-          <span className="kt-set-label-name">{name}</span>
-          <span className="kt-set-count" title="Issues using this label">{count}</span>
+          <span className="kh-tickets-set-label-name">{name}</span>
+          <span className="kh-tickets-set-count" title="Issues using this label">{count}</span>
           <button type="button" onClick={() => void rename(name, count)}>Rename</button>
           <button type="button" className="mod-warning" onClick={() => void remove(name, count)}>Delete</button>
         </div>
       ))}
-      {error && <div className="kt-set-error">{error}</div>}
+      {error && <div className="kh-tickets-set-error">{error}</div>}
     </div>
   );
 }

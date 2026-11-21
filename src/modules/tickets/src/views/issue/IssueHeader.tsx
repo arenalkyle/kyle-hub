@@ -20,27 +20,27 @@ export function IssueHeader(p: IssueHeaderProps) {
   const { issue, parent } = p;
   const project = issue.project ? fromLink(issue.project) : undefined;
   return (
-    <div className="kt-header kt-issue-header">
-      <nav className="kt-crumbs" aria-label="Breadcrumb">
+    <div className="kh-tickets-header kh-tickets-issue-header">
+      <nav className="kh-tickets-crumbs" aria-label="Breadcrumb">
         {project && (
           <>
-            <button type="button" className="kt-crumb" onClick={() => p.onOpenProject(project)}>
+            <button type="button" className="kh-tickets-crumb" onClick={() => p.onOpenProject(project)}>
               {project}
             </button>
-            <span className="kt-crumb-sep">›</span>
+            <span className="kh-tickets-crumb-sep">›</span>
           </>
         )}
         {parent && (
           <>
-            <button type="button" className="kt-crumb" title={parent.title} onClick={() => p.onOpenIssue(parent.id)}>
+            <button type="button" className="kh-tickets-crumb" title={parent.title} onClick={() => p.onOpenIssue(parent.id)}>
               {parent.id} {parent.title}
             </button>
-            <span className="kt-crumb-sep">›</span>
+            <span className="kh-tickets-crumb-sep">›</span>
           </>
         )}
-        <span className="kt-crumb is-current">{issue.id}</span>
+        <span className="kh-tickets-crumb is-current">{issue.id}</span>
       </nav>
-      <span className="kt-spacer" />
+      <span className="kh-tickets-spacer" />
       <button type="button" className="clickable-icon" title="Open as Markdown" aria-label="Open as Markdown" onClick={p.onOpenMarkdown}>
         <Icon name="file-text" size={16} />
       </button>

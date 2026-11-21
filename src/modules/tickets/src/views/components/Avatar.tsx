@@ -30,17 +30,17 @@ export function Avatar({ name, className }: { name: string; className?: string }
   const settings = useSettings();
   const login = useSyncExternalStore(subscribeGhLogin, getGhLogin);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const base = `kt-avatar${className ? ` ${className}` : ""}`;
+  const base = `kh-tickets-avatar${className ? ` ${className}` : ""}`;
 
   if (isClaudeAuthor(name)) {
-    return <span className={`${base} kt-avatar-claude`} title="Claude"><ClaudeMark /></span>;
+    return <span className={`${base} kh-tickets-avatar-claude`} title="Claude"><ClaudeMark /></span>;
   }
   const who = name.trim().replace(/^@/, "").toLowerCase();
   const isSelf = login !== undefined && (who === settings.displayName.trim().toLowerCase() || (!!login && who === login.toLowerCase()));
   const url = isSelf && login ? `https://github.com/${encodeURIComponent(login)}.png?size=64` : null;
   if (url && url !== failedUrl) {
     return (
-      <span className={`${base} kt-avatar-img`} title={name}>
+      <span className={`${base} kh-tickets-avatar-img`} title={name}>
         <img src={url} alt="" referrerPolicy="no-referrer" onError={() => setFailedUrl(url)} />
       </span>
     );

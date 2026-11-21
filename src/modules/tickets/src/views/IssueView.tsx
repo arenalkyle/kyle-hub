@@ -114,7 +114,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
       if (k) {
         setSidebarOpen(true);
         // Anchor after the sidebar is rendered.
-        requestAnimationFrame(() => openPicker(k, rootRef.current?.querySelector<HTMLElement>(`[data-kt-prop="${k}"]`) ?? null));
+        requestAnimationFrame(() => openPicker(k, rootRef.current?.querySelector<HTMLElement>(`[data-kh-tickets-prop="${k}"]`) ?? null));
         return true;
       }
       if (action === "new") {
@@ -135,7 +135,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
 
   if (!issue) {
     return (
-      <div className="kt-issue kt-issue-state" ref={rootRef} tabIndex={-1}>
+      <div className="kh-tickets-issue kh-tickets-issue-state" ref={rootRef} tabIndex={-1}>
         {ready ? (
           <>
             <div>This issue was deleted</div>
@@ -153,7 +153,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
 
   return (
     <div
-      className="kt-issue"
+      className="kh-tickets-issue"
       ref={rootRef}
       tabIndex={-1}
       onMouseDown={(e) => {
@@ -175,9 +175,9 @@ function IssueApp({ path, leaf }: IssueAppProps) {
         onCopyLink={() => copyText(issueLinkUri(plugin.app, path), "link")}
         onDelete={() => void deleteIssueConfirmed(plugin.app, plugin.store, issue, path)}
       />
-      <div className="kt-issue-body">
-        <div className="kt-issue-main">
-          <div className="kt-issue-column">
+      <div className="kh-tickets-issue-body">
+        <div className="kh-tickets-issue-main">
+          <div className="kh-tickets-issue-column">
             <TitleEditor title={issue.title} onSave={(title) => update({ title })} />
             <Description
               description={issue.description}
@@ -256,7 +256,7 @@ export class IssueView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
-    this.contentEl.addClass("kt-root");
+    this.contentEl.addClass("kh-tickets-root");
     this.root = createRoot(this.contentEl);
     this.render();
     this.unsub = this.plugin.store.on("change", () => this.refreshHeader());

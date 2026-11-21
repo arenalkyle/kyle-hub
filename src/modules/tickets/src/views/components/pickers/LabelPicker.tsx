@@ -38,7 +38,7 @@ export function LabelPicker({ anchor, value, onChange, onClose }: LabelPickerPro
       renderItem={(n) => (
         <>
           <Dot color={colors[n] ?? "var(--text-faint)"} />
-          <span className="kt-picker-label">{n}</span>
+          <span className="kh-tickets-picker-label">{n}</span>
         </>
       )}
       create={{

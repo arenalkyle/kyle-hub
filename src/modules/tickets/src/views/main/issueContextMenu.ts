@@ -22,7 +22,7 @@ function applyIcon(item: ObsidianMenuItem, icon: MenuIcon, plugin: KyleTicketsPl
   const slot = (item as unknown as { dom: HTMLElement }).dom.querySelector<HTMLElement>(".menu-item-icon");
   if (!slot) return;
   slot.empty();
-  slot.addClass("kt-ctx-icon");
+  slot.addClass("kh-tickets-ctx-icon");
   if (icon.kind === "avatar") {
     const root = createRoot(slot);
     roots.push(root);

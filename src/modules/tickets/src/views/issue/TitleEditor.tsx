@@ -14,7 +14,7 @@ export function TitleEditor({ title, onSave, extraClass = "" }: { title: string;
   }, [draft === null]); // eslint-disable-line react-hooks/exhaustive-deps
   if (draft === null) {
     return (
-      <h1 className={`kt-issue-title ${extraClass}`} tabIndex={0} title="Click to edit" onClick={() => setDraft(title)} onKeyDown={(e) => e.key === "Enter" && setDraft(title)}>
+      <h1 className={`kh-tickets-issue-title ${extraClass}`} tabIndex={0} title="Click to edit" onClick={() => setDraft(title)} onKeyDown={(e) => e.key === "Enter" && setDraft(title)}>
         {title}
       </h1>
     );
@@ -28,7 +28,7 @@ export function TitleEditor({ title, onSave, extraClass = "" }: { title: string;
     <textarea
       ref={ref}
       rows={1}
-      className={`kt-issue-title kt-issue-title-input ${extraClass}`}
+      className={`kh-tickets-issue-title kh-tickets-issue-title-input ${extraClass}`}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}

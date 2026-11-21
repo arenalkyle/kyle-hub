@@ -46,9 +46,9 @@ function AddMilestone({ project, onDone }: { project: Project; onDone: () => voi
     } else if (e.key === "Escape") onDone();
   };
   return (
-    <div className="kt-ms-add">
+    <div className="kh-tickets-ms-add">
       <input autoFocus value={name} placeholder="Milestone name" onChange={(e) => setName(e.target.value)} onKeyDown={keys} />
-      <button type="button" className="kt-prop-btn" onClick={(e) => setAnchor(e.currentTarget)}>
+      <button type="button" className="kh-tickets-prop-btn" onClick={(e) => setAnchor(e.currentTarget)}>
         <Icon name="calendar" />
         <span>{target ?? "Target date"}</span>
       </button>
@@ -59,7 +59,7 @@ function AddMilestone({ project, onDone }: { project: Project; onDone: () => voi
       <button type="button" onClick={onDone}>
         Cancel
       </button>
-      {error && <span className="kt-field-error">{error}</span>}
+      {error && <span className="kh-tickets-field-error">{error}</span>}
       {anchor && <DatePicker anchor={anchor} value={target} onChange={setTarget} onClose={() => setAnchor(null)} />}
     </div>
   );
@@ -124,18 +124,18 @@ export function Milestones({ project, color, filters, onFiltersChange }: Milesto
   };
 
   return (
-    <section className="kt-milestones">
-      <div className="kt-ms-head">
+    <section className="kh-tickets-milestones">
+      <div className="kh-tickets-ms-head">
         <h3>Milestones</h3>
         <button type="button" className="clickable-icon" title="Add milestone" aria-label="Add milestone" onClick={() => setAdding(true)}>
           <Icon name="plus" size={16} />
         </button>
       </div>
       {adding && <AddMilestone project={project} onDone={() => setAdding(false)} />}
-      {project.milestones.length === 0 && !adding && <div className="kt-ms-empty">No milestones yet</div>}
+      {project.milestones.length === 0 && !adding && <div className="kh-tickets-ms-empty">No milestones yet</div>}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={names} strategy={verticalListSortingStrategy}>
-          <ul className="kt-ms-list">
+          <ul className="kh-tickets-ms-list">
             {project.milestones.map((m) => {
               const p = progress.find((x) => x.name === m.name) ?? { name: m.name, done: 0, total: 0, percent: 0 };
               return (

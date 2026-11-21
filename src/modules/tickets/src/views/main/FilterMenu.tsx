@@ -23,7 +23,7 @@ export function FieldPicker({ anchor, onSelect, onClose }: { anchor: HTMLElement
       getKey={(f) => f}
       getSearch={(f) => [FILTER_FIELD_LABELS[f]]}
       placeholder="Filter by..."
-      renderItem={(f) => <span className="kt-picker-label">{FILTER_FIELD_LABELS[f]}</span>}
+      renderItem={(f) => <span className="kh-tickets-picker-label">{FILTER_FIELD_LABELS[f]}</span>}
       onSelect={onSelect}
       onClose={onClose}
     />
@@ -83,7 +83,7 @@ export function ValuePicker({
       renderItem={(i) => (
         <>
           {i.node}
-          <span className="kt-picker-label">{i.label}</span>
+          <span className="kh-tickets-picker-label">{i.label}</span>
         </>
       )}
       onSelect={toggle}

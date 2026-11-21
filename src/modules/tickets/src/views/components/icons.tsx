@@ -9,7 +9,7 @@ interface StatusIconProps {
 }
 
 export function StatusIcon({ category, color = "currentColor", size = 14 }: StatusIconProps) {
-  const common = { width: size, height: size, viewBox: "0 0 14 14", fill: "none", className: "kt-icon kt-status-icon" };
+  const common = { width: size, height: size, viewBox: "0 0 14 14", fill: "none", className: "kh-tickets-icon kh-tickets-status-icon" };
   switch (category) {
     case "triage":
     case "backlog":
@@ -51,7 +51,7 @@ export function StatusIcon({ category, color = "currentColor", size = 14 }: Stat
 const BARS: Record<Priority, number> = { none: 0, low: 1, medium: 2, high: 3, urgent: 0 };
 
 export function PriorityIcon({ priority, size = 14 }: { priority: Priority; size?: number }) {
-  const common = { width: size, height: size, viewBox: "0 0 14 14", className: "kt-icon kt-priority-icon" };
+  const common = { width: size, height: size, viewBox: "0 0 14 14", className: "kh-tickets-icon kh-tickets-priority-icon" };
   if (priority === "urgent") {
     return (
       <svg {...common}>
@@ -95,11 +95,11 @@ export function Icon({ name, size = 14 }: { name: string; size?: number }) {
   useEffect(() => {
     if (ref.current) setIcon(ref.current, name);
   }, [name]);
-  return <span ref={ref} className="kt-icon kt-lucide" style={{ width: size, height: size }} />;
+  return <span ref={ref} className="kh-tickets-icon kh-tickets-lucide" style={{ width: size, height: size }} />;
 }
 
 export function Dot({ color }: { color: string }) {
-  return <span className="kt-dot" style={{ background: color }} />;
+  return <span className="kh-tickets-dot" style={{ background: color }} />;
 }
 
 const PROJECT_STATUS_COLOR: Record<ProjectStatus, string> = {
@@ -116,7 +116,7 @@ export function ProjectStatusIcon({ status, size = 14 }: { status: ProjectStatus
   if (status === "paused") {
     const color = PROJECT_STATUS_COLOR.paused;
     return (
-      <svg width={size} height={size} viewBox="0 0 14 14" fill="none" className="kt-icon kt-status-icon">
+      <svg width={size} height={size} viewBox="0 0 14 14" fill="none" className="kh-tickets-icon kh-tickets-status-icon">
         <circle cx="7" cy="7" r="6" stroke={color} strokeWidth="1.5" />
         <rect x="4.9" y="4.6" width="1.5" height="4.8" rx="0.5" fill={color} />
         <rect x="7.6" y="4.6" width="1.5" height="4.8" rx="0.5" fill={color} />
@@ -132,13 +132,13 @@ export function ProjectGlyph({ icon, color, size = 14 }: { icon?: string; color?
   const style = color ? { color } : undefined;
   if (icon && !/^[a-z0-9-]+$/i.test(icon)) {
     return (
-      <span className="kt-icon kt-project-emoji" style={{ ...style, fontSize: size - 1, width: size, height: size }}>
+      <span className="kh-tickets-icon kh-tickets-project-emoji" style={{ ...style, fontSize: size - 1, width: size, height: size }}>
         {icon}
       </span>
     );
   }
   return (
-    <span className="kt-project-glyph" style={style}>
+    <span className="kh-tickets-project-glyph" style={style}>
       <Icon name={icon || "box"} size={size} />
     </span>
   );

@@ -82,7 +82,7 @@ export function Picker<T>(p: PickerProps<T>) {
   };
   useEffect(() => setActive(0), [query]);
   useEffect(() => {
-    listRef.current?.querySelector<HTMLElement>(".kt-picker-row.is-active")?.scrollIntoView({ block: "nearest" });
+    listRef.current?.querySelector<HTMLElement>(".kh-tickets-picker-row.is-active")?.scrollIntoView({ block: "nearest" });
   }, [active]);
 
   const choose = (i: number) => {
@@ -120,20 +120,20 @@ export function Picker<T>(p: PickerProps<T>) {
   filtered.forEach((item, idx) => {
     const g = p.groupOf?.(item);
     if (g !== undefined && g !== lastGroup) {
-      rows.push(<div key={`g:${g}`} className="kt-picker-group">{g}</div>);
+      rows.push(<div key={`g:${g}`} className="kh-tickets-picker-group">{g}</div>);
       lastGroup = g;
     }
     const key = p.getKey(item);
     rows.push(
       <div
         key={key}
-        className={`kt-picker-row${idx === active ? " is-active" : ""}${selected.has(key) ? " is-selected" : ""}`}
+        className={`kh-tickets-picker-row${idx === active ? " is-active" : ""}${selected.has(key) ? " is-selected" : ""}`}
         onMouseMove={() => setActive(idx)}
         onClick={() => choose(idx)}
       >
-        {multi && <span className={`kt-check${selected.has(key) ? " is-on" : ""}`} />}
+        {multi && <span className={`kh-tickets-check${selected.has(key) ? " is-on" : ""}`} />}
         {p.renderItem(item)}
-        {!multi && selected.has(key) && <span className="kt-picker-tick">{"✓"}</span>}
+        {!multi && selected.has(key) && <span className="kh-tickets-picker-tick">{"✓"}</span>}
       </div>,
     );
   });
@@ -142,7 +142,7 @@ export function Picker<T>(p: PickerProps<T>) {
     rows.push(
       <div
         key="__create"
-        className={`kt-picker-row kt-picker-create${idx === active ? " is-active" : ""}`}
+        className={`kh-tickets-picker-row kh-tickets-picker-create${idx === active ? " is-active" : ""}`}
         onMouseMove={() => setActive(idx)}
         onClick={() => choose(idx)}
       >
@@ -154,7 +154,7 @@ export function Picker<T>(p: PickerProps<T>) {
   return createPortal(
     <div
       ref={ref}
-      className="kt-picker"
+      className="kh-tickets-picker"
       tabIndex={searchable ? undefined : -1}
       onBlur={searchable ? undefined : onInputBlur}
       style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? "visible" : "hidden" }}
@@ -165,7 +165,7 @@ export function Picker<T>(p: PickerProps<T>) {
     >
       {searchable && (
         <input
-          className="kt-picker-input"
+          className="kh-tickets-picker-input"
           ref={inputRef}
           value={query}
           placeholder={p.placeholder ?? "Filter..."}
@@ -173,8 +173,8 @@ export function Picker<T>(p: PickerProps<T>) {
           onBlur={onInputBlur}
         />
       )}
-      <div className="kt-picker-list" ref={listRef}>
-        {rows.length === 0 && <div className="kt-picker-empty">No results</div>}
+      <div className="kh-tickets-picker-list" ref={listRef}>
+        {rows.length === 0 && <div className="kh-tickets-picker-empty">No results</div>}
         {rows}
       </div>
       {p.footer}

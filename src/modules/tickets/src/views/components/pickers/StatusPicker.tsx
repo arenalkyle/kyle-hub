@@ -25,7 +25,7 @@ export function StatusPicker({ anchor, value, onChange, onClose }: StatusPickerP
       renderItem={(s) => (
         <>
           <StatusIcon category={s.category} color={s.color} />
-          <span className="kt-picker-label">{s.name}</span>
+          <span className="kh-tickets-picker-label">{s.name}</span>
         </>
       )}
       onSelect={(s) => onChange(s.name)}

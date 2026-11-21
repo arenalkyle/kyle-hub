@@ -3,8 +3,8 @@ import type KyleTicketsPlugin from "../main";
 import { around } from "../../../../core/domain/around";
 import { interceptTarget, isIssuePath, isProjectPath } from "../../../../core/domain/intercept";
 
-export const VIEW_TYPE_ISSUE = "kyle-tickets-issue";
-export const VIEW_TYPE_PROJECT = "kyle-tickets-project";
+export const VIEW_TYPE_ISSUE = "kh-tickets-issue";
+export const VIEW_TYPE_PROJECT = "kh-tickets-project";
 
 interface ViewStateLike {
   type?: string;

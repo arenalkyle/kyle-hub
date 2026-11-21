@@ -8,9 +8,9 @@ import { Dot, Icon, ProjectGlyph } from "./icons";
 
 export function LabelChip({ label, color }: { label: string; color?: string }) {
   return (
-    <span className="kt-chip kt-chip-label" title={label}>
+    <span className="kh-tickets-chip kh-tickets-chip-label" title={label}>
       <Dot color={color ?? "var(--text-faint)"} />
-      <span className="kt-chip-text">{label}</span>
+      <span className="kh-tickets-chip-text">{label}</span>
     </span>
   );
 }
@@ -19,9 +19,9 @@ export function ProjectChip({ project }: { project: string }) {
   const name = fromLink(project);
   const def = findProjectByLink(useProjects(), project);
   return (
-    <span className="kt-chip" title={name}>
+    <span className="kh-tickets-chip" title={name}>
       <ProjectGlyph icon={def?.icon} color={def?.color} size={12} />
-      <span className="kt-chip-text">{name}</span>
+      <span className="kh-tickets-chip-text">{name}</span>
     </span>
   );
 }
@@ -41,35 +41,35 @@ export function isOverdue(due: string, now: Date = new Date()): boolean {
 
 export function DueChip({ due }: { due: string }) {
   return (
-    <span className={`kt-chip${isOverdue(due) ? " is-overdue" : ""}`} title={`Due ${due}`}>
+    <span className={`kh-tickets-chip${isOverdue(due) ? " is-overdue" : ""}`} title={`Due ${due}`}>
       <Icon name="calendar" size={12} />
-      <span className="kt-chip-text">{shortDate(due)}</span>
+      <span className="kh-tickets-chip-text">{shortDate(due)}</span>
     </span>
   );
 }
 
 export function AssigneeChip({ assignee }: { assignee: string }) {
   return (
-    <span className="kt-chip" title={assignee}>
+    <span className="kh-tickets-chip" title={assignee}>
       <Avatar name={assignee} />
-      <span className="kt-chip-text">{assignee}</span>
+      <span className="kh-tickets-chip-text">{assignee}</span>
     </span>
   );
 }
 
 export function CreatedChip({ created }: { created: string }) {
   return (
-    <span className="kt-chip kt-chip-muted" title={`Created ${created}`}>
-      <span className="kt-chip-text">{shortDate(created)}</span>
+    <span className="kh-tickets-chip kh-tickets-chip-muted" title={`Created ${created}`}>
+      <span className="kh-tickets-chip-text">{shortDate(created)}</span>
     </span>
   );
 }
 
 export function MilestoneChip({ milestone }: { milestone: string }) {
   return (
-    <span className="kt-chip" title={`Milestone ${milestone}`}>
+    <span className="kh-tickets-chip" title={`Milestone ${milestone}`}>
       <Icon name="flag" size={12} />
-      <span className="kt-chip-text">{milestone}</span>
+      <span className="kh-tickets-chip-text">{milestone}</span>
     </span>
   );
 }
@@ -80,7 +80,7 @@ const PR_ICON: Record<PrState, string> = {
 
 export function PrStateIcon({ state, size = 12 }: { state?: PrState; size?: number }) {
   return (
-    <span className={`kt-pr-icon${state ? ` kt-pr-${state}` : ""}`}>
+    <span className={`kh-tickets-pr-icon${state ? ` kh-tickets-pr-${state}` : ""}`}>
       <Icon name={state ? PR_ICON[state] : "git-pull-request"} size={size} />
     </span>
   );
@@ -92,18 +92,18 @@ export function PullRequestChip({ urls }: { urls: readonly string[] }) {
   const best = bestState(prs.flatMap((p) => (p.info ? [p.info] : [])));
   const count = urls.length;
   return (
-    <span className="kt-chip" title={prs.map((p) => (p.info ? `${prLabel(p.info)} · ${p.info.title} (${p.info.state})` : prLabelOfUrl(p.url))).join("\n")}>
+    <span className="kh-tickets-chip" title={prs.map((p) => (p.info ? `${prLabel(p.info)} · ${p.info.title} (${p.info.state})` : prLabelOfUrl(p.url))).join("\n")}>
       <PrStateIcon state={best} />
-      {count > 1 && <span className="kt-chip-text">{count}</span>}
+      {count > 1 && <span className="kh-tickets-chip-text">{count}</span>}
     </span>
   );
 }
 
 export function SubIssuesChip({ count }: { count: number }) {
   return (
-    <span className="kt-chip" title={`${count} sub-issue${count === 1 ? "" : "s"}`}>
+    <span className="kh-tickets-chip" title={`${count} sub-issue${count === 1 ? "" : "s"}`}>
       <Icon name="list-tree" size={12} />
-      <span className="kt-chip-text">{count} sub-issues</span>
+      <span className="kh-tickets-chip-text">{count} sub-issues</span>
     </span>
   );
 }

@@ -36,8 +36,8 @@ export function MilestonePicker({ anchor, project, value, onChange, onClose }: M
       renderItem={(i) => (
         <>
           <Icon name="milestone" />
-          <span className="kt-picker-label">{i.name ?? "No milestone"}</span>
-          {i.target && <span className="kt-picker-meta">{i.target}</span>}
+          <span className="kh-tickets-picker-label">{i.name ?? "No milestone"}</span>
+          {i.target && <span className="kh-tickets-picker-meta">{i.target}</span>}
         </>
       )}
       onSelect={(i) => onChange(i.name ?? undefined)}

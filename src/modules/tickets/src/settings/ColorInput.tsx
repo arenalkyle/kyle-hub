@@ -18,7 +18,7 @@ export function ColorInput({ value, title, onCommit }: { value: string; title: s
   return (
     <input
       type="color"
-      className="kt-set-color"
+      className="kh-tickets-set-color"
       title={title}
       value={local}
       onChange={(e) => {

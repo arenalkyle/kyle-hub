@@ -19,7 +19,7 @@ export interface MarkdownEditorProps {
   viewRef?: { current: EditorView | null };
 }
 
-/** Reusable CodeMirror 6 Markdown editor, styled via `.kt-md-editor` and Obsidian variables. */
+/** Reusable CodeMirror 6 Markdown editor, styled via `.kh-tickets-md-editor` and Obsidian variables. */
 export function MarkdownEditor(props: MarkdownEditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const latest = useRef(props);
@@ -87,5 +87,5 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     };
   }, []);
 
-  return <div ref={host} className={`kt-md-editor ${props.className ?? ""}`} />;
+  return <div ref={host} className={`kh-tickets-md-editor ${props.className ?? ""}`} />;
 }

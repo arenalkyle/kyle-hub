@@ -40,21 +40,21 @@ export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewI
     setFilterField(null);
   };
   return (
-    <div className="kt-header">
+    <div className="kh-tickets-header">
       {onToggleSidebar && (
         <button
           type="button"
-          className="kt-icon-btn"
+          className="kh-tickets-icon-btn"
           title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
           onClick={onToggleSidebar}
         >
           <Icon name="panel-left" size={16} />
         </button>
       )}
-      <h2 className="kt-header-title">{title}</h2>
-      <span className="kt-header-count">{count}</span>
-      <div className="kt-header-spacer" />
-      <div className="kt-toggle">
+      <h2 className="kh-tickets-header-title">{title}</h2>
+      <span className="kh-tickets-header-count">{count}</span>
+      <div className="kh-tickets-header-spacer" />
+      <div className="kh-tickets-toggle">
         <button type="button" className={display.layout === "list" ? "is-active" : ""} onClick={() => onDisplayChange({ ...display, layout: "list" })}>
           List
         </button>
@@ -65,11 +65,11 @@ export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewI
       <button
         type="button"
         ref={filterBtn}
-        className="kt-header-btn"
+        className="kh-tickets-header-btn"
         onClick={(e) => (filterAnchor ? closeFilter() : setFilterAnchor(e.currentTarget))}
       >
         <Icon name="list-filter" size={14} /> Filter
-        {filters.length > 0 && <span className="kt-filter-count">{filters.length}</span>}
+        {filters.length > 0 && <span className="kh-tickets-filter-count">{filters.length}</span>}
       </button>
       {filterAnchor && !filterField && <FieldPicker anchor={filterAnchor} onSelect={setFilterField} onClose={closeFilter} />}
       {filterAnchor && filterField && (
@@ -81,7 +81,7 @@ export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewI
           onClose={closeFilter}
         />
       )}
-      <button type="button" className="kt-header-btn" onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}>
+      <button type="button" className="kh-tickets-header-btn" onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}>
         <Icon name="sliders-horizontal" size={14} /> Display
       </button>
       {anchor && (

@@ -40,7 +40,7 @@ function PropButton(props: {
   return (
     <button
       type="button"
-      className={`kt-prop-btn${props.active ? " is-active" : ""}`}
+      className={`kh-tickets-prop-btn${props.active ? " is-active" : ""}`}
       disabled={props.disabled}
       onClick={(e) => props.onOpen(props.kind, e.currentTarget)}
     >
@@ -131,7 +131,7 @@ function NewIssueForm({ defaults, close }: { defaults: NewIssueDefaults; close: 
 
   return (
     <div
-      className="kt-new-issue"
+      className="kh-tickets-new-issue"
       onKeyDown={(e) => {
         if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
@@ -141,19 +141,19 @@ function NewIssueForm({ defaults, close }: { defaults: NewIssueDefaults; close: 
     >
       <input
         ref={titleRef}
-        className="kt-new-title"
+        className="kh-tickets-new-title"
         placeholder="Issue title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
       <textarea
-        className="kt-new-desc"
+        className="kh-tickets-new-desc"
         placeholder="Add description..."
         rows={6}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
-      <div className="kt-prop-row">
+      <div className="kh-tickets-prop-row">
         <PropButton
           kind="status"
           label={status}
@@ -212,8 +212,8 @@ function NewIssueForm({ defaults, close }: { defaults: NewIssueDefaults; close: 
           icon={<Icon name="git-branch" />}
         />
       </div>
-      <div className="kt-new-footer">
-        <label className="kt-more">
+      <div className="kh-tickets-new-footer">
+        <label className="kh-tickets-more">
           <input type="checkbox" checked={more} onChange={(e) => setMore(e.target.checked)} />
           <span>Create more</span>
         </label>
@@ -264,9 +264,9 @@ export class NewIssueModal extends Modal {
   }
 
   override onOpen(): void {
-    this.modalEl.addClass("kt-new-issue-modal");
+    this.modalEl.addClass("kh-tickets-new-issue-modal");
     this.titleEl.setText("New issue");
-    this.contentEl.addClass("kt-root");
+    this.contentEl.addClass("kh-tickets-root");
     this.root = createRoot(this.contentEl);
     this.root.render(
       <StrictMode>

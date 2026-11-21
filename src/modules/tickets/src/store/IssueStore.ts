@@ -19,6 +19,7 @@ import { clearUnlinked, markUnlinked } from "../../../../core/domain/prMatch";
 import { parseProject, serializeProject } from "../../../../core/domain/projectFile";
 import { issueInProject, rewriteProjectLink, validateProjectName } from "../../../../core/domain/projects";
 import type { Issue, Milestone, Project, ProjectStatus } from "../../../../core/domain/types";
+import type { EventBus } from "../../../../core";
 import type { PluginData } from "../data";
 
 export const EXTERNAL_DEBOUNCE_MS = 500;
@@ -30,6 +31,8 @@ export interface StoreHost {
   data: PluginData;
   savePluginData(): Promise<void>;
   registerEvent(ref: EventRef): void;
+  /** Hub event bus; ticket events are emitted when present. */
+  bus?: Pick<EventBus, "emit">;
 }
 
 export interface MalformedFile {
@@ -76,6 +79,8 @@ export class IssueStore {
   private malformedCache: readonly MalformedFile[] | null = null;
   private started = false;
   private loaded = false;
+  /** True while the whole index is rebuilt, so existing tickets do not emit `ticket:created`. */
+  private rebuilding = false;
 
   constructor(
     private readonly host: StoreHost,
@@ -107,8 +112,13 @@ export class IssueStore {
     this.snapshots.clear();
     this.malformed.clear();
     this.issuesCache = this.projectsCache = this.malformedCache = null;
-    for (const file of this.host.app.vault.getMarkdownFiles()) {
-      if (this.kindOf(file.path)) await this.ingest(file, true);
+    this.rebuilding = true;
+    try {
+      for (const file of this.host.app.vault.getMarkdownFiles()) {
+        if (this.kindOf(file.path)) await this.ingest(file, true);
+      }
+    } finally {
+      this.rebuilding = false;
     }
     this.loaded = true;
     this.emit();
@@ -620,6 +630,7 @@ export class IssueStore {
     if (old && old.id !== issue.id && this.pathById.get(old.id) === path) this.pathById.delete(old.id);
     this.issuesByPath.set(path, issue);
     this.pathById.set(issue.id, path);
+    this.emitTicketEvents(old, issue);
     if (snapshot || !this.snapshots.has(path)) this.snapshots.set(path, issue);
     this.issuesCache = null;
   }
@@ -659,6 +670,20 @@ export class IssueStore {
       this.malformed.set(path, error);
     }
     this.malformedCache = null;
+  }
+
+  /** Bus events for a change to the index (own writes and external edits both land here). */
+  private emitTicketEvents(old: Issue | undefined, next: Issue): void {
+    const bus = this.host.bus;
+    if (!bus || this.rebuilding) return;
+    if (!old) {
+      bus.emit("ticket:created", { id: next.id });
+      return;
+    }
+    if (old.status !== next.status) bus.emit("ticket:status-changed", { id: next.id, from: old.status, to: next.status });
+    const added = next.tags.filter((t) => !old.tags.includes(t));
+    const removed = old.tags.filter((t) => !next.tags.includes(t));
+    if (added.length > 0 || removed.length > 0) bus.emit("ticket:label-changed", { id: next.id, added, removed });
   }
 
   private emit(): void {

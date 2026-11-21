@@ -1,8 +1,10 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { Notice, TFile, type EventRef } from "obsidian";
+import type { EventBus, Hub, ModuleContext } from "../../../core";
 import { defaultSettings } from "../../../core/domain/defaults";
 import { parsePrUrl } from "../../../core/domain/pr";
 import type { Settings } from "../../../core/domain/types";
-import { mergeData, type PluginData } from "./data";
+import type { PluginData } from "./data";
+import { dataFromNamespace } from "./migrate";
 import { KyleTicketsSettingTab } from "./settings/SettingsTab";
 import { SetupModal } from "./settings/SetupModal";
 import { renderAgentsDoc } from "../../../core/domain/agentsDoc";
@@ -20,48 +22,83 @@ import { linkIssueIds } from "./views/idLinks";
 import { checkGh } from "./github/gh";
 import { setGhLogin } from "./github/login";
 
-export default class KyleTicketsPlugin extends Plugin {
-  data: PluginData = mergeData(null);
-  /** Public for debugging: `app.plugins.plugins["kyle-tickets"].store`. */
-  readonly store = new IssueStore(this);
-  readonly interceptor = new IssueInterceptor(this);
+/**
+ * The tickets module's runtime: what the Plugin subclass was in kyle-tickets, now driven by
+ * `load(hub, ctx)`. Views and UI code keep calling the same members they always did.
+ */
+export default class TicketsHost {
+  data: PluginData;
+  readonly store: IssueStore;
+  readonly interceptor: IssueInterceptor;
   /** Live PR state via the `gh` CLI. */
-  readonly prs = new PrService(this);
+  readonly prs: PrService;
   /** Auto-links PRs of watched repos by issue ID. */
-  readonly autoLinker = new AutoLinker(this);
+  readonly autoLinker: AutoLinker;
 
-  override async onload(): Promise<void> {
-    this.data = mergeData(await this.loadData());
+  constructor(
+    readonly hub: Hub,
+    private readonly ctx: ModuleContext,
+  ) {
+    this.data = dataFromNamespace(ctx.settings.get());
+    this.store = new IssueStore(this);
+    this.interceptor = new IssueInterceptor(this);
+    this.prs = new PrService(this);
+    this.autoLinker = new AutoLinker(this);
+  }
 
-    this.registerView(VIEW_TYPE_MAIN, (leaf) => new MainView(leaf, this));
-    this.registerView(VIEW_TYPE_ISSUE, (leaf) => new IssueView(leaf, this));
-    this.registerView(VIEW_TYPE_PROJECT, (leaf) => new ProjectView(leaf, this));
+  get app() {
+    return this.hub.app;
+  }
+
+  get bus(): EventBus {
+    return this.hub.events;
+  }
+
+  registerEvent(ref: EventRef): void {
+    this.ctx.registerEvent(ref);
+  }
+
+  register(cb: () => unknown): void {
+    this.ctx.register(cb);
+  }
+
+  start(): void {
+    this.ctx.registerView(VIEW_TYPE_MAIN, (leaf) => new MainView(leaf, this));
+    this.ctx.registerView(VIEW_TYPE_ISSUE, (leaf) => new IssueView(leaf, this));
+    this.ctx.registerView(VIEW_TYPE_PROJECT, (leaf) => new ProjectView(leaf, this));
     this.interceptor.install();
-    this.registerMarkdownPostProcessor((el) =>
+    this.ctx.registerMarkdownPostProcessor((el) =>
       linkIssueIds(el, this.data.settings.prefix, (id) => this.store.pathOf(id) !== undefined),
     );
-    this.addCommand({
+    this.ctx.addCommand({
       id: "toggle-issue-markdown",
       name: "Toggle issue / Markdown view",
       checkCallback: (check) => this.interceptor.toggle(check),
     });
-    this.addRibbonIcon("kanban-square", "kyle-tickets", () => void this.activateMainView());
-    this.addCommand({
+    this.ctx.addRibbonIcon("kanban-square", "kyle-tickets", () => void this.activateMainView());
+    this.ctx.addCommand({
       id: "open",
       name: "Open kyle-tickets",
       callback: () => void this.activateMainView(),
     });
-    this.addCommand({
+    this.ctx.addCommand({
       id: "new-issue",
       name: "New issue",
       callback: () => this.openNewIssue(),
     });
-    this.addCommand({
+    this.ctx.addCommand({
       id: "new-project",
       name: "New project",
       callback: () => this.openNewProject(),
     });
-    this.addSettingTab(new KyleTicketsSettingTab(this.app, this));
+    const tab = new KyleTicketsSettingTab(this.app, this);
+    this.ctx.addSettingsSection({
+      render: (el) => {
+        tab.containerEl = el;
+        tab.display();
+      },
+      cleanup: () => tab.hide(),
+    });
 
     this.app.workspace.onLayoutReady(() => {
       if (this.data.setupDone) void this.syncAgents();
@@ -74,7 +111,7 @@ export default class KyleTicketsPlugin extends Plugin {
       void checkGh().then((s) => setGhLogin(s.ok ? s.user : undefined), () => setGhLogin(undefined));
     });
     // Background PR refresh: a 1-minute tick; staleness is judged against the `prRefreshMinutes` setting.
-    this.registerInterval(
+    this.ctx.registerInterval(
       window.setInterval(() => {
         void this.prs.refreshAll();
         void this.autoLinker.tick();
@@ -82,11 +119,11 @@ export default class KyleTicketsPlugin extends Plugin {
     );
   }
 
-  override onunload(): void {
+  /** Stops background work; views, commands, ribbon icon and settings section go with `ctx.dispose()`. */
+  stop(): void {
     this.store.stop();
     this.autoLinker.stop();
     this.prs.stop();
-    // Views, commands, ribbon icons and the settings tab are cleaned up by Plugin.
   }
 
   /** Every PR url held by any issue (for background refresh). */
@@ -130,7 +167,7 @@ export default class KyleTicketsPlugin extends Plugin {
   }
 
   async savePluginData(): Promise<void> {
-    await this.saveData(this.data);
+    await this.ctx.settings.update({ ...this.data });
     void this.syncAgents();
   }
 

@@ -11,7 +11,7 @@ describe("ServiceRegistry", () => {
   it("returns registered impl and undefined for missing", () => {
     const r = new ServiceRegistry();
     expect(r.get("tickets")).toBeUndefined();
-    const impl = {};
+    const impl = {} as never;
     r.register("tickets", impl);
     expect(r.get("tickets")).toBe(impl);
     expect(r.get("brain")).toBeUndefined();
@@ -120,8 +120,54 @@ describe("loadModules", () => {
     const a = mk("tickets");
     const b = mk("term");
     const loaded = await loadModules(hub, [a, b]);
-    expect(a.load).toHaveBeenCalledWith(hub);
+    expect(a.load).toHaveBeenCalledWith(hub, undefined);
     expect(b.load).not.toHaveBeenCalled();
     expect(loaded).toEqual([a]);
+  });
+});
+
+describe("createModuleContext", () => {
+  it("dispose tears down commands, views, events, ribbon and sections once", async () => {
+    const { createModuleContext } = await import("./context");
+    const removeCommand = vi.fn();
+    const detach = vi.fn();
+    const unregisterView = vi.fn();
+    const offref = vi.fn();
+    const ribbon = { remove: vi.fn() };
+    const plugin = {
+      manifest: { id: "kyle-hub" },
+      app: { workspace: { detachLeavesOfType: detach, offref }, vault: { offref }, metadataCache: { offref }, commands: { removeCommand }, viewRegistry: { unregisterView } },
+      registerView: vi.fn(),
+      addCommand: vi.fn(),
+      addRibbonIcon: vi.fn(() => ribbon),
+      registerEvent: vi.fn(),
+    };
+    const settings = new SettingsRegistry();
+    settings.register({ id: "tickets", defaults: { a: 1 } });
+    settings.load({});
+    const save = vi.fn(async () => {});
+    const sections = new Map();
+    const ctx = createModuleContext("tickets", plugin as never, settings, save, sections);
+    ctx.registerView("v", (() => ({})) as never);
+    ctx.addCommand({ id: "c", name: "C", callback: () => {} });
+    ctx.addRibbonIcon("x", "t", () => {});
+    ctx.registerEvent({} as never);
+    ctx.addSettingsSection({ render: () => {} });
+    const cleanup = vi.fn();
+    ctx.register(cleanup);
+    await ctx.settings.update({ a: 2 });
+    expect(settings.module("tickets").a).toBe(2);
+    expect(save).toHaveBeenCalled();
+    expect(sections.size).toBe(1);
+    ctx.dispose();
+    ctx.dispose();
+    expect(removeCommand).toHaveBeenCalledOnce();
+    expect(removeCommand).toHaveBeenCalledWith("kyle-hub:c");
+    expect(detach).toHaveBeenCalledWith("v");
+    expect(unregisterView).toHaveBeenCalledWith("v");
+    expect(ribbon.remove).toHaveBeenCalledOnce();
+    expect(offref).toHaveBeenCalledTimes(3);
+    expect(cleanup).toHaveBeenCalledOnce();
+    expect(sections.size).toBe(0);
   });
 });

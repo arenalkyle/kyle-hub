@@ -69,7 +69,7 @@ export class ProjectView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
-    this.contentEl.addClass("kt-root");
+    this.contentEl.addClass("kh-tickets-root");
     this.root = createRoot(this.contentEl);
     this.render();
     this.unsub = this.plugin.store.on("change", () => this.refreshHeader());

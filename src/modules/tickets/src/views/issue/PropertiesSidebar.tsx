@@ -41,15 +41,15 @@ const PRIORITY_LABELS: Record<string, string> = {
 
 function Row({ kind, label, onOpen, children }: { kind: PropKind; label: string; onOpen: PropertiesSidebarProps["onOpen"]; children: ReactNode }) {
   return (
-    <div className="kt-prop">
-      <button type="button" className="kt-prop-value" data-kt-prop={kind} title={label} aria-label={label} onClick={(e) => onOpen(kind, e.currentTarget)}>
+    <div className="kh-tickets-prop">
+      <button type="button" className="kh-tickets-prop-value" data-kh-tickets-prop={kind} title={label} aria-label={label} onClick={(e) => onOpen(kind, e.currentTarget)}>
         {children}
       </button>
     </div>
   );
 }
 
-const Empty = ({ text }: { text: string }) => <span className="kt-prop-empty">{text}</span>;
+const Empty = ({ text }: { text: string }) => <span className="kh-tickets-prop-empty">{text}</span>;
 
 const STATE_LABEL = { open: "Open", draft: "Draft", merged: "Merged", closed: "Closed" } as const;
 
@@ -72,33 +72,33 @@ function PullRequests({ urls, onLink, onUnlink }: { urls: readonly string[]; onL
   };
   return (
     <>
-      <div className="kt-prop-group-title kt-prop-group-head">
+      <div className="kh-tickets-prop-group-title kh-tickets-prop-group-head">
         <span>Pull requests</span>
         {!adding && (
-          <button type="button" className="kt-group-add clickable-icon" aria-label="Link pull request" title="Link pull request" onClick={() => setAdding(true)}>
+          <button type="button" className="kh-tickets-group-add clickable-icon" aria-label="Link pull request" title="Link pull request" onClick={() => setAdding(true)}>
             <Icon name="plus" size={14} />
           </button>
         )}
       </div>
-      {prs.length === 0 && !adding && <div className="kt-prop-empty kt-prop-pad">None</div>}
-      <ul className="kt-prs">
+      {prs.length === 0 && !adding && <div className="kh-tickets-prop-empty kh-tickets-prop-pad">None</div>}
+      <ul className="kh-tickets-prs">
         {prs.map((p) => (
-          <li key={p.url} className="kt-pr-row">
-            <a href={p.canonical ?? p.url} className="external-link kt-pr-link" title={p.info?.title ?? p.url}>
+          <li key={p.url} className="kh-tickets-pr-row">
+            <a href={p.canonical ?? p.url} className="external-link kh-tickets-pr-link" title={p.info?.title ?? p.url}>
               {p.info && <PrStateIcon state={p.info.state} size={14} />}
-              <span className="kt-pr-text">
+              <span className="kh-tickets-pr-text">
                 {p.info ? `${prLabel(p.info)} · ${p.info.title}` : prLabelOfUrl(p.url)}
               </span>
             </a>
-            {p.info && <span className={`kt-pr-badge kt-pr-${p.info.state}`}>{STATE_LABEL[p.info.state]}</span>}
-            <button type="button" className="kt-pr-remove clickable-icon" aria-label="Unlink pull request" title="Unlink" onClick={() => onUnlink(p.url)}>
+            {p.info && <span className={`kh-tickets-pr-badge kh-tickets-pr-${p.info.state}`}>{STATE_LABEL[p.info.state]}</span>}
+            <button type="button" className="kh-tickets-pr-remove clickable-icon" aria-label="Unlink pull request" title="Unlink" onClick={() => onUnlink(p.url)}>
               ✕
             </button>
           </li>
         ))}
       </ul>
       {adding ? (
-        <form className="kt-pr-add" onSubmit={submit}>
+        <form className="kh-tickets-pr-add" onSubmit={submit}>
           <input
             autoFocus
             type="text"
@@ -113,7 +113,7 @@ function PullRequests({ urls, onLink, onUnlink }: { urls: readonly string[]; onL
               }
             }}
           />
-          {error && <div className="kt-pr-error">{error}</div>}
+          {error && <div className="kh-tickets-pr-error">{error}</div>}
         </form>
       ) : null}
     </>
@@ -126,11 +126,11 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
   const projectDef = findProjectByLink(useProjects(), issue.project);
   const anchor = open?.anchor ?? null;
   return (
-    <aside className="kt-issue-side">
+    <aside className="kh-tickets-issue-side">
       <PullRequests urls={issue.pullRequests} onLink={onLinkPr} onUnlink={onUnlinkPr} />
 
 
-      <div className="kt-prop-group-title">Properties</div>
+      <div className="kh-tickets-prop-group-title">Properties</div>
       <Row kind="status" label="Status" onOpen={onOpen}>
         <StatusIcon category={def?.category ?? "backlog"} color={def?.color} />
         <span>{issue.status}</span>
@@ -151,7 +151,7 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
       <Row kind="assignee" label="Assignee" onOpen={onOpen}>
         {issue.assignee ? (
           <>
-            <Avatar name={issue.assignee} className="kt-prop-avatar" />
+            <Avatar name={issue.assignee} className="kh-tickets-prop-avatar" />
             <span>{issue.assignee}</span>
           </>
         ) : (
@@ -164,7 +164,7 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
       <Row kind="milestone" label="Milestone" onOpen={onOpen}>
         {issue.milestone ? (
           <>
-            <span className="kt-icon kt-ms-icon" style={projectDef?.color ? { color: projectDef.color } : undefined}>
+            <span className="kh-tickets-icon kh-tickets-ms-icon" style={projectDef?.color ? { color: projectDef.color } : undefined}>
               <Icon name="milestone" size={14} />
             </span>
             <span>{issue.milestone}</span>
@@ -178,15 +178,15 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
       </Row>
 
 
-      <div className="kt-prop-group-title">Labels</div>
-      <div className="kt-prop">
-        <button type="button" className="kt-prop-value kt-prop-labels" data-kt-prop="labels" title="Labels" aria-label="Labels" onClick={(e) => onOpen("labels", e.currentTarget)}>
+      <div className="kh-tickets-prop-group-title">Labels</div>
+      <div className="kh-tickets-prop">
+        <button type="button" className="kh-tickets-prop-value kh-tickets-prop-labels" data-kh-tickets-prop="labels" title="Labels" aria-label="Labels" onClick={(e) => onOpen("labels", e.currentTarget)}>
           {issue.tags.length > 0 ? (
-            <span className="kt-prop-chips">
+            <span className="kh-tickets-prop-chips">
               {issue.tags.map((t) => (
                 <LabelChip key={t} label={t} color={settings.labelColors[t]} />
               ))}
-              <span className="kt-prop-plus"><Icon name="plus" size={14} /></span>
+              <span className="kh-tickets-prop-plus"><Icon name="plus" size={14} /></span>
             </span>
           ) : (
             <>
@@ -197,7 +197,7 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
         </button>
       </div>
 
-      <div className="kt-prop-group-title">Project</div>
+      <div className="kh-tickets-prop-group-title">Project</div>
       <Row kind="project" label="Project" onOpen={onOpen}>
         {project ? (
           <>

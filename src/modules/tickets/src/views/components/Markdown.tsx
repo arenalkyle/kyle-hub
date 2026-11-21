@@ -43,5 +43,5 @@ export const Markdown = memo(function Markdown({ md, sourcePath, className }: Ma
       el.replaceChildren();
     };
   }, [app, plugin, md, sourcePath, prefix]);
-  return <div ref={ref} className={`kt-md markdown-rendered ${className ?? ""}`} />;
+  return <div ref={ref} className={`kh-tickets-md markdown-rendered ${className ?? ""}`} />;
 });

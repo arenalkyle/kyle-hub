@@ -47,11 +47,11 @@ export function Sidebar({ view, projects, width, onSelect, onNewProject, onResiz
     <button
       key={id}
       type="button"
-      className={`kt-nav-item${view === id ? " is-active" : ""}`}
+      className={`kh-tickets-nav-item${view === id ? " is-active" : ""}`}
       onClick={() => onSelect(id)}
     >
       <Icon name={icon} size={14} />
-      <span className="kt-nav-label">{label}</span>
+      <span className="kh-tickets-nav-label">{label}</span>
     </button>
   );
 
@@ -59,39 +59,39 @@ export function Sidebar({ view, projects, width, onSelect, onNewProject, onResiz
     <button
       key={p.name}
       type="button"
-      className={`kt-nav-item${view === projectViewId(p.name) ? " is-active" : ""}`}
+      className={`kh-tickets-nav-item${view === projectViewId(p.name) ? " is-active" : ""}`}
       onClick={() => onSelect(projectViewId(p.name))}
     >
       <ProjectGlyph icon={p.icon} color={p.color} />
-      <span className="kt-nav-label">{p.name}</span>
+      <span className="kh-tickets-nav-label">{p.name}</span>
     </button>
   );
 
   return (
-    <nav className="kt-sidebar" style={{ width }}>
-      <div className="kt-sidebar-scroll">
+    <nav className="kh-tickets-sidebar" style={{ width }}>
+      <div className="kh-tickets-sidebar-scroll">
         {NAV.map((n) => item(n.id, n.label, n.icon))}
-        <div className="kt-nav-heading kt-nav-heading-row">
+        <div className="kh-tickets-nav-heading kh-tickets-nav-heading-row">
           <span>Projects</span>
-          <button type="button" className="clickable-icon kt-nav-add" title="New project" aria-label="New project" onClick={onNewProject}>
+          <button type="button" className="clickable-icon kh-tickets-nav-add" title="New project" aria-label="New project" onClick={onNewProject}>
             <Icon name="plus" size={14} />
           </button>
         </div>
-        {projects.length === 0 && <div className="kt-nav-empty">No projects</div>}
+        {projects.length === 0 && <div className="kh-tickets-nav-empty">No projects</div>}
         {active.map(projectItem)}
         {archived.length > 0 && (
           <>
-            <button type="button" className="kt-nav-item kt-nav-archived" onClick={() => setShowArchived((v) => !v)}>
+            <button type="button" className="kh-tickets-nav-item kh-tickets-nav-archived" onClick={() => setShowArchived((v) => !v)}>
               <Icon name={archivedOpen ? "chevron-down" : "chevron-right"} size={14} />
-              <span className="kt-nav-label">Archived</span>
-              <span className="kt-nav-count">{archived.length}</span>
+              <span className="kh-tickets-nav-label">Archived</span>
+              <span className="kh-tickets-nav-count">{archived.length}</span>
             </button>
             {archivedOpen && archived.map(projectItem)}
           </>
         )}
       </div>
       <div
-        className="kt-resizer"
+        className="kh-tickets-resizer"
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}

@@ -1,4 +1,4 @@
-import { Modal, Notice, PluginSettingTab, Setting, type App } from "obsidian";
+import { Modal, Notice, Setting, type App } from "obsidian";
 import { createElement, StrictMode, type ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { PluginContext } from "../views/PluginContext";
@@ -39,17 +39,17 @@ class ConfirmModal extends Modal {
   }
 }
 
-export class KyleTicketsSettingTab extends PluginSettingTab {
+/** The tickets block of the kyle-hub settings tab; `containerEl` is set by the hub tab before `display()`. */
+export class KyleTicketsSettingTab {
+  containerEl!: HTMLElement;
   private roots: Root[] = [];
 
   constructor(
-    app: App,
+    readonly app: App,
     private readonly plugin: KyleTicketsPlugin,
-  ) {
-    super(app, plugin);
-  }
+  ) {}
 
-  override display(): void {
+  display(): void {
     const { containerEl } = this;
     this.unmount();
     containerEl.empty();
@@ -62,7 +62,7 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
         t.setValue(s.folder).onChange(async (x) => {
           const folder = normalizeFolder(x);
           const err = validateFolder(folder);
-          t.inputEl.toggleClass("kt-invalid", err !== null);
+          t.inputEl.toggleClass("kh-tickets-invalid", err !== null);
           if (err || folder === this.plugin.data.settings.folder) return;
           this.plugin.data.settings.folder = folder;
           await this.plugin.savePluginData();
@@ -77,7 +77,7 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
       .addText((t) =>
         t.setValue(s.prefix).onChange(async (x) => {
           const err = validatePrefix(x);
-          t.inputEl.toggleClass("kt-invalid", err !== null);
+          t.inputEl.toggleClass("kh-tickets-invalid", err !== null);
           if (err) return;
           this.plugin.data.settings.prefix = x;
           await this.plugin.savePluginData();
@@ -107,8 +107,8 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
       status.setDesc("Checking gh...");
       const r = await checkGh({ bin: this.plugin.data.settings.ghPath, timeoutMs: 10000 });
       status.setDesc(r.message);
-      status.descEl.toggleClass("kt-gh-ok", r.ok);
-      status.descEl.toggleClass("kt-gh-bad", !r.ok);
+      status.descEl.toggleClass("kh-tickets-gh-ok", r.ok);
+      status.descEl.toggleClass("kh-tickets-gh-bad", !r.ok);
       this.plugin.prs.resetAvailability();
       if (r.ok) void this.plugin.prs.refreshAll();
     };
@@ -136,7 +136,7 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
           .onChange(async (x) => {
             const n = Number(x);
             const ok = Number.isFinite(n) && n >= 1 && n <= 1440;
-            t.inputEl.toggleClass("kt-invalid", !ok);
+            t.inputEl.toggleClass("kh-tickets-invalid", !ok);
             if (!ok) return;
             await this.plugin.updateSettings({ prRefreshMinutes: Math.round(n) });
           }),
@@ -174,20 +174,20 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
       return r ? `${r.message} · ${relativeAgo(r.at)}` : "Not synced yet.";
     };
     const sync = new Setting(containerEl).setName("Sync now").setDesc(last());
-    sync.descEl.toggleClass("kt-gh-bad", this.plugin.data.autoLink?.ok === false);
+    sync.descEl.toggleClass("kh-tickets-gh-bad", this.plugin.data.autoLink?.ok === false);
     sync.addButton((b) =>
       b.setButtonText("Sync now").onClick(async () => {
         b.setDisabled(true);
         sync.setDesc("Syncing...");
         const r = await this.plugin.autoLinker.sync();
         sync.setDesc(r ? last() : "A sync is already running.");
-        sync.descEl.toggleClass("kt-gh-bad", r?.ok === false);
+        sync.descEl.toggleClass("kh-tickets-gh-bad", r?.ok === false);
         b.setDisabled(false);
       }),
     );
   }
 
-  override hide(): void {
+  hide(): void {
     this.unmount();
   }
 
@@ -199,7 +199,7 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
   private mountEditor(name: string, desc: string, component: () => ReactElement): void {
     const { containerEl } = this;
     new Setting(containerEl).setName(name).setDesc(desc).setHeading();
-    const root = createRoot(containerEl.createDiv({ cls: "kt-set-host" }));
+    const root = createRoot(containerEl.createDiv({ cls: "kh-tickets-set-host" }));
     this.roots.push(root);
     root.render(
       createElement(StrictMode, null, createElement(PluginContext.Provider, { value: this.plugin }, createElement(component))),

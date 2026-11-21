@@ -18,20 +18,20 @@ export function SubIssues({ children, settings, onOpen, onStatus, onAdd }: SubIs
   const ordered = useMemo(() => orderSubIssues(children, settings.statuses), [children, settings.statuses]);
   const { done, total } = subIssueProgress(children, settings.statuses);
   return (
-    <section className="kt-subissues">
-      <div className="kt-section-head">
-        <h3 className="kt-section-title">Sub-issues</h3>
-        {total > 0 && <span className="kt-subissues-count">{done}/{total}</span>}
-        <span className="kt-spacer" />
-        <button type="button" className="kt-link-btn" onClick={onAdd}>+ Add sub-issue</button>
+    <section className="kh-tickets-subissues">
+      <div className="kh-tickets-section-head">
+        <h3 className="kh-tickets-section-title">Sub-issues</h3>
+        {total > 0 && <span className="kh-tickets-subissues-count">{done}/{total}</span>}
+        <span className="kh-tickets-spacer" />
+        <button type="button" className="kh-tickets-link-btn" onClick={onAdd}>+ Add sub-issue</button>
       </div>
       {ordered.map((c) => {
         const def = settings.statuses.find((s) => s.name === c.status);
         return (
-          <div key={c.id} className="kt-subissue" onClick={(e) => onOpen(c, e.ctrlKey || e.metaKey)}>
+          <div key={c.id} className="kh-tickets-subissue" onClick={(e) => onOpen(c, e.ctrlKey || e.metaKey)}>
             <button
               type="button"
-              className="kt-row-btn"
+              className="kh-tickets-row-btn"
               title={c.status}
               onClick={(e) => {
                 e.stopPropagation();
@@ -40,8 +40,8 @@ export function SubIssues({ children, settings, onOpen, onStatus, onAdd }: SubIs
             >
               <StatusIcon category={def?.category ?? "backlog"} color={def?.color} />
             </button>
-            <span className="kt-row-id">{c.id}</span>
-            <span className="kt-row-title">{c.title}</span>
+            <span className="kh-tickets-row-id">{c.id}</span>
+            <span className="kh-tickets-row-title">{c.title}</span>
             {c.assignee && <AssigneeChip assignee={c.assignee} />}
           </div>
         );

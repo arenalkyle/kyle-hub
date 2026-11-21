@@ -31,7 +31,7 @@ export function ProjectIconPicker({ anchor, value, color, onChange, onClose }: P
       renderItem={(i) => (
         <>
           <ProjectGlyph icon={i ?? undefined} color={color} />
-          <span className="kt-picker-label">{i ?? "Default icon"}</span>
+          <span className="kh-tickets-picker-label">{i ?? "Default icon"}</span>
         </>
       )}
       create={{

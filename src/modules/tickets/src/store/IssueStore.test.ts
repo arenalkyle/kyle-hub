@@ -91,6 +91,29 @@ describe("IssueStore", () => {
     expect((await store.createIssue({ title: "Three" })).id).toBe("TIX-3");
   });
 
+  it("emits ticket events on create, status and label changes (own writes and external edits), not on initial load", async () => {
+    const { store, vault, host } = setup();
+    vault.files.set("Tickets/Issues/TIX-9.md", ["---", "title: Old", "status: Backlog", "---", ""].join("\n"));
+    const emit = vi.fn();
+    (host as { bus?: unknown }).bus = { emit };
+    await store.start();
+    expect(emit).not.toHaveBeenCalled();
+    await store.createIssue({ title: "One" });
+    expect(emit).toHaveBeenCalledWith("ticket:created", { id: "TIX-10" });
+    emit.mockClear();
+    await store.updateIssue("TIX-10", { status: "Todo", tags: ["bug"] });
+    await flush();
+    expect(emit.mock.calls).toEqual([
+      ["ticket:status-changed", { id: "TIX-10", from: "Backlog", to: "Todo" }],
+      ["ticket:label-changed", { id: "TIX-10", added: ["bug"], removed: [] }],
+    ]);
+    emit.mockClear();
+    vault.external("Tickets/Issues/TIX-9.md", ["---", "title: Old", "status: Done", "tags: [x]", "---", ""].join("\n"));
+    await flush();
+    expect(emit).toHaveBeenCalledWith("ticket:status-changed", { id: "TIX-9", from: "Backlog", to: "Done" });
+    expect(emit).toHaveBeenCalledWith("ticket:label-changed", { id: "TIX-9", added: ["x"], removed: [] });
+  });
+
   it("logs store field changes and does not double-log on its own modify event", async () => {
     const { store, vault } = setup();
     await store.start();

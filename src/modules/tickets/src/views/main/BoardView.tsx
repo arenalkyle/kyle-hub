@@ -204,9 +204,9 @@ export function BoardView({ groups, display, subCounts, issues, project, selecte
   );
 
   return (
-    <div className="kt-board-wrap">
+    <div className="kh-tickets-board-wrap">
       {!manual && (
-        <div className="kt-board-hint">
+        <div className="kh-tickets-board-hint">
           Cards are ordered by {ORDER_BY_LABELS[display.orderBy].toLowerCase()}. Set Ordering to Manual in Display to reorder within a column.
         </div>
       )}
@@ -219,23 +219,23 @@ export function BoardView({ groups, display, subCounts, issues, project, selecte
         onDragCancel={reset}
       >
         {hasLanes ? (
-          <div className="kt-board is-lanes">
-            <div className="kt-board-head">{layout.columns.map((c) => header(c.group))}</div>
+          <div className="kh-tickets-board is-lanes">
+            <div className="kh-tickets-board-head">{layout.columns.map((c) => header(c.group))}</div>
             {layout.lanes.map((lane) => {
               const isCollapsed = collapsed.has(laneKey(lane.key));
               const count = layout.columns.reduce((n, c) => n + (c.byLane.get(lane.key)?.issues.length ?? 0), 0);
               return (
-                <div key={lane.key} className="kt-lane">
-                  <div className="kt-lane-header" onClick={() => onToggleGroup(laneKey(lane.key))}>
-                    <span className={`kt-chevron${isCollapsed ? " is-collapsed" : ""}`}>
+                <div key={lane.key} className="kh-tickets-lane">
+                  <div className="kh-tickets-lane-header" onClick={() => onToggleGroup(laneKey(lane.key))}>
+                    <span className={`kh-tickets-chevron${isCollapsed ? " is-collapsed" : ""}`}>
                       <Icon name="chevron-down" size={14} />
                     </span>
                     {lane.status ? <StatusIcon category={lane.status.category} color={lane.status.color} /> : null}
-                    <span className="kt-group-name">{lane.label}</span>
-                    <span className="kt-group-count">{count}</span>
+                    <span className="kh-tickets-group-name">{lane.label}</span>
+                    <span className="kh-tickets-group-count">{count}</span>
                   </div>
                   {!isCollapsed && (
-                    <div className="kt-lane-row">
+                    <div className="kh-tickets-lane-row">
                       {layout.columns.map((c) => cellView(c.byLane.get(lane.key)!, false))}
                     </div>
                   )}
@@ -244,20 +244,20 @@ export function BoardView({ groups, display, subCounts, issues, project, selecte
             })}
           </div>
         ) : (
-          <div className="kt-board">
+          <div className="kh-tickets-board">
             {layout.columns.map((c) => (
-              <div key={c.group.key} className="kt-col">
+              <div key={c.group.key} className="kh-tickets-col">
                 {header(c.group)}
                 {cellView(c.cell!, true)}
               </div>
             ))}
           </div>
         )}
-        {/* Portalled to <body>: .kt-content is a container (layout containment), which would otherwise be the fixed-position origin. */}
+        {/* Portalled to <body>: .kh-tickets-content is a container (layout containment), which would otherwise be the fixed-position origin. */}
         {createPortal(
           <DragOverlay>
             {active ? (
-              <div className="kt-card is-overlay">
+              <div className="kh-tickets-card is-overlay">
                 <IssueCard issue={active} settings={settings} properties={display.properties} subCount={subCounts.get(active.id)} />
               </div>
             ) : null}

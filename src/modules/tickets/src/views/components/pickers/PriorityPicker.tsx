@@ -24,7 +24,7 @@ export function PriorityPicker({ anchor, value, onChange, onClose }: PriorityPic
       renderItem={(p) => (
         <>
           <PriorityIcon priority={p} />
-          <span className="kt-picker-label">{PRIORITY_LABELS[p]}</span>
+          <span className="kh-tickets-picker-label">{PRIORITY_LABELS[p]}</span>
         </>
       )}
       onSelect={onChange}

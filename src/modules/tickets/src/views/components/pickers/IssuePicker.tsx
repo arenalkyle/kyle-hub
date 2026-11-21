@@ -42,13 +42,13 @@ export function IssuePicker({ anchor, value, excludeId, placeholder, onChange, o
       selectedKeys={[value ?? "__none"]}
       placeholder={placeholder ?? "Search by ID or title..."}
       renderItem={(i) => {
-        if (!i.issue) return <span className="kt-picker-label">No parent</span>;
+        if (!i.issue) return <span className="kh-tickets-picker-label">No parent</span>;
         const st = statusOf(i.issue.status);
         return (
           <>
             <StatusIcon category={st?.category ?? "backlog"} color={st?.color} />
-            <span className="kt-picker-id">{i.issue.id}</span>
-            <span className="kt-picker-label">{i.issue.title}</span>
+            <span className="kh-tickets-picker-id">{i.issue.id}</span>
+            <span className="kh-tickets-picker-label">{i.issue.title}</span>
           </>
         );
       }}

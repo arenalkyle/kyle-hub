@@ -1,4 +1,5 @@
 import type { App } from "obsidian";
+import type { ModuleContext } from "./context";
 import { EventBus } from "./events";
 import { ServiceRegistry } from "./services";
 import { SettingsRegistry, type ModuleId } from "./settings";
@@ -15,7 +16,7 @@ export interface Hub {
 
 export interface HubModule {
   id: Exclude<ModuleId, "core">;
-  load(hub: Hub): void | Promise<void>;
+  load(hub: Hub, ctx: ModuleContext): void | Promise<void>;
   unload?(): void | Promise<void>;
 }
 
@@ -24,12 +25,16 @@ export function createHubParts(): Pick<Hub, "services" | "events" | "settings"> 
 }
 
 /** Calls `load(hub)` only for modules whose `enabled` flag is set; returns the ones loaded. */
-export async function loadModules(hub: Hub, modules: readonly HubModule[]): Promise<HubModule[]> {
+export async function loadModules(
+  hub: Hub,
+  modules: readonly HubModule[],
+  makeCtx: (id: HubModule["id"]) => ModuleContext = () => undefined as never,
+): Promise<HubModule[]> {
   const loaded: HubModule[] = [];
   for (const m of modules) {
     if (!hub.settings.isEnabled(m.id)) continue;
     try {
-      await m.load(hub);
+      await m.load(hub, makeCtx(m.id));
       loaded.push(m);
     } catch (e) {
       console.error(`kyle-hub: module ${m.id} failed to load`, e);
@@ -37,3 +42,4 @@ export async function loadModules(hub: Hub, modules: readonly HubModule[]): Prom
   }
   return loaded;
 }
+

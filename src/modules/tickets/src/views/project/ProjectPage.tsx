@@ -36,7 +36,7 @@ function LeadEditor({ value, onSave }: { value: string | undefined; onSave: (v: 
   const [draft, setDraft] = useState<string | null>(null);
   if (draft === null) {
     return (
-      <button type="button" className="kt-prop-btn" onClick={() => setDraft(value ?? "")}>
+      <button type="button" className="kh-tickets-prop-btn" onClick={() => setDraft(value ?? "")}>
         <Icon name="user" />
         <span>{value ? value : "Lead"}</span>
       </button>
@@ -50,7 +50,7 @@ function LeadEditor({ value, onSave }: { value: string | undefined; onSave: (v: 
   return (
     <input
       autoFocus
-      className="kt-project-lead-input"
+      className="kh-tickets-project-lead-input"
       value={draft}
       placeholder="Lead"
       onChange={(e) => setDraft(e.target.value)}
@@ -79,7 +79,7 @@ export function ProjectPage({ name, onRenamed, onDeleted, headerLeft, extraMenu 
 
   if (!project) {
     return (
-      <div className="kt-project kt-issue-state" ref={root}>
+      <div className="kh-tickets-project kh-tickets-issue-state" ref={root}>
         {ready ? <div>This project no longer exists</div> : <div>Loading...</div>}
       </div>
     );
@@ -135,15 +135,15 @@ export function ProjectPage({ name, onRenamed, onDeleted, headerLeft, extraMenu 
   const close = () => setOpen(null);
 
   return (
-    <div className="kt-project" ref={root}>
-      <div className="kt-header kt-issue-header">
+    <div className="kh-tickets-project" ref={root}>
+      <div className="kh-tickets-header kh-tickets-issue-header">
         {headerLeft}
-        <nav className="kt-crumbs" aria-label="Breadcrumb">
-          <span className="kt-crumb">Projects</span>
-          <span className="kt-crumb-sep">›</span>
-          <span className="kt-crumb is-current">{project.name}</span>
+        <nav className="kh-tickets-crumbs" aria-label="Breadcrumb">
+          <span className="kh-tickets-crumb">Projects</span>
+          <span className="kh-tickets-crumb-sep">›</span>
+          <span className="kh-tickets-crumb is-current">{project.name}</span>
         </nav>
-        <span className="kt-spacer" />
+        <span className="kh-tickets-spacer" />
         <button
           type="button"
           className="clickable-icon"
@@ -160,40 +160,40 @@ export function ProjectPage({ name, onRenamed, onDeleted, headerLeft, extraMenu 
           <Icon name="more-horizontal" size={16} />
         </button>
       </div>
-      <div className="kt-issue-body">
-        <div className="kt-issue-main">
-          <div className="kt-issue-column">
-            <div className="kt-project-title">
+      <div className="kh-tickets-issue-body">
+        <div className="kh-tickets-issue-main">
+          <div className="kh-tickets-issue-column">
+            <div className="kh-tickets-project-title">
               <button
                 type="button"
-                className="kt-project-icon-btn"
+                className="kh-tickets-project-icon-btn"
                 title="Change icon"
                 onClick={(e) => setOpen({ kind: "icon", anchor: e.currentTarget })}
               >
                 <ProjectGlyph icon={project.icon} color={project.color ?? DEFAULT_PROJECT_COLOR} size={26} />
               </button>
-              <TitleEditor title={project.name} onSave={rename} extraClass="kt-project-name" />
+              <TitleEditor title={project.name} onSave={rename} extraClass="kh-tickets-project-name" />
             </div>
-            <div className="kt-project-props">
-              <button type="button" className="kt-prop-btn" onClick={(e) => setOpen({ kind: "status", anchor: e.currentTarget })}>
+            <div className="kh-tickets-project-props">
+              <button type="button" className="kh-tickets-prop-btn" onClick={(e) => setOpen({ kind: "status", anchor: e.currentTarget })}>
                 <ProjectStatusIcon status={project.status} />
                 <span>{PROJECT_STATUS_LABELS[project.status]}</span>
               </button>
               <LeadEditor value={project.lead} onSave={(lead) => update({ lead })} />
-              <button type="button" className="kt-prop-btn" onClick={(e) => setOpen({ kind: "due", anchor: e.currentTarget })}>
+              <button type="button" className="kh-tickets-prop-btn" onClick={(e) => setOpen({ kind: "due", anchor: e.currentTarget })}>
                 <Icon name="calendar" />
                 <span>{project.target ?? "Target date"}</span>
               </button>
-              <label className="kt-prop-btn kt-project-color" title="Color">
+              <label className="kh-tickets-prop-btn kh-tickets-project-color" title="Color">
                 <Icon name="palette" />
                 <ColorInput value={project.color ?? DEFAULT_PROJECT_COLOR} title="Project color" onCommit={(color) => update({ color })} />
               </label>
             </div>
-            <div className="kt-project-progress" title={`${progress.done} of ${progress.total} issues done`}>
-              <div className="kt-progress-bar">
-                <div className="kt-progress-fill" style={{ width: `${pct}%`, background: project.color ?? DEFAULT_PROJECT_COLOR }} />
+            <div className="kh-tickets-project-progress" title={`${progress.done} of ${progress.total} issues done`}>
+              <div className="kh-tickets-progress-bar">
+                <div className="kh-tickets-progress-fill" style={{ width: `${pct}%`, background: project.color ?? DEFAULT_PROJECT_COLOR }} />
               </div>
-              <span className="kt-progress-text">
+              <span className="kh-tickets-progress-text">
                 {progress.done} / {progress.total} issues done{progress.total > 0 ? ` · ${pct}%` : ""}
               </span>
             </div>
@@ -204,7 +204,7 @@ export function ProjectPage({ name, onRenamed, onDeleted, headerLeft, extraMenu 
             />
             <Milestones project={project} color={project.color ?? DEFAULT_PROJECT_COLOR} filters={viewState.filters} onFiltersChange={viewState.setFilters} />
           </div>
-          <div className="kt-project-issues">
+          <div className="kh-tickets-project-issues">
             <IssueCollection scope={viewKey} viewKey={viewKey} title="Issues" project={project.name} embedded viewState={viewState} />
           </div>
         </div>

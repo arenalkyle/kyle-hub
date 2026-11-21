@@ -46,7 +46,7 @@ export function AssigneePicker({ anchor, value, onChange, onClose }: AssigneePic
       renderItem={(i) => (
         <>
           <Icon name="user" />
-          <span className="kt-picker-label">{i.name ?? "No assignee"}</span>
+          <span className="kh-tickets-picker-label">{i.name ?? "No assignee"}</span>
         </>
       )}
       create={{ label: (q) => `Assign to "${q}"`, onCreate: (q) => onChange(q) }}

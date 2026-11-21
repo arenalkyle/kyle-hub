@@ -34,10 +34,10 @@ export function ProjectPicker({ anchor, value, onChange, onClose }: ProjectPicke
       placeholder="Set project..."
       renderItem={(i) => (
         <>
-          <span style={i.color ? { color: i.color } : undefined} className="kt-picker-icon">
+          <span style={i.color ? { color: i.color } : undefined} className="kh-tickets-picker-icon">
             <Icon name="box" />
           </span>
-          <span className="kt-picker-label">{i.name ?? "No project"}</span>
+          <span className="kh-tickets-picker-label">{i.name ?? "No project"}</span>
         </>
       )}
       onSelect={(i) => onChange(i.name ?? undefined)}

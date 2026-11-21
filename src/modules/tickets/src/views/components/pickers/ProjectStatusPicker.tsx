@@ -22,7 +22,7 @@ export function ProjectStatusPicker({ anchor, value, onChange, onClose }: Projec
       renderItem={(s) => (
         <>
           <ProjectStatusIcon status={s} />
-          <span className="kt-picker-label">{PROJECT_STATUS_LABELS[s]}</span>
+          <span className="kh-tickets-picker-label">{PROJECT_STATUS_LABELS[s]}</span>
         </>
       )}
       onSelect={onChange}

@@ -65,7 +65,7 @@ function InlineComposer({ initial, placeholder, submitLabel, onSubmit, onCancel 
     }
   };
   return (
-    <div className="kt-comment-composer">
+    <div className="kh-tickets-comment-composer">
       <MarkdownEditor
         viewRef={view}
         value={initial}
@@ -75,8 +75,8 @@ function InlineComposer({ initial, placeholder, submitLabel, onSubmit, onCancel 
         onSubmit={(b) => void submit(b)}
         onCancel={onCancel}
       />
-      <div className="kt-comment-actions">
-        <span className="kt-comment-hint">Ctrl+Enter to save, Esc to cancel</span>
+      <div className="kh-tickets-comment-actions">
+        <span className="kh-tickets-comment-hint">Ctrl+Enter to save, Esc to cancel</span>
         <button type="button" onClick={onCancel}>Cancel</button>
         <button
           type="button"
@@ -101,15 +101,15 @@ const CommentView = memo(function CommentView({ c, sourcePath, now, actions, can
   const [mode, setMode] = useState<"view" | "edit" | "reply">("view");
   const rel = relativeTime(c.time, new Date(now)) ?? c.time;
   return (
-    <div className={`kt-comment${c.replyTo ? " kt-comment-reply" : ""}`}>
-      <div className="kt-comment-head">
-        <Avatar name={c.author} className="kt-comment-avatar" />
-        <span className="kt-comment-author">{c.author}</span>
-        <span className="kt-comment-time" title={c.time}>{rel}</span>
-        {c.edited && <span className="kt-comment-edited" title="This comment was edited">(edited)</span>}
+    <div className={`kh-tickets-comment${c.replyTo ? " kh-tickets-comment-reply" : ""}`}>
+      <div className="kh-tickets-comment-head">
+        <Avatar name={c.author} className="kh-tickets-comment-avatar" />
+        <span className="kh-tickets-comment-author">{c.author}</span>
+        <span className="kh-tickets-comment-time" title={c.time}>{rel}</span>
+        {c.edited && <span className="kh-tickets-comment-edited" title="This comment was edited">(edited)</span>}
         {mode === "view" && (
-          <span className="kt-comment-tools">
-            <button type="button" className="kt-link-btn" onClick={() => setMode("edit")}>Edit</button>
+          <span className="kh-tickets-comment-tools">
+            <button type="button" className="kh-tickets-link-btn" onClick={() => setMode("edit")}>Edit</button>
           </span>
         )}
       </div>
@@ -122,10 +122,10 @@ const CommentView = memo(function CommentView({ c, sourcePath, now, actions, can
           onCancel={() => setMode("view")}
         />
       ) : (
-        c.body !== "" && <Markdown md={c.body} sourcePath={sourcePath} className="kt-comment-body" />
+        c.body !== "" && <Markdown md={c.body} sourcePath={sourcePath} className="kh-tickets-comment-body" />
       )}
       {canReply && mode === "view" && (
-        <button type="button" className="kt-link-btn kt-comment-reply-btn" onClick={() => setMode("reply")}>Reply</button>
+        <button type="button" className="kh-tickets-link-btn kh-tickets-comment-reply-btn" onClick={() => setMode("reply")}>Reply</button>
       )}
       {mode === "reply" && (
         <InlineComposer
@@ -144,10 +144,10 @@ const EventView = memo(function EventView({ entry, now }: { entry: ActivityEvent
   const rel = relativeTime(entry.time, new Date(now)) ?? entry.time;
   const h = humanizeEvent(entry.text);
   return (
-    <div className="kt-event">
-      <span className="kt-event-icon"><Icon name={EVENT_ICON[h.icon]} size={12} /></span>
-      <span className="kt-event-text">@{entry.author} {h.phrase}</span>
-      <span className="kt-event-time" title={entry.time}>· {rel}</span>
+    <div className="kh-tickets-event">
+      <span className="kh-tickets-event-icon"><Icon name={EVENT_ICON[h.icon]} size={12} /></span>
+      <span className="kh-tickets-event-text">@{entry.author} {h.phrase}</span>
+      <span className="kh-tickets-event-time" title={entry.time}>· {rel}</span>
     </div>
   );
 });
@@ -159,10 +159,10 @@ export function ActivityFeed({ feed, sourcePath, actions }: { feed: readonly Fee
   const items = buildItems(feed);
   const start = Math.max(0, items.length - shown);
   return (
-    <section className="kt-activity">
-      <h3 className="kt-section-title">Activity</h3>
+    <section className="kh-tickets-activity">
+      <h3 className="kh-tickets-section-title">Activity</h3>
       {start > 0 && (
-        <button type="button" className="kt-link-btn" onClick={() => setShown((n) => n + PAGE)}>
+        <button type="button" className="kh-tickets-link-btn" onClick={() => setShown((n) => n + PAGE)}>
           Show {Math.min(PAGE, start)} earlier ({start} hidden)
         </button>
       )}
@@ -170,10 +170,10 @@ export function ActivityFeed({ feed, sourcePath, actions }: { feed: readonly Fee
         it.kind === "event" ? (
           <EventView key={it.key} entry={it.entry} now={now} />
         ) : (
-          <div className="kt-thread" key={it.key}>
+          <div className="kh-tickets-thread" key={it.key}>
             <CommentView c={it.root} sourcePath={sourcePath} now={now} actions={actions} canReply />
             {it.replies.length > 0 && (
-              <div className="kt-thread-replies">
+              <div className="kh-tickets-thread-replies">
                 {it.replies.map((r) => (
                   <CommentView key={r.id} c={r} sourcePath={sourcePath} now={now} actions={actions} canReply={false} />
                 ))}

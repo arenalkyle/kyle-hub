@@ -28,16 +28,16 @@ function StatusRow({ status, count, isDefault, onRename, onColor, onCategory, on
   return (
     <div
       ref={setNodeRef}
-      className={`kt-set-row${isDragging ? " is-dragging" : ""}`}
+      className={`kh-tickets-set-row${isDragging ? " is-dragging" : ""}`}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <span className="kt-set-handle" title="Drag to reorder" {...attributes} {...listeners}>
+      <span className="kh-tickets-set-handle" title="Drag to reorder" {...attributes} {...listeners}>
         {"⋮⋮"}
       </span>
       <ColorInput value={status.color} title="Color" onCommit={onColor} />
       <input
         key={status.name}
-        className="kt-set-name"
+        className="kh-tickets-set-name"
         type="text"
         defaultValue={status.name}
         onBlur={(e) => {
@@ -58,7 +58,7 @@ function StatusRow({ status, count, isDefault, onRename, onColor, onCategory, on
           <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
         ))}
       </select>
-      <span className="kt-set-count" title="Issues using this status">{count}</span>
+      <span className="kh-tickets-set-count" title="Issues using this status">{count}</span>
       <button type="button" className={isDefault ? "mod-cta" : ""} disabled={isDefault} onClick={onDefault} title="Default for new issues">
         {isDefault ? "Default" : "Make default"}
       </button>
@@ -157,7 +157,7 @@ export function StatusesEditor() {
   };
 
   return (
-    <div className="kt-set-editor">
+    <div className="kh-tickets-set-editor">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={statuses.map((s) => s.name)} strategy={verticalListSortingStrategy}>
           {statuses.map((s) => (
@@ -177,7 +177,7 @@ export function StatusesEditor() {
           ))}
         </SortableContext>
       </DndContext>
-      {error && <div className="kt-set-error">{error}</div>}
+      {error && <div className="kh-tickets-set-error">{error}</div>}
       <button
         type="button"
         onClick={() =>

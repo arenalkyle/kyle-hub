@@ -50,21 +50,21 @@ export function MilestoneRow({ milestone, progress, overdue, color, active, onTo
   return (
     <li
       ref={setNodeRef}
-      className={`kt-ms-row${active ? " is-active" : ""}${overdue ? " is-overdue" : ""}${isDragging ? " is-dragging" : ""}`}
+      className={`kh-tickets-ms-row${active ? " is-active" : ""}${overdue ? " is-overdue" : ""}${isDragging ? " is-dragging" : ""}`}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <div className="kt-ms-main">
-        <span className="kt-ms-grip" title="Drag to reorder" aria-label="Drag to reorder" {...attributes} {...listeners}>
+      <div className="kh-tickets-ms-main">
+        <span className="kh-tickets-ms-grip" title="Drag to reorder" aria-label="Drag to reorder" {...attributes} {...listeners}>
           <Icon name="grip-vertical" size={14} />
         </span>
-        <span className="kt-ms-diamond" style={{ color }}>
+        <span className="kh-tickets-ms-diamond" style={{ color }}>
           <Icon name="diamond" size={14} />
         </span>
         {editing ? (
-          <div className="kt-ms-edit">
-            <input autoFocus className="kt-ms-name-input" value={name} placeholder="Milestone name" onChange={(e) => setName(e.target.value)} onKeyDown={keys} />
-            <input className="kt-ms-desc-input" value={desc} placeholder="Description" onChange={(e) => setDesc(e.target.value)} onKeyDown={keys} />
-            <span className="kt-ms-edit-actions">
+          <div className="kh-tickets-ms-edit">
+            <input autoFocus className="kh-tickets-ms-name-input" value={name} placeholder="Milestone name" onChange={(e) => setName(e.target.value)} onKeyDown={keys} />
+            <input className="kh-tickets-ms-desc-input" value={desc} placeholder="Description" onChange={(e) => setDesc(e.target.value)} onKeyDown={keys} />
+            <span className="kh-tickets-ms-edit-actions">
               <button type="button" className="mod-cta" onClick={save}>
                 Save
               </button>
@@ -74,23 +74,23 @@ export function MilestoneRow({ milestone, progress, overdue, color, active, onTo
             </span>
           </div>
         ) : (
-          <button type="button" className="kt-ms-name" title="Filter issues to this milestone" onClick={onToggleFilter}>
-            <span className="kt-ms-text">
-              <span className="kt-ms-title">{milestone.name}</span>
-              {milestone.description && <span className="kt-ms-desc">{milestone.description}</span>}
+          <button type="button" className="kh-tickets-ms-name" title="Filter issues to this milestone" onClick={onToggleFilter}>
+            <span className="kh-tickets-ms-text">
+              <span className="kh-tickets-ms-title">{milestone.name}</span>
+              {milestone.description && <span className="kh-tickets-ms-desc">{milestone.description}</span>}
             </span>
           </button>
         )}
-        <button type="button" className="kt-prop-btn kt-ms-date" title="Target date" onClick={(e) => setDateAnchor(e.currentTarget)}>
+        <button type="button" className="kh-tickets-prop-btn kh-tickets-ms-date" title="Target date" onClick={(e) => setDateAnchor(e.currentTarget)}>
           <Icon name="calendar" />
           <span>{milestone.target ?? "Target date"}</span>
         </button>
-        <span className="kt-ms-progress" title={`${progress.done} of ${progress.total} issues done`}>
-          <span className="kt-ms-count">
+        <span className="kh-tickets-ms-progress" title={`${progress.done} of ${progress.total} issues done`}>
+          <span className="kh-tickets-ms-count">
             {progress.done}/{progress.total} · {progress.percent}%
           </span>
-          <span className="kt-progress-bar kt-ms-bar">
-            <span className="kt-progress-fill" style={{ width: `${progress.percent}%`, background: color }} />
+          <span className="kh-tickets-progress-bar kh-tickets-ms-bar">
+            <span className="kh-tickets-progress-fill" style={{ width: `${progress.percent}%`, background: color }} />
           </span>
         </span>
         <button

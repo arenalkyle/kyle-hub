@@ -42,15 +42,15 @@ export function DatePicker({ anchor, value, onChange, onClose }: DatePickerProps
       renderItem={(i) => (
         <>
           <Icon name="calendar" />
-          <span className="kt-picker-label">{i.label}</span>
-          {i.date && <span className="kt-picker-meta">{i.date}</span>}
+          <span className="kh-tickets-picker-label">{i.label}</span>
+          {i.date && <span className="kh-tickets-picker-meta">{i.date}</span>}
         </>
       )}
       footer={
-        <div className="kt-picker-footer">
+        <div className="kh-tickets-picker-footer">
           <input
             type="date"
-            className="kt-date-input"
+            className="kh-tickets-date-input"
             value={value ?? ""}
             onChange={(e) => {
               onChange(e.target.value || undefined);

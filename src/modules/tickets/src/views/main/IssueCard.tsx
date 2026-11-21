@@ -19,21 +19,21 @@ export const IssueCard = memo(function IssueCard({ issue, settings, properties: 
   const initial = issue.assignee?.trim().charAt(0).toUpperCase();
   return (
     <>
-      <div className="kt-card-top">
-        {p.id ? <span className="kt-card-id">{issue.id}</span> : <span />}
+      <div className="kh-tickets-card-top">
+        {p.id ? <span className="kh-tickets-card-id">{issue.id}</span> : <span />}
         {p.assignee && initial ? (
-          <Avatar name={issue.assignee ?? ""} className="kt-card-avatar" />
+          <Avatar name={issue.assignee ?? ""} className="kh-tickets-card-avatar" />
         ) : null}
       </div>
-      <div className="kt-card-title">{issue.title}</div>
-      <div className="kt-card-chips">
+      <div className="kh-tickets-card-title">{issue.title}</div>
+      <div className="kh-tickets-card-chips">
         {p.status && (
-          <span className="kt-card-icon" title={issue.status}>
+          <span className="kh-tickets-card-icon" title={issue.status}>
             <StatusIcon category={def?.category ?? "backlog"} color={def?.color} />
           </span>
         )}
         {p.priority && (
-          <span className="kt-card-icon" title="Priority">
+          <span className="kh-tickets-card-icon" title="Priority">
             <PriorityIcon priority={issue.priority} />
           </span>
         )}

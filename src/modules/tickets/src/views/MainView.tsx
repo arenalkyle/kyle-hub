@@ -11,7 +11,7 @@ import { Icon } from "./components/icons";
 import { IssueCollection } from "./main/IssueCollection";
 import { Sidebar } from "./main/Sidebar";
 
-export const VIEW_TYPE_MAIN = "kyle-tickets-main";
+export const VIEW_TYPE_MAIN = "kh-tickets-main";
 
 function MainApp() {
   const plugin = usePlugin();
@@ -37,7 +37,7 @@ function MainApp() {
 
   return (
     <div
-      className="kt-main"
+      className="kh-tickets-main"
       ref={rootRef}
       tabIndex={-1}
       onMouseDown={(e) => {
@@ -61,7 +61,7 @@ function MainApp() {
         />
       )}
       {showPage ? (
-        <div className="kt-content">
+        <div className="kh-tickets-content">
           <ProjectPage
             key={project}
             name={project!}
@@ -79,7 +79,7 @@ function MainApp() {
           />
         </div>
       ) : (
-      <div className="kt-content">
+      <div className="kh-tickets-content">
         <IssueCollection
           scope={view}
           viewKey={view}
@@ -89,7 +89,7 @@ function MainApp() {
           onToggleSidebar={() => commit({ ...ui, sidebarCollapsed: !ui.sidebarCollapsed })}
           notice={
             !plugin.data.setupDone ? (
-              <div className="kt-notice">kyle-tickets setup has not run yet. Finish the setup window or open the plugin settings.</div>
+              <div className="kh-tickets-notice">kyle-tickets setup has not run yet. Finish the setup window or open the plugin settings.</div>
             ) : undefined
           }
         />
@@ -119,7 +119,7 @@ export class MainView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
-    this.contentEl.addClass("kt-root");
+    this.contentEl.addClass("kh-tickets-root");
     this.root = createRoot(this.contentEl);
     this.root.render(
       <StrictMode>

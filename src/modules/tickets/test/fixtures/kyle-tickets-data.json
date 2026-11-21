@@ -1,0 +1,24 @@
+{
+  "main": { "view": "board", "sidebarWidth": 240, "sidebarCollapsed": true, "collapsedGroups": { "all": ["Done"] } },
+  "settings": {
+    "folder": "Work/Tickets",
+    "prefix": "WRK",
+    "displayName": "alex",
+    "statuses": [
+      { "name": "Backlog", "color": "#888888", "type": "backlog" },
+      { "name": "Shipped", "color": "#22aa55", "type": "completed" }
+    ],
+    "defaultStatus": "Backlog",
+    "labelColors": { "bug": "#ff0000" },
+    "ghRepos": ["owner/repo"],
+    "autoLinkPrs": true,
+    "unlinkedPrs": { "WRK-1": ["https://github.com/owner/repo/pull/9"] },
+    "prRefreshMinutes": 5,
+    "ghPath": "C:\\tools\\gh.exe"
+  },
+  "idCounter": 41,
+  "setupDone": true,
+  "views": { "all": { "layout": "list" } },
+  "prCache": {},
+  "autoLink": { "at": 1763700000000, "ok": true, "message": "ok" }
+}

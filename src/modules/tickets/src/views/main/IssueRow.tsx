@@ -29,24 +29,24 @@ export const IssueRow = memo(function IssueRow({
     fn(e.currentTarget);
   };
   return (
-    <div className={`kt-row${sub ? " is-sub" : ""}${selected ? " is-selected" : ""}`} data-kt-id={issue.id} onClick={(e) => onOpen(issue, e.ctrlKey || e.metaKey)}>
+    <div className={`kh-tickets-row${sub ? " is-sub" : ""}${selected ? " is-selected" : ""}`} data-kh-tickets-id={issue.id} onClick={(e) => onOpen(issue, e.ctrlKey || e.metaKey)}>
       {p.priority ? (
-        <button type="button" className="kt-row-btn" title="Priority" onClick={stop((a) => onPriority(issue, a))}>
+        <button type="button" className="kh-tickets-row-btn" title="Priority" onClick={stop((a) => onPriority(issue, a))}>
           <PriorityIcon priority={issue.priority} />
         </button>
       ) : (
         <span />
       )}
-      {p.id ? <span className="kt-row-id">{issue.id}</span> : <span />}
+      {p.id ? <span className="kh-tickets-row-id">{issue.id}</span> : <span />}
       {p.status ? (
-        <button type="button" className="kt-row-btn" title={issue.status} onClick={stop((a) => onStatus(issue, a))}>
+        <button type="button" className="kh-tickets-row-btn" title={issue.status} onClick={stop((a) => onStatus(issue, a))}>
           <StatusIcon category={def?.category ?? "backlog"} color={def?.color} />
         </button>
       ) : (
         <span />
       )}
-      <span className="kt-row-title">{issue.title}</span>
-      <span className="kt-row-chips">
+      <span className="kh-tickets-row-title">{issue.title}</span>
+      <span className="kh-tickets-row-chips">
         {subCount ? <SubIssuesChip count={subCount} /> : null}
         {p.labels && issue.tags.map((t) => <LabelChip key={t} label={t} color={settings.labelColors[t]} />)}
         {p.project && issue.project && <ProjectChip project={issue.project} />}
