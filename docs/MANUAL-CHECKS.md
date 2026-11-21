@@ -59,3 +59,15 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 6. Group "+" in a Priority/Project group → New issue is preset with that priority/project.
 7. Set All Issues and Active to different groupings, restart Obsidian → each is remembered. **Reset** restores defaults.
 8. Dropdown pickers inside the popover open above it without closing it.
+
+## 4.2 Board — LOCK-18
+
+1. All Issues → header toggle **Board** (or Display → Layout) → one column per workflow status in order (empty status columns shown), correct counts; board scrolls horizontally, columns vertically. The choice persists per view.
+2. Drag a card Todo → In Progress: it lands where dropped, the file's `status` changes, and an activity line is appended.
+3. Display: group by Project, sub-group by Priority → collapsible swimlanes with counts. Drag a card to another project lane and column → both fields update. Drag into "No project" → `project` is cleared.
+4. Group by Label → dragging moves the dragged-from label to the target label.
+5. Ordering Manual → reorder within a column, reload Obsidian → order kept. With any other ordering, in-column reorder is disabled and a hint bar says so.
+6. A single click on a card opens the ticket; a drag does not. Cards show ID + assignee initial, 2-line title, enabled chips.
+7. Column "+" opens New issue preset to that column's value.
+8. Smoothness: with 300+ issues (create via console loop: `for (let i=0;i<300;i++) await app.plugins.plugins['kyle-tickets'].store.createIssue({title:'Load '+i})`), dragging stays smooth. Delete them afterwards.
+9. Light and dark themes: drag overlay raised, drop targets highlighted.
