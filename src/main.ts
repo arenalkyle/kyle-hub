@@ -14,7 +14,7 @@ import { SessionManager, type Session } from "./session-manager";
 import { detectProfiles, type ShellProfile } from "./shells";
 import { XtermSession, type TermLook } from "./xterm-session";
 import {
-  blurPx, buildXtermTheme, DEFAULT_APPEARANCE, mergeAppearance, obsidianPalette, resolvePalette, toHex, type Palette,
+  blurPx, buildXtermTheme, DEFAULT_APPEARANCE, mergeAppearance, obsidianPalette, resolvePalette, shouldUseWebgl, toHex, type Palette,
 } from "./appearance";
 import fs from "node:fs";
 
@@ -123,6 +123,7 @@ export default class KyleTermPlugin extends Plugin {
       theme: buildXtermTheme(this.currentPalette(), a.terminalOpacity),
       fontFamily: a.fontFamily || DEFAULT_APPEARANCE.fontFamily,
       fontSize: a.fontSize,
+      webgl: shouldUseWebgl(a.terminalOpacity),
     };
   }
 

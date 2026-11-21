@@ -8,6 +8,7 @@ export interface TermLook {
   theme: XtermTheme;
   fontFamily: string;
   fontSize: number;
+  webgl: boolean;
 }
 
 /** One long-lived xterm per session; its element is moved between views, never recreated. */
@@ -16,6 +17,7 @@ export class XtermSession implements TermLike {
   private fitAddon = new FitAddon();
   private el = document.createElement("div");
   private opened = false;
+  private gl: WebglAddon | null = null;
   /** Per-session zoom; null = follow the setting. Not persisted. */
   private zoom: number | null = null;
 
@@ -84,6 +86,7 @@ export class XtermSession implements TermLike {
     this.term.options.theme = l.theme;
     this.term.options.fontFamily = l.fontFamily;
     this.term.options.fontSize = this.zoom ?? l.fontSize;
+    this.syncWebgl();
     this.fit();
   }
 
@@ -99,15 +102,28 @@ export class XtermSession implements TermLike {
     if (!this.opened) {
       this.opened = true;
       this.term.open(this.el);
-      try {
-        const gl = new WebglAddon();
-        gl.onContextLoss(() => gl.dispose());
-        this.term.loadAddon(gl);
-      } catch {
-        // fall back to the default renderer
-      }
+      this.syncWebgl();
     }
     this.fit();
+  }
+
+  /** Load or dispose the WebGL addon to match the look; disposing falls back to the DOM renderer. */
+  private syncWebgl(): void {
+    if (!this.opened) return;
+    if (this.look().webgl) {
+      if (this.gl) return;
+      try {
+        const gl = new WebglAddon();
+        gl.onContextLoss(() => { gl.dispose(); if (this.gl === gl) this.gl = null; });
+        this.term.loadAddon(gl);
+        this.gl = gl;
+      } catch {
+        this.gl = null; // fall back to the default renderer
+      }
+    } else if (this.gl) {
+      this.gl.dispose();
+      this.gl = null;
+    }
   }
 
   fit(): void {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PRESETS, DEFAULT_APPEARANCE, buildXtermTheme, resolvePalette, withAlpha, parseColor, toHex, mergeAppearance,
-  clampFont, blurPx, obsidianPalette,
+  clampFont, blurPx, obsidianPalette, shouldUseWebgl,
 } from "../src/appearance";
 
 describe("appearance", () => {
@@ -46,5 +46,10 @@ describe("appearance", () => {
     expect(m.fontSize).toBe(18);
     expect(m.custom.ansi).toHaveLength(16);
     expect(m.custom.background).toBe("#000000");
+  });
+  it("uses WebGL only at 100% terminal opacity", () => {
+    expect(shouldUseWebgl(100)).toBe(true);
+    expect(shouldUseWebgl(99)).toBe(false);
+    expect(shouldUseWebgl(0)).toBe(false);
   });
 });

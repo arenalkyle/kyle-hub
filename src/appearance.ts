@@ -182,3 +182,8 @@ export function obsidianPalette(read: (cssVar: string) => string): Palette {
     ansi,
   };
 }
+
+/** WebGL only when the terminal background is fully opaque; otherwise use the DOM renderer. */
+export function shouldUseWebgl(terminalOpacity: number): boolean {
+  return terminalOpacity >= 100;
+}
