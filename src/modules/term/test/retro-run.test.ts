@@ -302,3 +302,75 @@ describe("draft rule (opt-in LLM)", () => {
     expect(buildPrompt("s", 1, 1, ["a", "b", "c", "d"]).match(/Excerpt/g)).toHaveLength(3);
   });
 });
+
+describe("work profile (ADR-0008)", () => {
+  const SECRET = "ROTATE-THE-PROD-KEY-NOW";
+  const workFixture = () => {
+    const runs: RunIndexEntry[] = [];
+    const records: Record<string, DerivedRecord[]> = {};
+    for (let i = 0; i < 4; i++) {
+      const t = `2026-11-0${i + 1}T10:00:00Z`;
+      runs.push(run(500 + i, t, { profile: "work", repo: "acme" }));
+      records[`r-${500 + i}`] = [
+        rec("tool_call", t, { cmdNorm: "git push" }),
+        // Derived records of a work run carry no excerpt; even if a legacy record did, no ticket may echo it.
+        rec("user_correction", t, { afterTool: "Bash", excerpt: SECRET }),
+      ];
+    }
+    return { runs, records };
+  };
+
+  it("retro tickets contain signatures and counts only, no excerpts", async () => {
+    const { runs, records } = workFixture();
+    const { svc, issues } = fakeTickets();
+    const r = await performRetro({
+      logs: logsOf(runs, records),
+      tickets: svc,
+      config: resolveRetroConfig({}),
+      settings: { ...DEFAULT_RETRO_SETTINGS },
+      ctx,
+      profiles: ["work"],
+      stateFile: () => path.join(root, "retro-work.json"),
+      now: () => new Date("2026-12-01T00:00:00Z"),
+    });
+    expect(r.created.length).toBeGreaterThan(0);
+    const corr = issues.find((i) => i.description?.includes("corr:Bash"));
+    expect(corr).toBeDefined();
+    expect(corr!.description).toMatch(/Seen 4x/);
+    for (const i of issues) expect(`${i.title}\n${i.description}`).not.toContain(SECRET);
+  });
+
+  it("the draft-rule button is hidden and drafting refused in a work vault", async () => {
+    const { svc, issues } = fakeTickets();
+    issues.push({ id: "T-1", type: "finding", status: "Triage", tags: [], repo: "acme", description: "Signature: `corr:Bash:git push`" } as unknown as Issue);
+    const mk = (vault: "home" | "work", repoProfile: "home" | "work") =>
+      createRetroService({
+        tickets: () => svc,
+        logs: () => undefined,
+        rawSettings: () => ({ allowDraftRule: true }),
+        repos: () => ({ acme: { path: "C:/x", profile: repoProfile } }),
+        ctx,
+        runner: () => ({ run: vi.fn() }),
+        vaultProfile: () => vault,
+      });
+    expect(mk("home", "home").canDraft("T-1")).toBe(true);
+    expect(mk("work", "work").canDraft("T-1")).toBe(false);
+    expect(mk("home", "work").canDraft("T-1")).toBe(false);
+    expect(await mk("work", "work").draft("T-1")).toMatchObject({ ok: false });
+  });
+
+  it("retro status only reads the vault's profile", async () => {
+    const runs = [run(1, "2026-11-01T10:00:00Z", { profile: "home" }), run(2, "2026-11-02T10:00:00Z", { profile: "work" })];
+    const svc = createRetroService({
+      tickets: () => undefined,
+      logs: () => logsOf(runs, {}),
+      rawSettings: () => undefined,
+      repos: () => ({}),
+      ctx,
+      runner: () => ({ run: vi.fn() }),
+      stateFile: (p) => path.join(root, `${p}.json`),
+      vaultProfile: () => "work",
+    });
+    expect((await svc.status()).sessionsSince).toBe(1);
+  });
+});

@@ -3,6 +3,8 @@ import { buildPack } from "../../../core/domain/pack";
 import type { Issue } from "../../../core/domain/types";
 import type { Model, RepoConfig } from "../../../core/domain/fields";
 import type { RunInfo } from "../run/runs";
+import { checkProfileMatch } from "../../../core/profile";
+import type { Profile } from "../../../core/logs/types";
 
 export interface GitPort {
   /** Runs `git <args>` in `cwd`; rejects on a non-zero exit. */
@@ -34,6 +36,8 @@ export interface LaunchDeps {
   /** Brain service getter; undefined = brain module off (the pack gets no docs section). */
   brain?: () => Pick<BrainService, "selectDocs"> | undefined;
   clock: () => Date;
+  /** The vault profile (`core.profile`); a repo of another profile is refused. */
+  vaultProfile: () => Profile;
   repos: () => Record<string, RepoConfig>;
   settings: () => LaunchSettings;
   /** `<localappdata>\kyle-hub\<profile>\packs`. */
@@ -53,6 +57,7 @@ export type LaunchFailure =
   | "concurrency"
   | "no-started-status"
   | "unsafe-path"
+  | "profile-mismatch"
   | "git"
   | "spawn";
 
@@ -127,6 +132,8 @@ export class Launcher {
       if (!key || !repos[key]) return fail("cancelled", "No repo chosen.");
     }
     const repo = repos[key]!;
+    const guard = checkProfileMatch(d.vaultProfile(), repo.profile, key);
+    if (!guard.ok) return fail("profile-mismatch", guard.message);
     const started = [...d.tickets.statuses()].filter((s) => s.category === "started").sort((a, b) => a.order - b.order)[0];
     if (!started) return fail("no-started-status", "No started-category status exists.");
 

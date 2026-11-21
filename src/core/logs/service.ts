@@ -285,8 +285,9 @@ export class FileLogService implements LogService {
     return countIndexSince(this.allIndex(), ts);
   }
 
-  async spendByDay(days: number): Promise<SpendDay[]> {
-    return spendIndexByDay(this.allIndex(), days, this.now());
+  async spendByDay(days: number, profile?: Profile): Promise<SpendDay[]> {
+    const all = this.allIndex();
+    return spendIndexByDay(profile ? all.filter((e) => e.profile === profile) : all, days, this.now());
   }
 
   /** Removes (or with `dryRun`, only lists) data past retention in every profile. */

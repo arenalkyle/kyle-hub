@@ -71,6 +71,8 @@ export interface RunQuery {
   since?: string;
   ticketId?: string;
   repo?: string;
+  /** Only runs of this profile (the vault profile for the dashboard and retro). */
+  profile?: Profile;
   limit?: number;
 }
 
@@ -89,7 +91,7 @@ export interface LogService {
   run(runId: string): Promise<RunIndexEntry | undefined>;
   records(runId: string): AsyncIterable<DerivedRecord>;
   countSince(ts: string): Promise<number>;
-  spendByDay(days: number): Promise<SpendDay[]>;
+  spendByDay(days: number, profile?: Profile): Promise<SpendDay[]>;
 }
 
 /** Derived record: one JSON object per line in runs/<runId>.jsonl. */

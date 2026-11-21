@@ -26,6 +26,7 @@ interface Opts {
   max?: number;
   pick?: string | undefined;
   gitFail?: boolean;
+  vault?: "home" | "work";
 }
 
 function setup(opts: Opts = {}) {
@@ -68,6 +69,7 @@ function setup(opts: Opts = {}) {
       projectDescription: () => undefined,
     },
     clock: () => new Date(2026, 10, 21, 10, 15, 30),
+    vaultProfile: () => opts.vault ?? "home",
     repos: () => opts.repos ?? { hub: { path: "C:\\dev\\hub", profile: "home", worktrees: true } },
     settings: () => ({ maxConcurrentRuns: opts.max ?? 3, defaultModel: "sonnet", claudeCommand: "claude" }),
     packDir: () => "C:\\data\\home\\packs",
@@ -77,6 +79,23 @@ function setup(opts: Opts = {}) {
   };
   return { launcher: new Launcher(deps), spawn, update, logEvent, pickRepo, files, gitCalls, sessions, exists };
 }
+
+describe("launch guard (ADR-0008)", () => {
+  it("refuses a repo whose profile differs from the vault's, naming both, before any git or spawn", async () => {
+    const h = setup({ vault: "work" });
+    const r = await h.launcher.launch("LOCK-9");
+    expect(r).toMatchObject({ ok: false, reason: "profile-mismatch" });
+    expect(!r.ok && r.message).toMatch(/home.*work|work.*home/);
+    expect(h.gitCalls).toHaveLength(0);
+    expect(h.spawn).not.toHaveBeenCalled();
+    expect(h.files.size).toBe(0);
+  });
+
+  it("launches when the profiles match", async () => {
+    const h = setup({ vault: "home" });
+    expect(await h.launcher.launch("LOCK-9")).toMatchObject({ ok: true });
+  });
+});
 
 describe("helpers", () => {
   it("run id and slugs", () => {
@@ -210,6 +229,7 @@ describe.skipIf(!hasGit)("Launcher with real git in a temp repo", () => {
       },
       tickets: { get: () => t, repoOf: () => "r", statuses: () => STATUSES as never, update: async () => t, logEvent: async () => t, userName: () => "kyle", projectDescription: () => undefined },
       clock: () => new Date(),
+      vaultProfile: () => "home",
       repos: () => ({ r: { path: repo, profile: "home", worktrees: true } }),
       settings: () => ({ maxConcurrentRuns: 3, defaultModel: "sonnet", claudeCommand: "claude" }),
       packDir: () => path.join(root, "packs"),

@@ -13,6 +13,8 @@ import {
   type SectionRegistry,
 } from "./core";
 import { DEFAULT_FLOOD } from "./core/domain/flood";
+import { DEFAULT_PUBLIC_HOSTS } from "./core/domain/scrub";
+import { vaultProfileOf } from "./core/profile";
 import { termModule, termSettings } from "./modules/term";
 import { ticketsModule, ticketsSettings } from "./modules/tickets";
 import { brainModule, brainSettings } from "./modules/brain";
@@ -35,7 +37,7 @@ export default class KyleHubPlugin extends Plugin {
 
   override async onload(): Promise<void> {
     const parts = createHubParts();
-    parts.settings.register({ id: "core", defaults: { repos: {}, flood: { ...DEFAULT_FLOOD }, launch: { maxConcurrentRuns: 3, defaultModel: "sonnet" } } });
+    parts.settings.register({ id: "core", defaults: { repos: {}, profile: "home", promote: { homeVaultPath: "", publicHosts: [...DEFAULT_PUBLIC_HOSTS], denylist: [] }, flood: { ...DEFAULT_FLOOD }, launch: { maxConcurrentRuns: 3, defaultModel: "sonnet" } } });
     parts.settings.register(ticketsSettings);
     parts.settings.register(termSettings);
     parts.settings.register(brainSettings);
@@ -127,6 +129,7 @@ class HubSettingTab extends PluginSettingTab {
       containerEl.createEl("h2", { text: MODULE_LABELS[id] });
       section.render(containerEl.createDiv());
     }
+    this.displayProfile(containerEl);
     this.displayRepos(containerEl);
     containerEl.createEl("h2", { text: "Log health" });
     const doctorOut = containerEl.createDiv();
@@ -139,6 +142,46 @@ class HubSettingTab extends PluginSettingTab {
           for (const c of runDoctorChecks(process.env, homedir())) doctorOut.createEl("p", { text: `[${c.status}] ${c.id}: ${c.message}` });
         }),
       );
+  }
+
+  /** Vault profile (work | home) and Promote settings (ADR-0008). */
+  private displayProfile(el: HTMLElement): void {
+    const core = this.plugin.hub.settings.module("core") as Record<string, unknown>;
+    const promote = (core.promote ??= { homeVaultPath: "", publicHosts: [...DEFAULT_PUBLIC_HOSTS], denylist: [] }) as {
+      homeVaultPath: string;
+      publicHosts: string[];
+      denylist: string[];
+    };
+    const save = () => this.plugin.hub.save();
+    const list = (s: string): string[] => s.split(/[\n,]/).map((x) => x.trim()).filter((x) => x.length > 0);
+    el.createEl("h2", { text: "Profile and promote" });
+    new Setting(el)
+      .setName("Vault profile")
+      .setDesc("work or home. Launching a repo of the other profile is refused; the dashboard and retro read only this profile's logs. Work vaults keep no excerpts.")
+      .addDropdown((d) =>
+        d.addOptions({ home: "home", work: "work" }).setValue(vaultProfileOf(core)).onChange(async (v) => {
+          core.profile = v;
+          await save();
+        }),
+      );
+    new Setting(el).setName("Home vault path").setDesc("Promote writes to <path>/Brain/lessons/.").addText((t) =>
+      t.setPlaceholder("Path to the home vault").setValue(promote.homeVaultPath).onChange(async (v) => {
+        promote.homeVaultPath = v.trim();
+        await save();
+      }),
+    );
+    new Setting(el).setName("Public hosts").setDesc("Comma or newline separated. URLs on other hosts are replaced when promoting.").addTextArea((t) =>
+      t.setValue(promote.publicHosts.join("\n")).onChange(async (v) => {
+        promote.publicHosts = list(v);
+        await save();
+      }),
+    );
+    new Setting(el).setName("Denylist").setDesc("Extra terms to scrub (repo-map keys and GitHub orgs are always scrubbed).").addTextArea((t) =>
+      t.setValue(promote.denylist.join("\n")).onChange(async (v) => {
+        promote.denylist = list(v);
+        await save();
+      }),
+    );
   }
 
   /** Repo map (`core.repos`) and launch limits, used by the term module's queue. */

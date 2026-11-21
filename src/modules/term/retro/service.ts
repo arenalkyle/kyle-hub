@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { RetroService, RetroStatus, TicketService } from "../../../core/services";
 import { dataDir } from "../../../core/paths";
-import { PROFILES, type Profile } from "../../../core/logs/types";
+import { type Profile, PROFILES } from "../../../core/logs/types";
 import { effectiveType } from "../../../core/domain/fields";
 import { makeRedactor } from "../../../core/redact";
 import { applyProposal, canApply } from "./apply";
@@ -25,6 +25,8 @@ export interface RetroServiceDeps {
   /** Built only when `allowDraftRule` is on. */
   runner: () => LlmRunner;
   stateFile?: (profile: Profile) => string;
+  /** The vault profile: retro reads and writes only this profile's logs (ADR-0008). Default `home`. */
+  vaultProfile?: () => Profile;
   now?: () => Date;
 }
 
@@ -37,6 +39,7 @@ export function createRetroService(deps: RetroServiceDeps): RetroService {
   const notify = (): void => listeners.forEach((l) => l());
   const stateFile = deps.stateFile ?? ((p: Profile) => retroFile(dataDir(p)));
   const now = deps.now ?? (() => new Date());
+  const vaultProfile = (): Profile => deps.vaultProfile?.() ?? "home";
   const settings = (): RetroSettings => resolveRetroSettings(deps.rawSettings());
   const need = <T>(v: T | undefined, what: string): T => {
     if (v === undefined) throw new Error(`${what} is not available (module off).`);
@@ -52,7 +55,7 @@ export function createRetroService(deps: RetroServiceDeps): RetroService {
       const logs = need(deps.logs(), "Logs");
       let last: string | undefined;
       let since = 0;
-      for (const profile of PROFILES) {
+      for (const profile of [vaultProfile()]) {
         const s = readRetroState(stateFile(profile));
         if (s.lastRetroAt !== undefined && (last === undefined || s.lastRetroAt > last)) last = s.lastRetroAt;
         const runs = (await logs.runs({ since: s.watermark })).filter((r) => r.profile === profile);
@@ -68,7 +71,7 @@ export function createRetroService(deps: RetroServiceDeps): RetroService {
         config: resolveRetroConfig(deps.rawSettings()),
         settings: settings(),
         ctx: deps.ctx,
-        profiles: PROFILES,
+        profiles: [vaultProfile()],
         stateFile: deps.stateFile,
         now,
       });
@@ -95,6 +98,7 @@ export function createRetroService(deps: RetroServiceDeps): RetroService {
     canDraft(id) {
       const issue = deps.tickets()?.get(id);
       if (!issue || !settings().allowDraftRule) return false;
+      if (vaultProfile() === "work" || profileOf(issue.repo) === "work") return false; // work profile: no excerpts, no draft button
       return effectiveType(issue) === "finding" && (parseSignature(issue.description) ?? "").startsWith("corr:");
     },
 
@@ -102,6 +106,7 @@ export function createRetroService(deps: RetroServiceDeps): RetroService {
       const tickets = need(deps.tickets(), "Tickets");
       const issue = tickets.get(id);
       if (!issue) return { ok: false, message: `No ticket ${id}.` };
+      if (vaultProfile() === "work" || profileOf(issue.repo) === "work") return { ok: false, message: "Draft rule is disabled for the work profile (no excerpts)." };
       const r = await draftRule(
         {
           settings,

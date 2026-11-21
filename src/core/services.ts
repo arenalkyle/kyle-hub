@@ -160,6 +160,13 @@ export interface Services {
   attention: AttentionService;
   retro: RetroService;
   brain: BrainService;
+  promote: PromoteService;
+}
+
+/** Work -> home promotion (ADR-0008): scrub, show the diff, write only on confirm. */
+export interface PromoteService {
+  /** Opens the diff modal for `text` (a work lesson or applied proposal); returns a refusal reason, or undefined when opened. */
+  open(name: string, text: string): string | undefined;
 }
 
 export class ServiceRegistry {

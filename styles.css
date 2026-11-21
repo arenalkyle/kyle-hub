@@ -610,3 +610,9 @@
 .kh-command-center-row:hover { color: var(--text-accent); }
 .kh-command-center-spend-total { font-size: var(--font-ui-large); font-weight: 600; }
 .kh-command-center-sparkline { width: 100%; height: 48px; display: block; }
+
+/* Promote modal (kh-brain-promote-) */
+.kh-brain-promote-diff { max-height: 360px; overflow: auto; font-family: var(--font-monospace); font-size: var(--font-smallest); padding: 8px; background: var(--background-secondary); border-radius: 4px; }
+.kh-brain-promote-line { white-space: pre-wrap; }
+.kh-brain-promote-line.is-add { color: var(--text-success, var(--text-accent)); }
+.kh-brain-promote-line.is-del { color: var(--text-error); }

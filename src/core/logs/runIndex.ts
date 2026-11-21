@@ -109,6 +109,7 @@ export function queryRuns(entries: readonly RunIndexEntry[], q: RunQuery = {}): 
     .filter((e) => since === undefined || Date.parse(e.start) >= since)
     .filter((e) => q.ticketId === undefined || e.ticketId === q.ticketId)
     .filter((e) => q.repo === undefined || e.repo === q.repo)
+    .filter((e) => q.profile === undefined || e.profile === q.profile)
     .sort((a, b) => (a.start < b.start ? 1 : a.start > b.start ? -1 : 0));
   return q.limit !== undefined ? out.slice(0, Math.max(0, q.limit)) : out;
 }

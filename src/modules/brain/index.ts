@@ -4,7 +4,10 @@ import { createBrainService, type RepoEntry } from "../../core/brain/service";
 import { DEFAULT_HEALTH_WEIGHTS, type HealthWeights } from "../../core/brain/health";
 import { createConventionDocs } from "./conventions";
 import { NewDocModal } from "./newDocModal";
-import { Notice } from "obsidian";
+import { Notice, TFile } from "obsidian";
+import { planPromote, promoteEligible, scrubOptionsFrom } from "../../core/domain/promote";
+import { vaultProfileOf } from "../../core/profile";
+import { PromoteModal } from "./promoteModal";
 
 export const brainSettings: ModuleSettingsDef = {
   id: "brain",
@@ -39,6 +42,33 @@ export const brainModule: HubModule = {
     } catch {
       /* health is advisory; a failed scan leaves the previous snapshot */
     }
+    type PromoteCfg = { homeVaultPath?: string; publicHosts?: unknown; denylist?: unknown };
+    const openPromote = (name: string, text: string): string | undefined => {
+      const core = hub.settings.module("core") as { promote?: PromoteCfg; repos?: Record<string, { github?: unknown }>; profile?: unknown };
+      if (vaultProfileOf(core) !== "work") return "Promote runs from a work vault; this vault's profile is home.";
+      const ok = promoteEligible(text);
+      if (!ok.ok) return ok.reason;
+      const plan = planPromote(name, text, scrubOptionsFrom(core.promote, core.repos));
+      new PromoteModal(hub.app, plan, core.promote?.homeVaultPath?.trim() ?? "").open();
+      return undefined;
+    };
+    hub.services.register("promote", { open: openPromote });
+    ctx.register(() => hub.services.unregister("promote"));
+    ctx.addCommand({
+      id: "promote-to-home",
+      name: "Promote to home",
+      checkCallback: (checking) => {
+        const f = hub.app.workspace.getActiveFile();
+        if (!f || !(f instanceof TFile) || f.extension !== "md" || vaultProfileOf(hub.settings.module("core")) !== "work") return false;
+        if (!checking) {
+          void hub.app.vault.read(f).then((text) => {
+            const why = openPromote(f.name, text);
+            if (why) new Notice(`kyle-hub: ${why}`);
+          });
+        }
+        return true;
+      },
+    });
     ctx.addCommand({
       id: "new-doc",
       name: "New doc",
