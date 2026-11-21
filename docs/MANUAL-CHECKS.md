@@ -60,3 +60,15 @@ Things that need a person using Obsidian. Agents ran the automated checks (`npm 
 6. Terminal opacity < 100% switches to the DOM renderer (image shows through, text crisp); back at 100% WebGL returns.
 7. A missing image path shows a notice and no image.
 8. Restart Obsidian: everything is kept except per-session zoom.
+
+## Phase 6 — Vault integration (LOCK-7)
+
+1. File explorer: right-click a folder → "New Claude session here": Claude starts in that folder. Right-click a note → "Open terminal here": shell starts in the note's parent folder. The tab is revealed.
+2. Settings → add a saved folder for a code repo (try a missing path: warning shown); reorder and remove work. Right-click `New Session` → pick it.
+3. Right-click `New Session` → Continue last (starts `claude --continue`); Choose folder… (search works); Manage saved folders… opens the settings tab (uses private `app.setting`).
+4. Select a multi-line paragraph → "Send selection to kyle-term" (editor menu and command): appears in Claude's prompt, not sent.
+5. "Send note to kyle-term" on a note whose name has spaces: inserted as `@"path with spaces.md"`; confirm Claude actually reads it when you send. **(Unverified quoting form — if Claude can't read it, report it; the fix is one line in `buildRef`.)**
+6. Drag two notes and a folder onto the terminal: `@` references appear, space-separated (uses private `app.dragManager`). Drag plain text: text is pasted.
+7. Toggle the relative/absolute `@path` setting; a note outside the session folder is always absolute.
+8. With no running session, Send note: a Claude session starts, waits until ready, then the reference is pasted.
+9. Terminal has focus after send and drop.
