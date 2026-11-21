@@ -9,13 +9,14 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 
 - **Done**: design grilling; PLAN, 11 ADRs, GLOSSARY, phased breakdown, ticket stubs written; Linear tickets LOCK-42…60 created (Phase 9 accounts + usage added).
 - **In progress**: Phase 1.2 (LOCK-44) built locally and in review: tickets module on core, `TicketService`, bus events, settings migration, `kh-tickets-` CSS. Not pushed. Phase 1.1 (LOCK-43) in review.
-- **Next**: review + push 1.1, 1.2, 2.1 → Phase 2.2 (LOCK-46).
+- **Next**: review + push 1.1, 1.2, 2.1, 2.2 → Phase 3.1 (LOCK-47).
 - **Also in review**: Phase 2.1 (LOCK-45) built locally: term module on core (`SessionService`, `session:*` bus events, kyle-term settings migration, `kh-term-` CSS, macOS paths removed, Install/Uninstall hooks with diff modal). Not pushed. CDP smoke (`npm run smoke`) needs a manual run in Obsidian.
+- **Also in review**: Phase 2.2 (LOCK-46) built locally: `kh` CLI (`cli/`, `kh tickets …`), `kt` shim, `kh import linear` (recorded-fixture tests). Not pushed. Cutover checklist and Linear import run are manual.
 
 | Phase | Sub-phases | Ticket | Model | State |
 |---|---|---|---|---|
 | 1 Foundation | 1.1 · 1.2 | LOCK-43 · LOCK-44 | S · S | 1.1 · 1.2 in review |
-| 2 Term + cutover | 2.1 · 2.2 | LOCK-45 · LOCK-46 | S · H | 2.1 in review |
+| 2 Term + cutover | 2.1 · 2.2 | LOCK-45 · LOCK-46 | S · H | 2.1 · 2.2 in review |
 | 3 Schema + triage | 3.1 · 3.2 | LOCK-47 · LOCK-48 | H · S | Not started |
 | 4 Logs | 4.1 · 4.2 | LOCK-49 · LOCK-50 | H · H | Not started |
 | 5 Bridge | 5.1 · 5.2 | LOCK-51 · LOCK-52 | S · S | Not started |
