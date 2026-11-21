@@ -155,3 +155,14 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 7. Add a URL to `pullRequests:` in frontmatter by hand → live state appears.
 8. Change the refresh interval (1–1440 min) → re-opening an issue page refreshes state; open PRs refresh in the background.
 9. Set "gh path" to `C:\nope\gh.exe` (or take gh off PATH) → Re-check → reason shown in red; PRs show as plain `owner/repo#N` links; no console error spam. Restore → Re-check → live state returns.
+
+## 8.2 Auto-link pull requests — LOCK-26
+
+1. Settings → kyle-tickets → GitHub: add `arenalkyle/kyle-tickets` (one `owner/repo` per line), turn on **Auto-link PRs**; gh status shows OK.
+2. On GitHub, open a PR titled "TIX-1 test" from branch `tix-1-test` (use your real prefix and an existing issue). **Sync now** → status reads "Linked 1 PR · just now"; TIX-1's Pull requests lists it, with an "@github linked PR owner/repo#N" activity line.
+3. Sync now again → nothing is linked twice.
+4. Unlink the PR from TIX-1, Sync now → it is not re-added. (Re-linking it manually clears that block.)
+5. A PR mentioning only TIX-12 (title or branch, e.g. `feature/tix_12-x`) links to TIX-12, never TIX-1. A title with two IDs links to both issues.
+6. Set "gh path" to a bad value → Sync now → red "Error: …" status. Restore it.
+7. Turn Auto-link off → the background interval no longer links anything.
+8. Afterwards, close/delete the test PR and branch on GitHub.
