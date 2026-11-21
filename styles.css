@@ -587,3 +587,10 @@
 .kh-tickets-attention { background: var(--background-modifier-error); color: var(--text-on-accent); border: none; cursor: pointer; }
 .kh-term-queue-running { align-self: flex-start; color: var(--text-success); }
 .kh-term-queue-launch { align-self: flex-start; }
+
+.kh-term-retro { display: flex; flex-direction: column; gap: 2px; padding: 0 6px 6px; font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.kh-term-sidebar.kh-term-collapsed .kh-term-retro { display: none; }
+.kh-term-retro-btn { align-self: stretch; }
+.kh-term-retro-since.is-nudge { color: var(--text-accent); font-weight: 600; }
+.kh-tickets-retro-actions { display: flex; gap: 6px; padding: 4px 0; }
+.kh-term-draft-diff { max-height: 300px; overflow: auto; white-space: pre; font-family: var(--font-monospace); font-size: var(--font-smallest); padding: 8px; background: var(--background-secondary); border-radius: 4px; }

@@ -1,6 +1,7 @@
 import { resolveNode } from "./node-path";
 import { FuzzySuggestModal, Setting, type App, type TFile } from "obsidian";
 import type { SettingsSection } from "../../../core";
+import { resolveRetroSettings } from "../retro/settings";
 import fs from "node:fs";
 import type TermHost from "./main";
 import { TONES, type AlertEvent } from "./alert";
@@ -114,8 +115,38 @@ PATH: ${process.env.PATH ?? ""}`)
         }),
       );
     this.displayFolders(el);
+    this.displayRetro(el);
     this.displayAppearance(el);
     this.displaySounds(el);
+  }
+
+  private displayRetro(el: HTMLElement): void {
+    const raw = this.plugin.settings as unknown as { retro?: Record<string, unknown> };
+    const r = (raw.retro ??= {});
+    const cur = resolveRetroSettings(r);
+    new Setting(el).setName("Retro").setHeading();
+    const num = (name: string, desc: string, key: "nudgeAt" | "maxTickets" | "dailyCapUsd", float = false): void => {
+      new Setting(el).setName(name).setDesc(desc).addText((t) =>
+        t.setValue(String(cur[key])).onChange(async (v) => {
+          const n = Number(v);
+          if (Number.isFinite(n) && n > 0) r[key] = float ? n : Math.floor(n);
+          else delete r[key];
+          await this.plugin.saveSettings();
+        }),
+      );
+    };
+    num("Nudge at (sessions)", "Highlight the sessions-since-last-retro count from this many sessions.", "nudgeAt");
+    num("Max tickets per retro", "New proposal and finding tickets one retro may create.", "maxTickets");
+    new Setting(el)
+      .setName("Draft rule with Haiku")
+      .setDesc("Off by default. Shows a button on user-correction findings that sends the pattern, counts and up to 3 redacted excerpts to claude -p --model haiku.")
+      .addToggle((t) =>
+        t.setValue(cur.allowDraftRule).onChange(async (v) => {
+          r.allowDraftRule = v;
+          await this.plugin.saveSettings();
+        }),
+      );
+    num("Daily Haiku cap (USD)", "Draft rule refuses once today's spend reaches this.", "dailyCapUsd", true);
   }
 
   private displayFolders(el: HTMLElement): void {

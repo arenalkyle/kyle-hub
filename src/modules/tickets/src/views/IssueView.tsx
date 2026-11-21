@@ -13,6 +13,7 @@ import { CommentBox } from "./issue/CommentBox";
 import { Description } from "./issue/Description";
 import { TitleEditor } from "./issue/TitleEditor";
 import { IssueHeader } from "./issue/IssueHeader";
+import { RetroActions } from "./issue/RetroActions";
 import { SubIssues } from "./issue/SubIssues";
 import { PropertiesSidebar, type PropKind } from "./issue/PropertiesSidebar";
 import { VIEW_TYPE_ISSUE } from "./intercept";
@@ -179,6 +180,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
         <div className="kh-tickets-issue-main">
           <div className="kh-tickets-issue-column">
             <TitleEditor title={issue.title} onSave={(title) => update({ title })} />
+            <RetroActions issue={issue} />
             <Description
               description={issue.description}
               sourcePath={path}

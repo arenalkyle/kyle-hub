@@ -38,6 +38,9 @@ import { categoryOf } from "../../../core/domain/fields";
 import { offerNotice } from "../run/offerNotice";
 import { QueueView, QUEUE_VIEW_TYPE } from "../queue/QueueView";
 import { RepoPicker } from "../queue/RepoPicker";
+import { claudeRunner } from "../retro/llm";
+import { createRetroService } from "../retro/service";
+import type { RetroService } from "../../../core";
 
 const PERSIST_DEBOUNCE_MS = 2000;
 const SCROLLBACK_SAVE_MS = 30_000;
@@ -177,6 +180,7 @@ export default class TermHost {
 
   stop(): void {
     this.watcher = null;
+    this.retroSvc = undefined;
     this.offBus.forEach((o) => o());
     this.offBus = [];
     this.unwire?.();
@@ -354,6 +358,30 @@ export default class TermHost {
         return (t as unknown as Record<string | symbol, unknown>)[k];
       },
     });
+  }
+
+  private retroSvc: RetroService | undefined;
+
+  /** The retro loop (Perform Retro, Apply, Draft rule). Tickets and logs are read per call (modules may be off). */
+  retroService(): RetroService {
+    return (this.retroSvc ??= createRetroService({
+      tickets: () => this.hub.services.get("tickets"),
+      logs: () => this.hub.services.get("logs"),
+      rawSettings: () => (this.hub.settings.module("term") as Record<string, unknown>).retro,
+      repos: () => (this.hub.settings.module("core").repos as Record<string, { path?: string; profile?: string }> | undefined) ?? {},
+      ctx: {
+        claudeHome: path.join(os.homedir(), ".claude"),
+        repoPath: (key) => (key === undefined ? undefined : (this.hub.settings.module("core").repos as Record<string, { path?: string }> | undefined)?.[key]?.path),
+        readFile: (p) => {
+          try {
+            return fs.readFileSync(p, "utf8");
+          } catch {
+            return undefined;
+          }
+        },
+      },
+      runner: () => claudeRunner(this.settings.claudeCommand || "claude"),
+    }));
   }
 
   /** What other modules read to show needs-attention badges. */

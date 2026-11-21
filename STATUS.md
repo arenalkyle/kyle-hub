@@ -23,6 +23,8 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 
 - **Also in review**: Phase 6.1 (LOCK-53) built locally: pure `term/retro/` (detectors, signatures, clustering, watermark state in `retro.json`, `sessionsSinceRetro`), `kh retro detect` dry run. Not pushed. No real-run check yet (manual checklist in the ticket).
 
+- **Also in review**: Phase 6.2 (LOCK-54) built locally: retro templates (`term/retro/templates/`), `performRetro` (agent tickets, `maxTickets`, dedupe, recurrence check), Perform Retro button with watermark and nudge, Apply button (`git apply` / built-in patcher with backup), opt-in Draft rule with Haiku (off by default, daily cap), `retro` service. Not pushed. `npm run smoke:retro` needs a manual run in a throwaway vault.
+
 | Phase | Sub-phases | Ticket | Model | State |
 |---|---|---|---|---|
 | 1 Foundation | 1.1 · 1.2 | LOCK-43 · LOCK-44 | S · S | 1.1 · 1.2 in review |
@@ -30,7 +32,7 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 | 3 Schema + triage | 3.1 · 3.2 | LOCK-47 · LOCK-48 | H · S | 3.1 in review · 3.2 not started |
 | 4 Logs | 4.1 · 4.2 | LOCK-49 · LOCK-50 | H · H | 4.1 in review · 4.2 in review |
 | 5 Bridge | 5.1 · 5.2 | LOCK-51 · LOCK-52 | S · S | 5.1 in review · 5.2 not started |
-| 6 Retro | 6.1 · 6.2 | LOCK-53 · LOCK-54 | H · S | 6.1 in review · 6.2 not started |
+| 6 Retro | 6.1 · 6.2 | LOCK-53 · LOCK-54 | H · S | 6.1 in review · 6.2 in review |
 | 7 Brain | 7.1 · 7.2 | LOCK-55 · LOCK-56 | H · H | Not started |
 | 8 Command center + profiles | 8.1 · 8.2 | LOCK-57 · LOCK-58 | H · S | Not started |
 | 9 Accounts + usage | 9.1 · 9.2 | LOCK-59 · LOCK-60 | S · S | Not started |

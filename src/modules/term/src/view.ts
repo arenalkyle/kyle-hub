@@ -41,6 +41,7 @@ export class TermView extends ItemView {
   private mgr: SessionManager | null = null;
   private unsub: (() => void) | null = null;
   private unsubMute: (() => void) | null = null;
+  private unsubRetro: (() => void) | null = null;
   private ro: ResizeObserver | null = null;
   private sidebar!: HTMLElement;
   private list!: HTMLElement;
@@ -114,6 +115,7 @@ export class TermView extends ItemView {
       void this.plugin.saveSettings();
       this.applySidebar();
     };
+    this.buildRetroPanel();
     this.list = this.sidebar.createDiv({ cls: "kh-term-list" });
 
     resizer.addEventListener("pointerdown", (e) => {
@@ -150,7 +152,53 @@ export class TermView extends ItemView {
     for (const [k, v] of Object.entries(vars)) this.wrap.style.setProperty(k, v);
   }
 
+  /** Perform Retro button with the watermark and the sessions-since nudge. */
+  private buildRetroPanel(): void {
+    const panel = this.sidebar.createDiv({ cls: "kh-term-retro" });
+    const btn = panel.createEl("button", { text: "Perform Retro", cls: "kh-term-retro-btn", attr: { "data-kh-retro": "perform" } });
+    const last = panel.createDiv({ cls: "kh-term-retro-last", attr: { "data-kh-retro": "last" } });
+    const since = panel.createDiv({ cls: "kh-term-retro-since", attr: { "data-kh-retro": "since" } });
+    const svc = () => this.plugin.retroService();
+    const refresh = async (): Promise<void> => {
+      try {
+        const s = await svc().status();
+        last.setText(`Last retro: ${s.lastRetroAt === undefined ? "never" : Date.now() - Date.parse(s.lastRetroAt) < 60000 ? "just now" : `${formatAge(Date.now() - Date.parse(s.lastRetroAt))} ago`}`);
+        since.setText(`${s.sessionsSince} sessions since last retro`);
+        since.toggleClass("is-nudge", s.sessionsSince >= s.nudgeAt);
+      } catch {
+        last.setText("Last retro: unavailable");
+        since.setText("");
+      }
+    };
+    btn.onclick = () => {
+      btn.disabled = true;
+      void svc()
+        .perform()
+        .then((r) => {
+          const lines = r.created.map((c) => `${c.id} (${c.type}): ${c.title}`);
+          new Notice(
+            `Retro done. ${r.created.length} new ticket${r.created.length === 1 ? "" : "s"}${r.seenAgain.length > 0 ? `, ${r.seenAgain.length} seen again` : ""}.${lines.length > 0 ? "\n" + lines.join("\n") : ""}`,
+            10000,
+          );
+        })
+        .catch((e: unknown) => new Notice(`Retro failed: ${(e as Error).message}`, 10000))
+        .finally(() => {
+          btn.disabled = false;
+          void refresh();
+        });
+    };
+    void refresh();
+    const off = svc().subscribe(() => void refresh());
+    const timer = window.setInterval(() => void refresh(), 60000);
+    this.unsubRetro = () => {
+      off();
+      window.clearInterval(timer);
+    };
+  }
+
   override async onClose(): Promise<void> {
+    this.unsubRetro?.();
+    this.unsubRetro = null;
     // Sessions belong to the plugin: just detach, never kill.
     this.unsub?.();
     this.unsub = null;
