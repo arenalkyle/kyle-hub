@@ -86,6 +86,8 @@ interface Runtime {
   cmdSentAt: number;
   /** Output arrived since scrollback was last saved. */
   dirty: boolean;
+  /** Command typed for the current start only (a resume); s.command stays the original. */
+  command?: string;
   inputSeen: boolean;
   idleTimer?: ReturnType<typeof setTimeout>;
   quietTimer?: ReturnType<typeof setTimeout>;
@@ -250,7 +252,7 @@ export class SessionManager {
     };
   }
 
-  private start(s: Session, rt: Runtime, keep?: { claudeSessionId?: boolean }): void {
+  private start(s: Session, rt: Runtime, keep?: { claudeSessionId?: boolean }, command?: string): void {
     const p = this.profile(s.profileId);
     const gen = ++rt.gen;
     s.status = "running";
@@ -270,7 +272,8 @@ export class SessionManager {
     }
     rt.inputSeen = false;
     s.lastOutputAt = this.now();
-    rt.cmdSent = !(s.kind === "claude" && s.command);
+    rt.command = command ?? s.command;
+    rt.cmdSent = !(s.kind === "claude" && rt.command);
     this.clearTimers(rt);
     rt.ptyId = this.deps.pty.spawnSession(
       {
@@ -312,7 +315,7 @@ export class SessionManager {
     rt.cmdSent = true;
     rt.cmdSentAt = this.now();
     this.clearTimers(rt);
-    this.deps.pty.write(rt.ptyId, `${s.command}\r`);
+    this.deps.pty.write(rt.ptyId, `${rt.command}\r`);
   }
 
   /** Fallback for CLIs without hooks: output after user input means busy; quiet means finished. */
@@ -388,8 +391,7 @@ export class SessionManager {
     const s = this.get(id);
     const rt = this.rt.get(id);
     if (!s || !rt || !this.canResume(s)) return;
-    s.command = this.deps.resumeCommand!(s.agent.claudeSessionId!);
-    this.start(s, rt, { claudeSessionId: true });
+    this.start(s, rt, { claudeSessionId: true }, this.deps.resumeCommand!(s.agent.claudeSessionId!));
     this.emit();
   }
 

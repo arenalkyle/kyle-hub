@@ -146,6 +146,21 @@ describe("restore / resume", () => {
     expect(pty.written).toEqual(["claude --resume sid-1\r"]);
   });
 
+  it("Resume leaves the original command alone: later Restart and persisted metadata use it", () => {
+    const m = makeManager();
+    m.restore(saved(), () => undefined);
+    m.resume("s1");
+    pty.listeners[0]!.onData("p>");
+    vi.advanceTimersByTime(500);
+    expect(pty.written).toEqual(["claude --resume sid-1\r"]);
+    expect(m.get("s1")!.command).toBe("claude");
+    expect(serializeSessions(m.list(), 1)[0]!.command).toBe("claude");
+    m.restart("s1");
+    pty.listeners[1]!.onData("p>");
+    vi.advanceTimersByTime(500);
+    expect(pty.written[1]).toBe("claude\r");
+  });
+
   it("Resume is unavailable without a stored id or for shells", () => {
     const m = makeManager();
     m.restore([...saved({ id: "n", claudeSessionId: undefined }), ...saved({ id: "sh", kind: "shell" })], () => undefined);
