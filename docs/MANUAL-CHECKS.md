@@ -82,3 +82,14 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 6. Due date → Overdue → only past-due, not-completed issues. Also try Due today, this week (Mon–Sun), this month, No due date.
 7. Switch to another sidebar view and back → each view keeps its own filters. Restart Obsidian → filters persist.
 8. Narrow the pane below ~560px → chip bar hides and a count badge appears on the Filter button.
+
+## 5.2 Keyboard shortcuts and settings editors — LOCK-20
+
+1. All Issues → click empty space in the view → `J` a few times: highlight moves and scrolls into view. `K`, ↓/↑, `Enter` (opens the ticket) and `Esc` (clears) work. On Board, `J`/`K` walk cards column by column.
+2. With an issue selected: `S` → Done changes its status; `P`, `L`, `A` open their pickers anchored to the row/card. `C` opens New issue (preset to the project in a project view).
+3. `F` opens the filter menu; typing `c` in its search does not open New issue. `Ctrl+Shift+B` toggles List/Board. With a note focused, Obsidian's own hotkeys are unaffected.
+4. Settings → kyle-tickets → Statuses: rename "In Review" → "Review": confirmation shows a count; afterwards the board column is renamed and each affected file has an activity line.
+5. Add status "Blocked" (category Started, red), drag it between In Progress and Review: board column order follows.
+6. Deleting the default status is refused; deleting a used status asks where to move its issues. Make another status the default.
+7. Labels: change the "bug" color → chips update in open views immediately. Rename a label (confirmation + count) and delete one; check the ticket files.
+8. Rename a status used by more than 20 issues → a progress notice appears.
