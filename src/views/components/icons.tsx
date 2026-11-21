@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { setIcon } from "obsidian";
-import type { Priority, StatusCategory } from "../../core/types";
+import type { Priority, ProjectStatus, StatusCategory } from "../../core/types";
 
 interface StatusIconProps {
   category: StatusCategory;
@@ -100,4 +100,46 @@ export function Icon({ name, size = 14 }: { name: string; size?: number }) {
 
 export function Dot({ color }: { color: string }) {
   return <span className="kt-dot" style={{ background: color }} />;
+}
+
+const PROJECT_STATUS_COLOR: Record<ProjectStatus, string> = {
+  backlog: "var(--text-faint)",
+  planned: "var(--text-muted)",
+  started: "var(--color-yellow)",
+  paused: "var(--text-muted)",
+  completed: "var(--color-blue)",
+  canceled: "var(--text-faint)",
+};
+
+/** Linear-style project status glyph: dashed = backlog, empty = planned, half = started, pause, check, x. */
+export function ProjectStatusIcon({ status, size = 14 }: { status: ProjectStatus; size?: number }) {
+  if (status === "paused") {
+    const color = PROJECT_STATUS_COLOR.paused;
+    return (
+      <svg width={size} height={size} viewBox="0 0 14 14" fill="none" className="kt-icon kt-status-icon">
+        <circle cx="7" cy="7" r="6" stroke={color} strokeWidth="1.5" />
+        <rect x="4.9" y="4.6" width="1.5" height="4.8" rx="0.5" fill={color} />
+        <rect x="7.6" y="4.6" width="1.5" height="4.8" rx="0.5" fill={color} />
+      </svg>
+    );
+  }
+  const category: StatusCategory = status === "planned" ? "unstarted" : status;
+  return <StatusIcon category={category} color={PROJECT_STATUS_COLOR[status]} size={size} />;
+}
+
+/** A project's icon: an emoji/text, or a lucide icon name (falls back to `box`), tinted with its color. */
+export function ProjectGlyph({ icon, color, size = 14 }: { icon?: string; color?: string; size?: number }) {
+  const style = color ? { color } : undefined;
+  if (icon && !/^[a-z0-9-]+$/i.test(icon)) {
+    return (
+      <span className="kt-icon kt-project-emoji" style={{ ...style, fontSize: size - 1, width: size, height: size }}>
+        {icon}
+      </span>
+    );
+  }
+  return (
+    <span className="kt-project-glyph" style={style}>
+      <Icon name={icon || "box"} size={size} />
+    </span>
+  );
 }

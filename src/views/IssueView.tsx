@@ -10,6 +10,7 @@ import { PluginContext, usePlugin } from "./PluginContext";
 import { ActivityFeed } from "./issue/ActivityFeed";
 import { CommentBox } from "./issue/CommentBox";
 import { Description } from "./issue/Description";
+import { TitleEditor } from "./issue/TitleEditor";
 import { IssueHeader } from "./issue/IssueHeader";
 import { SubIssues } from "./issue/SubIssues";
 import { PropertiesSidebar, type PropKind } from "./issue/PropertiesSidebar";
@@ -21,52 +22,6 @@ export { VIEW_TYPE_ISSUE };
 function idOfPath(path: string): string {
   const name = path.slice(path.lastIndexOf("/") + 1);
   return name.endsWith(".md") ? name.slice(0, -3) : name;
-}
-
-function TitleEditor({ title, onSave }: { title: string; onSave: (t: string) => void }) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [draft]);
-  useEffect(() => {
-    if (draft !== null) ref.current?.focus();
-  }, [draft === null]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (draft === null) {
-    return (
-      <h1 className="kt-issue-title" tabIndex={0} title="Click to edit" onClick={() => setDraft(title)} onKeyDown={(e) => e.key === "Enter" && setDraft(title)}>
-        {title}
-      </h1>
-    );
-  }
-  const commit = () => {
-    const t = draft.replace(/\s+/g, " ").trim();
-    setDraft(null);
-    if (t !== "" && t !== title) onSave(t);
-  };
-  return (
-    <textarea
-      ref={ref}
-      rows={1}
-      className="kt-issue-title kt-issue-title-input"
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          commit();
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          e.stopPropagation();
-          setDraft(null);
-        }
-      }}
-    />
-  );
 }
 
 interface IssueAppProps {

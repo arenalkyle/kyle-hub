@@ -325,3 +325,29 @@
 .kt-comment-box { margin: var(--size-4-3) 0 var(--size-4-8); }
 .kt-comment-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--size-4-3); margin-top: var(--size-4-2); }
 .kt-comment-hint { color: var(--text-faint); font-size: var(--font-ui-smaller); }
+
+/* ---- projects ---- */
+.kt-nav-heading-row { display: flex; align-items: center; justify-content: space-between; }
+.kt-nav-add { height: 20px; width: 20px; padding: 0; }
+.kt-nav-count { margin-left: auto; color: var(--text-faint); font-size: var(--font-ui-smaller); }
+.kt-nav-archived { color: var(--text-faint); }
+.kt-project-glyph { display: inline-flex; align-items: center; }
+.kt-project-emoji { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.kt-project { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.kt-project-title { display: flex; align-items: center; gap: var(--size-4-3); }
+.kt-project-name { flex: 1; min-width: 0; }
+.kt-project-icon-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; background: transparent; border: 0; box-shadow: none; border-radius: var(--radius-m); cursor: pointer; }
+.kt-project-icon-btn:hover { background: var(--background-modifier-hover); }
+.kt-project-props { display: flex; flex-wrap: wrap; gap: var(--size-4-2); margin: var(--size-4-3) 0; }
+.kt-project-lead-input { height: 24px; width: 120px; font-size: var(--font-ui-small); }
+.kt-prop-btn .kt-project-lead-input { border: 0; background: transparent; box-shadow: none; padding: 0; }
+.kt-project-color { cursor: pointer; }
+.kt-project-progress { display: flex; align-items: center; gap: var(--size-4-3); margin: var(--size-4-3) 0; }
+.kt-progress-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--background-modifier-border); overflow: hidden; }
+.kt-progress-fill { height: 100%; border-radius: 3px; transition: width 0.2s; }
+.kt-progress-text { flex: none; font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.kt-new-project-name { display: flex; align-items: center; gap: var(--size-4-2); }
+.kt-new-project-name .kt-new-title { flex: 1; }
+.kt-field-error { color: var(--text-error); font-size: var(--font-ui-smaller); }
+.kt-project-back { padding: var(--size-4-1) var(--size-4-3); border-bottom: 1px solid var(--background-modifier-border); }
+.kt-project-back .clickable-icon { display: inline-flex; align-items: center; gap: var(--size-4-1); width: auto; font-size: var(--font-ui-small); }

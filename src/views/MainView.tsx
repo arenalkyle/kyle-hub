@@ -7,6 +7,8 @@ import { applyPatch, type IssuePatch } from "../core/issueFile";
 import { buildView, OTHER_GROUP_KEY, viewTitle } from "../core/query";
 import { useIssues, useProjects, useSettings } from "../store/hooks";
 import { PluginContext, usePlugin } from "./PluginContext";
+import { ProjectPage } from "./project/ProjectPage";
+import { projectViewId } from "../core/query";
 import { AssigneePicker } from "./components/pickers/AssigneePicker";
 import { LabelPicker } from "./components/pickers/LabelPicker";
 import { PriorityPicker } from "./components/pickers/PriorityPicker";
@@ -16,6 +18,7 @@ import { BoardView, type BoardMove } from "./main/BoardView";
 import { FilterBar } from "./main/FilterBar";
 import { Header } from "./main/Header";
 import { flatten, ListView } from "./main/ListView";
+import { Icon } from "./components/icons";
 import { Sidebar } from "./main/Sidebar";
 import { useViewState } from "./main/useViewState";
 
@@ -85,6 +88,9 @@ function MainApp() {
   const visible = built.groups;
   const collapsed = useMemo(() => new Set(ui.collapsedGroups[view] ?? []), [ui.collapsedGroups, view]);
   const project = view.startsWith("project:") ? view.slice("project:".length) : undefined;
+  // The project page is the default for a project; "View issues" shows its issue list until another view is picked.
+  const [issuesOf, setIssuesOf] = useState<string | null>(null);
+  const showPage = project !== undefined && issuesOf !== view;
 
   const toggleGroup = (key: string) => {
     const set = new Set(collapsed);
@@ -176,14 +182,46 @@ function MainApp() {
           view={view}
           projects={projects}
           width={width}
-          onSelect={(v) => commit({ ...ui, view: v })}
+          onNewProject={() => plugin.openNewProject()}
+          onSelect={(v) => {
+            setIssuesOf(null);
+            commit({ ...ui, view: v });
+          }}
           onResize={(w, done) => {
             setWidth(w);
             if (done) commit({ ...ui, sidebarWidth: w });
           }}
         />
       )}
+      {showPage ? (
+        <div className="kt-content">
+          <ProjectPage
+            key={project}
+            name={project!}
+            headerLeft={
+              ui.sidebarCollapsed ? (
+                <button type="button" className="clickable-icon" title="Show sidebar" aria-label="Show sidebar" onClick={() => commit({ ...ui, sidebarCollapsed: false })}>
+                  <Icon name="panel-left" size={16} />
+                </button>
+              ) : undefined
+            }
+            onViewIssues={() => setIssuesOf(view)}
+            onRenamed={(n) => {
+              if (issuesOf !== null) setIssuesOf(projectViewId(n));
+              commit({ ...plugin.data.main, view: projectViewId(n) });
+            }}
+            onDeleted={() => commit({ ...plugin.data.main, view: "all" })}
+          />
+        </div>
+      ) : (
       <div className="kt-content">
+        {project !== undefined && (
+          <div className="kt-project-back">
+            <button type="button" className="clickable-icon" onClick={() => setIssuesOf(null)}>
+              <Icon name="arrow-left" size={14} /> Project page
+            </button>
+          </div>
+        )}
         <Header
           title={viewTitle(view)}
           count={built.total}
@@ -214,6 +252,7 @@ function MainApp() {
           <ListView groups={built.groups} display={display} subCounts={built.subCounts} issues={issues} viewId={view} project={project} selectedId={current} collapsed={collapsed} onToggleGroup={toggleGroup} />
         )}
       </div>
+      )}
       {sp && spIssue && sp.kind === "status" && (
         <StatusPicker anchor={sp.anchor} value={spIssue.status} onChange={(status) => spUpdate({ status })} onClose={closeSp} />
       )}

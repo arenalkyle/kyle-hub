@@ -10,6 +10,8 @@ import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";
 import { IssueStore } from "./store/IssueStore";
 import { IssueView, VIEW_TYPE_ISSUE } from "./views/IssueView";
 import { IssueInterceptor } from "./views/intercept";
+import { NewProjectModal } from "./views/NewProjectModal";
+import { ProjectView, VIEW_TYPE_PROJECT } from "./views/ProjectView";
 
 export default class KyleTicketsPlugin extends Plugin {
   data: PluginData = mergeData(null);
@@ -22,6 +24,7 @@ export default class KyleTicketsPlugin extends Plugin {
 
     this.registerView(VIEW_TYPE_MAIN, (leaf) => new MainView(leaf, this));
     this.registerView(VIEW_TYPE_ISSUE, (leaf) => new IssueView(leaf, this));
+    this.registerView(VIEW_TYPE_PROJECT, (leaf) => new ProjectView(leaf, this));
     this.interceptor.install();
     this.addCommand({
       id: "toggle-issue-markdown",
@@ -38,6 +41,11 @@ export default class KyleTicketsPlugin extends Plugin {
       id: "new-issue",
       name: "New issue",
       callback: () => this.openNewIssue(),
+    });
+    this.addCommand({
+      id: "new-project",
+      name: "New project",
+      callback: () => this.openNewProject(),
     });
     this.addSettingTab(new KyleTicketsSettingTab(this.app, this));
 
@@ -74,6 +82,17 @@ export default class KyleTicketsPlugin extends Plugin {
     const path = this.store.pathOf(id);
     const f = path ? this.app.vault.getAbstractFileByPath(path) : null;
     if (f instanceof TFile) void this.app.workspace.getLeaf(newTab ? "tab" : false).openFile(f);
+  }
+
+  /** Opens a project's file, which the interceptor turns into the project page. */
+  openProject(name: string, newTab = false): void {
+    const path = this.store.pathOfProject(name);
+    const f = path ? this.app.vault.getAbstractFileByPath(path) : null;
+    if (f instanceof TFile) void this.app.workspace.getLeaf(newTab ? "tab" : false).openFile(f);
+  }
+
+  openNewProject(): void {
+    new NewProjectModal(this).open();
   }
 
   async savePluginData(): Promise<void> {

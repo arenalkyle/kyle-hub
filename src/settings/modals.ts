@@ -129,3 +129,18 @@ export async function bulkWithProgress(
     (notice as Notice | null)?.hide();
   }
 }
+
+/** Runs `run` with an `onProgress` that shows a notice once more than 20 files are touched. */
+export async function withProgressNotice<T>(label: string, run: (onProgress: (done: number, total: number) => void) => Promise<T>): Promise<T> {
+  let notice: Notice | null = null;
+  try {
+    return await run((done, total) => {
+      if (total <= BULK_PROGRESS_THRESHOLD) return;
+      const msg = `kyle-tickets: ${label} ${done}/${total}`;
+      if (notice) notice.setMessage(msg);
+      else notice = new Notice(msg, 0);
+    });
+  } finally {
+    (notice as Notice | null)?.hide();
+  }
+}

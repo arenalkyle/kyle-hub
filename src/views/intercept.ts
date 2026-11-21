@@ -1,9 +1,10 @@
 import { WorkspaceLeaf, type TFile, type View } from "obsidian";
 import type KyleTicketsPlugin from "../main";
 import { around } from "../core/around";
-import { isIssuePath, shouldIntercept } from "../core/intercept";
+import { interceptTarget, isIssuePath, isProjectPath } from "../core/intercept";
 
 export const VIEW_TYPE_ISSUE = "kyle-tickets-issue";
+export const VIEW_TYPE_PROJECT = "kyle-tickets-project";
 
 interface ViewStateLike {
   type?: string;
@@ -50,8 +51,9 @@ export class IssueInterceptor {
     const forcedPath = this.forced.get(leaf);
     if (forcedPath !== undefined && forcedPath !== path) this.forced.delete(leaf);
     const forcedMarkdown = this.forced.get(leaf) === path;
-    if (!shouldIntercept({ path, folder: this.plugin.data.settings.folder, forcedMarkdown })) return null;
-    return { ...state, type: VIEW_TYPE_ISSUE, state: { file: path } };
+    const target = interceptTarget({ path, folder: this.plugin.data.settings.folder, forcedMarkdown });
+    if (!target) return null;
+    return { ...state, type: target === "issue" ? VIEW_TYPE_ISSUE : VIEW_TYPE_PROJECT, state: { file: path } };
   }
 
   /** Switches `leaf` (showing an issue file) to the Markdown editor. */
@@ -76,11 +78,13 @@ export class IssueInterceptor {
     if (!leaf) return false;
     const type = leaf.view.getViewType();
     const file = (leaf.view as { file?: TFile | null }).file;
+    const folder = this.plugin.data.settings.folder;
     const applicable =
       type === VIEW_TYPE_ISSUE ||
-      (type === "markdown" && !!file && isIssuePath(file.path, this.plugin.data.settings.folder));
+      type === VIEW_TYPE_PROJECT ||
+      (type === "markdown" && !!file && (isIssuePath(file.path, folder) || isProjectPath(file.path, folder)));
     if (!applicable) return false;
-    if (!check) void (type === VIEW_TYPE_ISSUE ? this.showMarkdown(leaf) : this.showIssue(leaf));
+    if (!check) void (type === VIEW_TYPE_ISSUE || type === VIEW_TYPE_PROJECT ? this.showMarkdown(leaf) : this.showIssue(leaf));
     return true;
   }
 
@@ -90,12 +94,12 @@ export class IssueInterceptor {
     for (const leaf of this.plugin.app.workspace.getLeavesOfType("markdown")) {
       const view = leaf.view;
       const file = (view as { file?: TFile | null }).file;
-      const inFolder = !!file && isIssuePath(file.path, folder);
+      const inFolder = !!file && (isIssuePath(file.path, folder) || isProjectPath(file.path, folder));
       let el = this.actions.get(view);
       if (!el && inFolder) {
         el = (view as unknown as { addAction(icon: string, title: string, cb: () => void): HTMLElement }).addAction(
           "layout-template",
-          "Open as issue",
+          "Open in kyle-tickets view",
           () => void this.showIssue(leaf),
         );
         this.actions.set(view, el);
