@@ -33,9 +33,7 @@ function MainApp() {
 
   const view = ui.view;
   const project = view.startsWith("project:") ? view.slice("project:".length) : undefined;
-  // The project page is the default for a project; "View issues" shows its issue list until another view is picked.
-  const [issuesOf, setIssuesOf] = useState<string | null>(null);
-  const showPage = project !== undefined && issuesOf !== view;
+  const showPage = project !== undefined;
 
   return (
     <div
@@ -54,7 +52,6 @@ function MainApp() {
           width={width}
           onNewProject={() => plugin.openNewProject()}
           onSelect={(v) => {
-            setIssuesOf(null);
             commit({ ...ui, view: v });
           }}
           onResize={(w, done) => {
@@ -75,9 +72,7 @@ function MainApp() {
                 </button>
               ) : undefined
             }
-            onViewIssues={() => setIssuesOf(view)}
             onRenamed={(n) => {
-              if (issuesOf !== null) setIssuesOf(projectViewId(n));
               commit({ ...plugin.data.main, view: projectViewId(n) });
             }}
             onDeleted={() => commit({ ...plugin.data.main, view: "all" })}
@@ -85,13 +80,6 @@ function MainApp() {
         </div>
       ) : (
       <div className="kt-content">
-        {project !== undefined && (
-          <div className="kt-project-back">
-            <button type="button" className="clickable-icon" onClick={() => setIssuesOf(null)}>
-              <Icon name="arrow-left" size={14} /> Project page
-            </button>
-          </div>
-        )}
         <IssueCollection
           scope={view}
           viewKey={view}

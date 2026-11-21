@@ -1,5 +1,6 @@
 import { Menu, Notice } from "obsidian";
 import { useRef, useState, type ReactNode } from "react";
+import { projectViewId } from "../../core/query";
 import { PROJECT_STATUS_LABELS, issueInProject, projectProgress, validateProjectName } from "../../core/projects";
 import type { Project, ProjectStatus } from "../../core/types";
 import { ColorInput } from "../../settings/ColorInput";
@@ -13,6 +14,9 @@ import { ProjectIconPicker } from "../components/pickers/ProjectIconPicker";
 import { ProjectStatusPicker } from "../components/pickers/ProjectStatusPicker";
 import { Description } from "../issue/Description";
 import { TitleEditor } from "../issue/TitleEditor";
+import { IssueCollection } from "../main/IssueCollection";
+import { useViewState } from "../main/useViewState";
+import { Milestones } from "./Milestones";
 
 export const DEFAULT_PROJECT_COLOR = "#5e6ad2";
 
@@ -24,8 +28,6 @@ export interface ProjectPageProps {
   onDeleted: () => void;
   /** Extra controls at the left of the header (e.g. sidebar toggle). */
   headerLeft?: ReactNode;
-  /** Shows a "View issues" button. */
-  onViewIssues?: () => void;
   /** Extra items for the "..." menu. */
   extraMenu?: (menu: Menu) => void;
 }
@@ -62,7 +64,7 @@ function LeadEditor({ value, onSave }: { value: string | undefined; onSave: (v: 
   );
 }
 
-export function ProjectPage({ name, onRenamed, onDeleted, headerLeft, onViewIssues, extraMenu }: ProjectPageProps) {
+export function ProjectPage({ name, onRenamed, onDeleted, headerLeft, extraMenu }: ProjectPageProps) {
   const plugin = usePlugin();
   const projects = useProjects();
   const issues = useIssues();
@@ -71,6 +73,9 @@ export function ProjectPage({ name, onRenamed, onDeleted, headerLeft, onViewIssu
   const [open, setOpen] = useState<{ kind: "status" | "due" | "icon"; anchor: HTMLElement } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const project: Project | undefined = projects.find((p) => p.name.toLowerCase() === name.toLowerCase());
+  // Shared by the Milestones section (click-to-filter) and the issue collection below it.
+  const viewKey = projectViewId(project?.name ?? name);
+  const viewState = useViewState(viewKey);
 
   if (!project) {
     return (
@@ -139,11 +144,6 @@ export function ProjectPage({ name, onRenamed, onDeleted, headerLeft, onViewIssu
           <span className="kt-crumb is-current">{project.name}</span>
         </nav>
         <span className="kt-spacer" />
-        {onViewIssues && (
-          <button type="button" onClick={onViewIssues}>
-            View issues
-          </button>
-        )}
         <button
           type="button"
           className="clickable-icon"
@@ -202,6 +202,10 @@ export function ProjectPage({ name, onRenamed, onDeleted, headerLeft, onViewIssu
               sourcePath={path}
               onSave={(md) => update({ description: md.replace(/^(?:[ \t]*\r?\n)+/, "").replace(/\s+$/, "") })}
             />
+            <Milestones project={project} color={project.color ?? DEFAULT_PROJECT_COLOR} filters={viewState.filters} onFiltersChange={viewState.setFilters} />
+          </div>
+          <div className="kt-project-issues">
+            <IssueCollection scope={viewKey} viewKey={viewKey} title="Issues" project={project.name} embedded viewState={viewState} />
           </div>
         </div>
       </div>
