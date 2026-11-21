@@ -1,11 +1,14 @@
 import type { EditorView } from "@codemirror/view";
 import { useRef, useState } from "react";
+import { Avatar } from "../components/Avatar";
+import { useSettings } from "../../store/hooks";
 import { MarkdownEditor } from "./MarkdownEditor";
 
 export function CommentBox({ onPost }: { onPost: (body: string) => Promise<void> }) {
   const view = useRef<EditorView | null>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const settings = useSettings();
 
   const post = async (body: string) => {
     if (busy || body.trim() === "") return;
@@ -21,12 +24,15 @@ export function CommentBox({ onPost }: { onPost: (body: string) => Promise<void>
 
   return (
     <div className="kt-comment-box">
-      <MarkdownEditor viewRef={view} value="" placeholder="Leave a comment…" onChange={setText} onSubmit={(b) => void post(b)} />
-      <div className="kt-comment-actions">
-        <span className="kt-comment-hint">Ctrl+Enter to post</span>
-        <button type="button" className="mod-cta" disabled={busy || text.trim() === ""} onClick={() => void post(view.current?.state.doc.toString() ?? "")}>
-          Comment
-        </button>
+      <Avatar name={settings.displayName} className="kt-comment-avatar" />
+      <div className="kt-comment-box-main">
+        <MarkdownEditor viewRef={view} value="" placeholder="Leave a comment…" onChange={setText} onSubmit={(b) => void post(b)} />
+        <div className="kt-comment-actions">
+          <span className="kt-comment-hint">Ctrl+Enter to post</span>
+          <button type="button" className="mod-cta" disabled={busy || text.trim() === ""} onClick={() => void post(view.current?.state.doc.toString() ?? "")}>
+            Comment
+          </button>
+        </div>
       </div>
     </div>
   );

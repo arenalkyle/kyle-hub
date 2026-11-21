@@ -2,6 +2,7 @@ import { memo, useState } from "react";
 import { humanizeEvent, type EventIcon } from "../../core/activity";
 import { relativeTime } from "../../core/time";
 import type { FeedEntry } from "../../core/types";
+import { Avatar } from "../components/Avatar";
 import { Icon } from "../components/icons";
 import { Markdown } from "../components/Markdown";
 
@@ -26,7 +27,7 @@ const Entry = memo(function Entry({ entry, sourcePath, now }: { entry: FeedEntry
   return (
     <div className="kt-comment">
       <div className="kt-comment-head">
-        <span className="kt-avatar">{entry.author.charAt(0).toUpperCase()}</span>
+        <Avatar name={entry.author} className="kt-comment-avatar" />
         <span className="kt-comment-author">{entry.author}</span>
         <span className="kt-comment-time" title={entry.time}>{rel}</span>
       </div>
