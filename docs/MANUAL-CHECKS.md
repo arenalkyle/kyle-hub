@@ -141,3 +141,12 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] `kh promote <file> --to <homeVault> --dry-run` changes no files.
 - [ ] In a work vault, "Draft rule" is hidden/refused; command center and retro show only the vault profile's data.
 - [ ] With CDP on port 9222: `npm run smoke:promote` passes (not run unattended).
+
+## 9.1 Accounts + launch routing — LOCK-59
+
+- [ ] Settings → Claude accounts → Add: a login tab opens; run `/login` there with a real account (config dir defaults to `%LOCALAPPDATA%\kyle-hub\claude-accounts\<id>`, never `~/.claude`).
+- [ ] Set the new account as default for one repo (repo-row dropdown), launch a ticket from the Queue: the run used that account (`kh logs runs --json` shows its `accountId`).
+- [ ] With two or more accounts, launch another ticket and pick a different account in the picker: the ticket gets `account:` frontmatter and the run uses it.
+- [ ] An unknown account id on a ticket/repo refuses the launch; an account whose profile doesn't match the vault is refused.
+- [ ] `kh account list` and `kh account use <id> --repo <key>` (with `KYLE_HUB_VAULTS` set) work; reload the plugin after a CLI change (Obsidian rewrites data.json on save).
+- [ ] With no accounts configured, launch behaves as before (no `CLAUDE_CONFIG_DIR`).
