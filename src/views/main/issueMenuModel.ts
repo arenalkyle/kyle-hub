@@ -7,68 +7,98 @@ export type PickerKind = "labels" | "assignee" | "project" | "milestone" | "due"
 export type MenuAction =
   | { type: "status"; value: string }
   | { type: "priority"; value: Priority }
+  | { type: "assignee"; value: string | null }
   | { type: "picker"; kind: PickerKind }
   | { type: "open"; newTab: boolean }
   | { type: "copyLink" }
   | { type: "delete" };
 
+/** Icon of a menu item: the plugin's coloured icons, or a Lucide name for plain actions. */
+export type MenuIcon =
+  | { kind: "lucide"; name: string }
+  | { kind: "status"; category: StatusDef["category"]; color: string }
+  | { kind: "priority"; priority: Priority }
+  | { kind: "avatar"; name: string };
+
+export interface MenuItem {
+  type: "item";
+  label: string;
+  icon: MenuIcon;
+  action: MenuAction;
+  checked?: boolean;
+  danger?: boolean;
+}
+
 export type MenuEntry =
   | { type: "separator" }
   | { type: "heading"; label: string }
-  | { type: "item"; label: string; icon: string; action: MenuAction; checked?: boolean; danger?: boolean };
+  | MenuItem
+  | { type: "submenu"; label: string; icon: MenuIcon; children: MenuItem[] };
 
-/** Lucide icon per status category (Obsidian menus cannot host the React status SVGs). */
-const STATUS_ICON: Record<StatusDef["category"], string> = {
-  triage: "circle-help",
-  backlog: "circle-dashed",
-  unstarted: "circle",
-  started: "circle-dot",
-  completed: "circle-check",
-  canceled: "circle-x",
-};
+const lucide = (name: string): MenuIcon => ({ kind: "lucide", name });
 
-const PRIORITY_ICON: Record<Priority, string> = {
-  urgent: "alert-triangle",
-  high: "chevrons-up",
-  medium: "chevron-up",
-  low: "chevron-down",
-  none: "minus",
-};
-
-/** Context menu for an issue row/card. Pure: no Obsidian or DOM access. */
-export function buildIssueMenu(issue: Issue, settings: Settings): MenuEntry[] {
+/** Context menu for an issue row/card. Pure: no Obsidian or DOM access. `assignees` are extra known assignee names. */
+export function buildIssueMenu(issue: Issue, settings: Settings, assignees: string[] = []): MenuEntry[] {
   const statuses = [...settings.statuses].sort((a, b) => a.order - b.order);
-  const entries: MenuEntry[] = [
-    { type: "heading", label: "Status" },
-    ...statuses.map<MenuEntry>((s) => ({
+  const current = statuses.find((s) => s.name === issue.status);
+  const names: string[] = [];
+  for (const n of [issue.assignee, settings.displayName, ...assignees]) {
+    const t = n?.trim();
+    if (t && !names.some((x) => x.toLowerCase() === t.toLowerCase())) names.push(t);
+  }
+  const assigneeChildren: MenuItem[] = [
+    { type: "item", label: "Unassign", icon: lucide("user-x"), checked: !issue.assignee, action: { type: "assignee", value: null } },
+    ...names.map<MenuItem>((n) => ({
       type: "item",
-      label: s.name,
-      icon: STATUS_ICON[s.category],
-      checked: s.name === issue.status,
-      action: { type: "status", value: s.name },
+      label: n,
+      icon: { kind: "avatar", name: n },
+      checked: n.toLowerCase() === issue.assignee?.trim().toLowerCase(),
+      action: { type: "assignee", value: n },
     })),
-    { type: "separator" },
-    { type: "heading", label: "Priority" },
-    ...PRIORITY_ORDER.map<MenuEntry>((p) => ({
-      type: "item",
-      label: PRIORITY_LABELS[p],
-      icon: PRIORITY_ICON[p],
-      checked: p === issue.priority,
-      action: { type: "priority", value: p },
-    })),
-    { type: "separator" },
-    { type: "item", label: "Assignee…", icon: "user", action: { type: "picker", kind: "assignee" } },
-    { type: "item", label: "Labels…", icon: "tags", action: { type: "picker", kind: "labels" } },
-    { type: "item", label: "Project…", icon: "folder", action: { type: "picker", kind: "project" } },
   ];
-  if (issue.project) entries.push({ type: "item", label: "Milestone…", icon: "flag", action: { type: "picker", kind: "milestone" } });
+  const entries: MenuEntry[] = [
+    {
+      type: "submenu",
+      label: `Status: ${issue.status}`,
+      icon: current ? { kind: "status", category: current.category, color: current.color } : lucide("circle"),
+      children: statuses.map<MenuItem>((s) => ({
+        type: "item",
+        label: s.name,
+        icon: { kind: "status", category: s.category, color: s.color },
+        checked: s.name === issue.status,
+        action: { type: "status", value: s.name },
+      })),
+    },
+    {
+      type: "submenu",
+      label: `Priority: ${PRIORITY_LABELS[issue.priority]}`,
+      icon: { kind: "priority", priority: issue.priority },
+      children: PRIORITY_ORDER.map<MenuItem>((p) => ({
+        type: "item",
+        label: PRIORITY_LABELS[p],
+        icon: { kind: "priority", priority: p },
+        checked: p === issue.priority,
+        action: { type: "priority", value: p },
+      })),
+    },
+    {
+      type: "submenu",
+      label: `Assignee: ${issue.assignee?.trim() || "Unassigned"}`,
+      icon: issue.assignee?.trim() ? { kind: "avatar", name: issue.assignee.trim() } : lucide("user"),
+      children: assigneeChildren,
+    },
+    { type: "separator" },
+    { type: "item", label: "Labels…", icon: lucide("tags"), action: { type: "picker", kind: "labels" } },
+    { type: "item", label: "Project…", icon: lucide("folder"), action: { type: "picker", kind: "project" } },
+  ];
+  if (issue.project) entries.push({ type: "item", label: "Milestone…", icon: lucide("flag"), action: { type: "picker", kind: "milestone" } });
   entries.push(
-    { type: "item", label: "Due date…", icon: "calendar", action: { type: "picker", kind: "due" } },
+    { type: "item", label: "Due date…", icon: lucide("calendar"), action: { type: "picker", kind: "due" } },
     { type: "separator" },
-    { type: "item", label: "Open in new tab", icon: "file-plus", action: { type: "open", newTab: true } },
-    { type: "item", label: "Copy link", icon: "link", action: { type: "copyLink" } },
+    { type: "item", label: "Open in new tab", icon: lucide("file-plus"), action: { type: "open", newTab: true } },
+    { type: "item", label: "Copy link", icon: lucide("link"), action: { type: "copyLink" } },
     { type: "separator" },
-    { type: "item", label: "Delete issue", icon: "trash", action: { type: "delete" }, danger: true },
+    { type: "item", label: "Delete issue", icon: lucide("trash"), action: { type: "delete" }, danger: true },
   );
   return entries;
 }

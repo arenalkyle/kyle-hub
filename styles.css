@@ -470,3 +470,7 @@
 .kt-related-row:hover .kt-related-remove { visibility: visible; }
 .kt-related-remove:hover { color: var(--text-error); }
 .kt-related-add { color: var(--text-muted); }
+
+/* Issue context menu: coloured icons inside Obsidian menu items */
+.menu-item-icon.kt-ctx-icon { display: inline-flex; align-items: center; justify-content: center; }
+.menu-item-icon.kt-ctx-icon .kt-icon { width: 14px; height: 14px; }

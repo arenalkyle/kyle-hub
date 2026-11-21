@@ -191,6 +191,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
       switch (a.type) {
         case "status":
         case "priority":
+        case "assignee":
           void plugin.store.updateIssue(issue.id, { [a.type]: a.value }).catch((err) => console.error("kyle-tickets: update failed", err));
           break;
         case "picker": {
@@ -215,7 +216,8 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
         }
       }
     };
-    showIssueContextMenu(e.nativeEvent, issue, settings, run);
+    const assignees = [...issues].sort((x, y) => (y.updated ?? "").localeCompare(x.updated ?? "")).flatMap((i) => (i.assignee ? [i.assignee] : []));
+    showIssueContextMenu(e.nativeEvent, issue, settings, plugin, assignees, run);
   };
   const spIssue = sp ? issues.find((i) => i.id === sp.id) : undefined;
   const spUpdate = (patch: IssuePatch) => {
