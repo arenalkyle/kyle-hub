@@ -150,3 +150,13 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] An unknown account id on a ticket/repo refuses the launch; an account whose profile doesn't match the vault is refused.
 - [ ] `kh account list` and `kh account use <id> --repo <key>` (with `KYLE_HUB_VAULTS` set) work; reload the plugin after a CLI change (Obsidian rewrites data.json on save).
 - [ ] With no accounts configured, launch behaves as before (no `CLAUDE_CONFIG_DIR`).
+
+## 9.2 Usage tracker + surfaces — LOCK-60
+
+- [ ] Enable the usage and command-center modules; start Obsidian with `--remote-debugging-port=9222` and run `npm run smoke:usage` (not run unattended).
+- [ ] Compare the session and week numbers with `/usage`; adjust `usage.caps.<plan>` in Settings → Usage (default caps are placeholders; subscription % = tokens excl. cache reads ÷ cap).
+- [ ] Add an enterprise account, set a budget: tile, status-bar chip and picker show $ and no percent.
+- [ ] Set a low cap and cross 80%: a notice appears and a running ticket of that account gets a comment (fires once per window; never switches accounts).
+- [ ] With 2+ accounts, launch a ticket: each picker row shows its usage line.
+- [ ] Optional: turn on "official reading" (`claude -p "/usage"` parsed per account; unverified guess, falls back to the estimate). `kh usage` reads the estimate only.
+- [ ] Note: the usage module runs `logs.ingest()` at most every 2 minutes so the chip isn't stale.
