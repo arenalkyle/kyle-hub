@@ -1,6 +1,18 @@
 .kyle-term-root { height: 100%; width: 100%; padding: 0; box-sizing: border-box; overflow: hidden; display: flex; }
 .kyle-term-term { height: 100%; width: 100%; padding: 4px; box-sizing: border-box; }
 .kyle-term-term .xterm { height: 100%; }
+/* Obsidian/theme typography must not leak into xterm: it measures a character to size every cell,
+   so inherited letter-spacing or font features make cells wider than the glyphs ("spread out"). */
+.kyle-term-term .xterm,
+.kyle-term-term .xterm * {
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+  font-feature-settings: normal !important;
+  font-variation-settings: normal !important;
+  font-variant-ligatures: none !important;
+  font-kerning: none !important;
+  text-transform: none !important;
+}
 .kyle-term-message { padding: 16px; color: var(--text-error); white-space: pre-wrap; }
 .kyle-term-message.kt-empty { color: var(--text-muted); }
 
