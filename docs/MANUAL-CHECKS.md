@@ -98,3 +98,9 @@ On the Mac (Apple Silicon; darwin-x64 untested):
 5. Cmd+C copies (with selection), Cmd+V pastes, Ctrl+C always interrupts, Cmd+= / Cmd+- / Cmd+0 zoom, Shift+Enter inserts a newline in Claude.
 6. Background image from an absolute POSIX path; send note / drag notes give POSIX `@` refs.
 7. Quit and reopen: Resume works.
+
+## Post-ship — terminal font (2026-11-21)
+
+1. With Font family empty, the terminal uses Obsidian's monospace font (Settings → Appearance → Font); letters are evenly spaced, not tiny or spread out.
+2. Change Obsidian's monospace font: the terminal follows. Type a font in kyle-term's Font family: it overrides.
+3. Text is crisp at 100% terminal opacity; lowering opacity with a background image still shows the image.
