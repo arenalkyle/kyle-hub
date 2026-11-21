@@ -18,6 +18,25 @@ export interface RetroState {
   watermark?: string;
   lastRetroAt?: string;
   history: RetroHistoryEntry[];
+  applied: AppliedEntry[];
+  llmSpend?: LlmSpend;
+}
+
+/** A proposal that was applied; the next retros check whether its pattern still occurs. */
+export interface AppliedEntry {
+  signature: string;
+  appliedAt: string;
+  ticketId: string;
+  /** Consecutive retros with zero occurrences since `appliedAt`. */
+  quietRetros: number;
+  /** Set once the "Resolved" comment was posted. */
+  resolved?: boolean;
+}
+
+/** Haiku spend of the current day (opt-in draft rule). */
+export interface LlmSpend {
+  day: string;
+  usd: number;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -29,16 +48,32 @@ export function readRetroState(file: string): RetroState {
   try {
     raw = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
-    return { history: [] };
+    return { history: [], applied: [] };
   }
-  if (!isObj(raw)) return { history: [] };
+  if (!isObj(raw)) return { history: [], applied: [] };
   const history = Array.isArray(raw.history)
     ? raw.history.filter(isObj).map((h) => ({ at: typeof h.at === "string" ? h.at : "", clusters: strList(h.clusters), ticketIds: strList(h.ticketIds) }))
     : [];
+  const applied: AppliedEntry[] = Array.isArray(raw.applied)
+    ? raw.applied.filter(isObj).flatMap((a) =>
+        typeof a.signature === "string" && typeof a.appliedAt === "string"
+          ? [{
+              signature: a.signature,
+              appliedAt: a.appliedAt,
+              ticketId: typeof a.ticketId === "string" ? a.ticketId : "",
+              quietRetros: typeof a.quietRetros === "number" ? a.quietRetros : 0,
+              ...(a.resolved === true ? { resolved: true } : {}),
+            }]
+          : [],
+      )
+    : [];
+  const spend = isObj(raw.llmSpend) && typeof raw.llmSpend.day === "string" && typeof raw.llmSpend.usd === "number" ? { day: raw.llmSpend.day, usd: raw.llmSpend.usd } : undefined;
   return {
     ...(typeof raw.watermark === "string" ? { watermark: raw.watermark } : {}),
     ...(typeof raw.lastRetroAt === "string" ? { lastRetroAt: raw.lastRetroAt } : {}),
     history,
+    applied,
+    ...(spend ? { llmSpend: spend } : {}),
   };
 }
 
@@ -54,6 +89,7 @@ export function commitRetro(file: string, result: DetectResult, ticketIds: reado
   const at = now.toISOString();
   const prev = readRetroState(file);
   const next: RetroState = {
+    ...prev,
     watermark: at,
     lastRetroAt: at,
     history: [...prev.history, { at, clusters: result.clusters.map((c) => c.signature), ticketIds: [...ticketIds] }],
@@ -65,4 +101,11 @@ export function commitRetro(file: string, result: DetectResult, ticketIds: reado
 /** Index runs started strictly after the watermark. */
 export function sessionsSinceRetro(runs: readonly RunIndexEntry[], watermark?: string): number {
   return runs.filter((r) => watermark === undefined || Date.parse(r.start) > Date.parse(watermark)).length;
+}
+
+/** Read-modify-write of retro.json. */
+export function updateRetroState(file: string, fn: (s: RetroState) => RetroState): RetroState {
+  const next = fn(readRetroState(file));
+  writeRetroStateAtomic(file, next);
+  return next;
 }

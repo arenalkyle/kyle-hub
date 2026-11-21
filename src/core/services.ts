@@ -110,6 +110,43 @@ export interface AttentionService {
   subscribe(cb: () => void): () => void;
 }
 
+export interface RetroStatus {
+  /** Latest retro across profiles (ISO), if any. */
+  lastRetroAt?: string;
+  sessionsSince: number;
+  nudgeAt: number;
+}
+
+export interface RetroSummary {
+  created: { id: string; title: string; type: string }[];
+  seenAgain: string[];
+  skipped: string[];
+  recurred: string[];
+  resolved: string[];
+}
+
+export interface RuleDraft {
+  rule: string;
+  diff: string;
+  root: string;
+  costUsd: number;
+}
+
+/** Published by the term module: the retro loop (6.2). Ticket-page buttons call it; the term sidebar shows the status. */
+export interface RetroService {
+  status(): Promise<RetroStatus>;
+  perform(): Promise<RetroSummary>;
+  /** Apply button: an accepted, open proposal with a diff that was not applied yet. */
+  canApply(id: string): boolean;
+  apply(id: string): Promise<{ ok: boolean; message: string }>;
+  /** Draft rule button: only when `allowDraftRule` is on and the ticket is a user_correction finding. */
+  canDraft(id: string): boolean;
+  draft(id: string): Promise<{ ok: true; draft: RuleDraft } | { ok: false; message: string }>;
+  confirmDraft(id: string, draft: RuleDraft): Promise<void>;
+  /** Fires after a retro or an apply; returns an unsubscribe function. */
+  subscribe(cb: () => void): () => void;
+}
+
 /** Stub service interface; the brain module fills it in (7.x). */
 export interface BrainService {}
 
@@ -119,6 +156,7 @@ export interface Services {
   sessions: SessionService;
   logs: LogService;
   attention: AttentionService;
+  retro: RetroService;
   brain: BrainService;
 }
 
