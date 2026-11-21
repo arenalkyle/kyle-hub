@@ -1,0 +1,3 @@
+# Retro proposals come from templates, not an LLM
+
+Retro detects signals deterministically, normalizes them into signatures, and promotes a signature to a cluster at 3 or more occurrences across 2 or more sessions. Each signal type maps to a template that generates the proposal diff (permission denial → `permissions.allow` entry; repeated command sequence → script stub plus a `CLAUDE.md` pointer; docs read at session start → context-pack include list) or a finding with evidence. Drafting a rule from user corrections is an opt-in Haiku button, off by default. Apply runs `git apply --check` then `git apply`. The next retro counts recurrences of each applied signature. With default settings a retro costs zero tokens.

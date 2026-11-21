@@ -1,0 +1,3 @@
+# Deterministic first; AI only where judgment is required
+
+Every pipeline step (ingest, redaction, dedupe, expiry, pack assembly, status changes, worktrees, summaries, retro detection, proposal generation, apply, effectiveness checks, staleness) is plain code with tests. An LLM runs only in (1) the work session itself, (2) an opt-in "draft rule" button on a finding, (3) an opt-in stale-doc digest. Each opt-in call uses the cheapest workable model on pre-digested input under a hard token/$ cap. Reason: predictable cost, reproducible behaviour, testability; AI must not be the default engine of the loop.

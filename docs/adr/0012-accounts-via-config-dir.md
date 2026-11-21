@@ -1,0 +1,3 @@
+# Multiple Claude accounts are isolated by CLAUDE_CONFIG_DIR; usage is derived locally
+
+Each account (subscription or enterprise) gets its own `CLAUDE_CONFIG_DIR`, so login, credentials and transcripts are separate. kyle-hub only sets the env var at launch and opens a term tab for `/login`; it never reads, copies or stores tokens. Usage (5 h session window, 7 d week) is computed deterministically from ingested transcripts and labeled an estimate, calibrated by user-set caps. Enterprise accounts show spend in $ against an optional budget. An exact reading from Anthropic is opt-in, off by default, best-effort (undocumented). The plugin warns but never switches accounts on its own (ADR-0005).
