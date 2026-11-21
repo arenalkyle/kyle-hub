@@ -83,9 +83,10 @@ export class CommandCenterView extends ItemView {
     const tiles = el.createDiv({ cls: "kh-command-center-tiles" });
     for (const t of m.tiles) this.paintTile(tiles, t);
 
-    this.paintUsage(el, m.usage);
+    const grid = el.createDiv({ cls: "kh-command-center-grid" });
+    this.paintUsage(grid, m.usage);
 
-    this.paintSection(el, "Needs attention", m.attention, (list, rows) => {
+    this.paintSection(grid, "Needs attention", m.attention, (list, rows) => {
       if (rows.length === 0) list.createEl("li", { text: "None" });
       for (const r of rows) {
         const li = list.createEl("li", { cls: "kh-command-center-row", text: `${r.ticketId} · ${r.reason}` });
@@ -93,17 +94,17 @@ export class CommandCenterView extends ItemView {
       }
     });
 
-    this.paintSection(el, "Recent runs", m.recentRuns, (list, rows) => {
+    this.paintSection(grid, "Recent runs", m.recentRuns, (list, rows) => {
       if (rows.length === 0) list.createEl("li", { text: "No runs yet" });
       for (const r of rows) list.createEl("li", { cls: "kh-command-center-row", text: `${r.ticketId ?? r.runId} · ${r.outcome} · $${r.costUsd.toFixed(2)}` });
     });
 
-    this.paintSection(el, "Open proposals", m.proposals, (list, rows) => {
+    this.paintSection(grid, "Open proposals", m.proposals, (list, rows) => {
       if (rows.length === 0) list.createEl("li", { text: "None" });
       for (const p of rows) list.createEl("li", { cls: "kh-command-center-row", text: `${p.id} · ${p.title}` });
     });
 
-    const spark = el.createDiv({ cls: "kh-command-center-spend" });
+    const spark = grid.createDiv({ cls: "kh-command-center-spend kh-command-center-card" });
     spark.createEl("h4", { text: "Spend, last 30 days" });
     if (m.sparkline.state !== "ok") spark.createDiv({ text: degradedText(m.sparkline) });
     else {
@@ -125,7 +126,7 @@ export class CommandCenterView extends ItemView {
   }
 
   private paintUsage(el: HTMLElement, p: Part<UsageRow[]>): void {
-    const box = el.createDiv({ cls: "kh-command-center-usage kh-usage-tile" });
+    const box = el.createDiv({ cls: "kh-command-center-usage kh-usage-tile kh-command-center-card" });
     box.createEl("h4", { text: "Usage" });
     if (p.state !== "ok") return void box.createDiv({ text: degradedText(p) });
     if (p.value.length === 0) return void box.createDiv({ text: "No accounts" });
@@ -156,12 +157,13 @@ export class CommandCenterView extends ItemView {
   }
 
   private paintSection<T>(el: HTMLElement, title: string, p: Part<T[]>, fill: (list: HTMLElement, rows: T[]) => void): void {
-    el.createEl("h4", { text: title });
+    const card = el.createDiv({ cls: "kh-command-center-card" });
+    card.createEl("h4", { text: title });
     if (p.state !== "ok") {
-      el.createDiv({ text: degradedText(p) });
+      card.createDiv({ cls: "kh-command-center-empty", text: degradedText(p) });
       return;
     }
-    fill(el.createEl("ul", { cls: "kh-command-center-list" }), p.value);
+    fill(card.createEl("ul", { cls: "kh-command-center-list" }), p.value);
   }
 }
 
