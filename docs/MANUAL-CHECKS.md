@@ -107,3 +107,12 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] No "Draft rule with Haiku" button until `allowDraftRule` is on in Retro settings; with it on, the button appears on a `corr:` finding and opens the diff modal; check the Haiku spend cap with a real `claude`.
 - [ ] Settings → term → Retro section: `nudgeAt`, `maxTickets`, `allowDraftRule`, `dailyCapUsd`.
 - [ ] Known gap: built-in patcher on CRLF files is untested (git-apply path is tested).
+
+## 7.1 Brain doc types + staleness — LOCK-55
+
+- [ ] Enable the Brain module in settings, reload Obsidian: it loads with no console errors.
+- [ ] Run New doc → lesson → vault: file appears under `Brain/lesson/` and opens.
+- [ ] Run New doc → ADR → repo kyle-hub: `docs/adr/0013-...` is numbered and lint-clean.
+- [ ] `kh brain check` on kyle-hub lists ~14 findings (shorthand paths like `core/domain/pack` in STATUS.md, PLAN.md, ADR-0003): fix the docs or add `brain.ignoreSymbols`.
+- [ ] `kh brain check --repo kyle-term` works (needs a kyle-term entry in the vault repo map).
+- [ ] Findings cap is only tested with a fake sink, not the real CLI; `kh brain check --tickets` twice adds no duplicate tickets.
