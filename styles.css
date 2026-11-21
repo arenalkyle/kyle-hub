@@ -284,12 +284,16 @@
 .kt-prop-group-title { font-size: var(--font-ui-smaller); color: var(--text-muted); margin: var(--size-4-6) 0 var(--size-4-1); padding: 0; }
 .kt-prop-group-title:first-child { margin-top: 0; }
 .kt-prop { display: flex; align-items: center; gap: var(--size-4-2); min-height: 26px; font-size: var(--font-ui-small); }
-.kt-prop-value, .kt-prop-value:hover, .kt-prop-value:focus, .kt-prop-value:active, .kt-prop-value:focus-visible { background: transparent; border: 0; box-shadow: none; outline: none; }
-.kt-prop-value { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--size-4-2); justify-content: flex-start; text-align: left; padding: 3px 6px; margin: 0 -6px; height: auto; cursor: pointer; color: var(--text-normal); border-radius: var(--radius-s); font-weight: normal; }
+/* Beat Obsidian's `button:not(.clickable-icon)` (0,1,1) so sidebar buttons render as plain text. */
+.kt-issue-side button.kt-prop-value, .kt-issue-side button.kt-prop-value:hover, .kt-issue-side button.kt-prop-value:focus, .kt-issue-side button.kt-prop-value:active, .kt-issue-side button.kt-prop-value:focus-visible,
+.kt-issue-side button.kt-related-remove, .kt-issue-side button.kt-related-remove:hover, .kt-issue-side button.kt-pr-remove, .kt-issue-side button.kt-pr-remove:hover { background: transparent; border: 0; box-shadow: none; outline: none; }
+.kt-prop-value { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--size-4-2); justify-content: flex-start; text-align: left; padding: 3px 6px; margin: 0 -6px; height: auto; cursor: pointer; color: var(--text-normal); border-radius: var(--radius-s); font-weight: var(--font-medium); }
 .kt-prop-value:hover { color: var(--text-normal); }
 .kt-prop-value:hover .kt-prop-empty { color: var(--text-muted); }
 .kt-issue-side .kt-chip { background: transparent; border-color: transparent; box-shadow: none; padding: 0 6px 0 0; height: 20px; color: var(--text-normal); }
-.kt-issue-side .kt-prop-labels .kt-chip { border: 1px solid var(--background-modifier-border-hover); padding: 0 8px; opacity: 0.95; }
+.kt-issue-side .kt-prop-labels .kt-chip { border: 1px solid var(--background-modifier-border); border-radius: 999px; padding: 0 10px 0 8px; height: 24px; gap: 6px; font-weight: var(--font-medium); }
+.kt-issue-side .kt-prop-labels .kt-chip:hover { border-color: var(--background-modifier-border-hover); }
+.kt-issue-side .kt-prop-chips { gap: 6px; align-items: center; }
 .kt-issue-side .kt-prop-group-title { padding: 0; }
 .kt-prop-value > span:not(.kt-icon):not(.kt-chip):not(.kt-prop-chips) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kt-prop-chips { display: flex; flex-wrap: wrap; gap: var(--size-4-1); }
