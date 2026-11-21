@@ -8,6 +8,7 @@ import { loadSettingsFile, planHookInstall, planHookUninstall, writeSettingsFile
 import { HookDiffModal } from "./hook-diff-modal";
 import { createSessionService, wireSessionEvents } from "./service";
 import { HookServer } from "./hook-server";
+import { forwardHookToLogs } from "./hook-logs";
 import xtermCss from "@xterm/xterm/css/xterm.css";
 import { PtyManager } from "./pty-manager";
 import { resolveNode } from "./node-path";
@@ -64,7 +65,10 @@ export default class TermHost {
     this.savedSessions = this.settings.sessions;
     this.profiles = detectProfiles();
     this.styleEl = document.head.createEl("style", { text: xtermCss });
-    const server = new HookServer((m) => this.sessions?.handleHook(m.session, m.event, m.payload));
+    const server = new HookServer((m) => {
+      this.sessions?.handleHook(m.session, m.event, m.payload);
+      forwardHookToLogs(this.hub.services, m);
+    });
     try {
       await server.start();
       this.hookServer = server;

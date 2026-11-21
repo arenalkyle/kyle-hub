@@ -1,6 +1,7 @@
 import { homedir } from "node:os";
 import { Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { runDoctorChecks } from "./core/ops/environment";
+import { logServiceFromSettings, type CoreSettingsLike } from "./core/logs/hubService";
 import {
   createHubParts,
   createModuleContext,
@@ -39,12 +40,14 @@ export default class KyleHubPlugin extends Plugin {
     parts.settings.register({ id: "commandCenter", defaults: {}, enabledByDefault: false });
     parts.settings.load(await this.loadData());
     this.hub = { app: this.app, ...parts, save: () => this.saveData(parts.settings.all) };
+    parts.services.register("logs", logServiceFromSettings(parts.settings.module("core") as CoreSettingsLike));
     this.loaded = await loadModules(this.hub, MODULES, (id) => this.contextFor(id));
     this.addSettingTab(new HubSettingTab(this));
   }
 
   override async onunload(): Promise<void> {
     for (const m of [...this.loaded]) await this.unloadModule(m);
+    this.hub.services.unregister("logs");
   }
 
   private contextFor(id: ModuleId): ModuleContext {
