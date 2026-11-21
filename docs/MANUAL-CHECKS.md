@@ -72,3 +72,13 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Set the `core.logs.prices` table in plugin settings for cost figures (CLI reads it from data.json); without it costs show $0.
 - [ ] Close Obsidian, run a Claude session, wait 30 min (or `schtasks /Run /TN kyle-hub-maintain`): `kh logs runs --since 2026-11-01` includes the session.
 - [ ] With the term hook installed, hook events land in `%LOCALAPPDATA%\kyle-hub\<profile>\hooks\<date>.jsonl`.
+
+## 5.1 Launch queue + worktree + context pack — LOCK-51
+
+- [ ] Reload Obsidian. Settings → kyle-hub → "Repo map and launch": add a scratch repo (key, absolute path with no spaces, profile).
+- [ ] Create a ticket with `repo:` set and acceptance criteria, accept it in Triage with `r`. "Open launch queue" lists it.
+- [ ] Click Launch: terminal opens in `...\.kh-worktrees\<repo>\<ID>` on branch `kh/<ID>-<slug>`; Claude starts with `Work ticket <ID>. Context: @<pack>`; ticket is In Progress with a run id and a "launched by" event; pack is under `%LOCALAPPDATA%\kyle-hub\<profile>\packs`.
+- [ ] Click the "running" row to focus the session. Close it and relaunch: worktree reused, pack names the previous run.
+- [ ] Launch 4 tickets: the 4th shows a refusal notice (max 3 concurrent). Turn the tickets module off: Queue shows "Tickets module disabled" (implemented, not unit-tested).
+- [ ] Throwaway vault, CDP on port 9222, `KH_SMOKE_CLAUDE=echo`: `npm run smoke:launch` passes (not run unattended).
+- [ ] Note: repo chosen in the picker isn't written back to the ticket; `worktrees:false` runs are tracked only until restart.
