@@ -33,7 +33,7 @@ export default class KyleHubPlugin extends Plugin {
 
   override async onload(): Promise<void> {
     const parts = createHubParts();
-    parts.settings.register({ id: "core", defaults: { repos: {}, flood: { ...DEFAULT_FLOOD } } });
+    parts.settings.register({ id: "core", defaults: { repos: {}, flood: { ...DEFAULT_FLOOD }, launch: { maxConcurrentRuns: 3, defaultModel: "sonnet" } } });
     parts.settings.register(ticketsSettings);
     parts.settings.register(termSettings);
     parts.settings.register({ id: "brain", defaults: {}, enabledByDefault: false });
@@ -125,6 +125,7 @@ class HubSettingTab extends PluginSettingTab {
       containerEl.createEl("h2", { text: MODULE_LABELS[id] });
       section.render(containerEl.createDiv());
     }
+    this.displayRepos(containerEl);
     containerEl.createEl("h2", { text: "Log health" });
     const doctorOut = containerEl.createDiv();
     new Setting(containerEl)
@@ -137,5 +138,53 @@ class HubSettingTab extends PluginSettingTab {
         }),
       );
   }
-}
 
+  /** Repo map (`core.repos`) and launch limits, used by the term module's queue. */
+  private displayRepos(el: HTMLElement): void {
+    const core = this.plugin.hub.settings.module("core") as Record<string, unknown>;
+    const repos = (core.repos ??= {}) as Record<string, { path: string; profile: "work" | "home"; worktrees: boolean; github?: string }>;
+    const launch = (core.launch ??= { maxConcurrentRuns: 3, defaultModel: "sonnet" }) as { maxConcurrentRuns: number; defaultModel: string };
+    const save = () => this.plugin.hub.save();
+    el.createEl("h2", { text: "Repo map and launch" });
+    new Setting(el).setName("Max concurrent runs").addText((t) =>
+      t.setValue(String(launch.maxConcurrentRuns)).onChange(async (v) => {
+        const n = Math.floor(Number(v));
+        launch.maxConcurrentRuns = Number.isFinite(n) && n >= 1 ? n : 3;
+        await save();
+      }),
+    );
+    new Setting(el).setName("Default model").setDesc("Used when a ticket has no model.").addDropdown((d) =>
+      d.addOptions({ haiku: "haiku", sonnet: "sonnet", opus: "opus" }).setValue(launch.defaultModel).onChange(async (v) => {
+        launch.defaultModel = v;
+        await save();
+      }),
+    );
+    for (const [key, r] of Object.entries(repos)) {
+      new Setting(el)
+        .setName(key)
+        .setDesc(`${r.path} · ${r.profile} · ${r.worktrees === false ? "no worktrees" : "worktrees"}`)
+        .addButton((b) => b.setButtonText("Remove").onClick(async () => {
+          delete repos[key];
+          await save();
+          this.display();
+        }));
+    }
+    let key = "";
+    let dir = "";
+    let profile: "work" | "home" = "home";
+    let worktrees = true;
+    new Setting(el)
+      .setName("Add repo")
+      .setDesc("Key (used in a ticket's repo field), absolute path, profile, worktree per ticket.")
+      .addText((t) => t.setPlaceholder("key").onChange((v) => (key = v.trim())))
+      .addText((t) => t.setPlaceholder("C:\path\to\repo").onChange((v) => (dir = v.trim())))
+      .addDropdown((d) => d.addOptions({ home: "home", work: "work" }).setValue(profile).onChange((v) => (profile = v as "work" | "home")))
+      .addToggle((t) => t.setValue(worktrees).onChange((v) => (worktrees = v)))
+      .addButton((b) => b.setButtonText("Add").setCta().onClick(async () => {
+        if (!key || !dir) return void new Notice("kyle-hub: key and path are required.");
+        repos[key] = { path: dir, profile, worktrees };
+        await save();
+        this.display();
+      }));
+  }
+}

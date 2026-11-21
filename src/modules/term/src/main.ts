@@ -1,5 +1,5 @@
 import { FileSystemAdapter, Menu, Notice, Platform, TFile, TFolder, type TAbstractFile } from "obsidian";
-import type { Hub, ModuleContext, SessionService, SessionState } from "../../../core";
+import type { Hub, ModuleContext, SessionService, SessionState, TicketService } from "../../../core";
 import { FolderSuggest } from "./folder-suggest";
 import { buildRefs, parseDropText } from "./vault-paths";
 import path from "node:path";
@@ -25,6 +25,12 @@ import {
 } from "./appearance";
 import fs from "node:fs";
 import { orphanFiles, scrollbackFile } from "./persist";
+import { dataDir } from "../../../core/paths";
+import type { RepoConfig } from "../../../core/domain/fields";
+import { Launcher, type LaunchSettings } from "../launch/launch";
+import { realFs, realGit } from "../launch/git";
+import { QueueView, QUEUE_VIEW_TYPE } from "../queue/QueueView";
+import { RepoPicker } from "../queue/RepoPicker";
 
 const PERSIST_DEBOUNCE_MS = 2000;
 const SCROLLBACK_SAVE_MS = 30_000;
@@ -80,6 +86,8 @@ export default class TermHost {
     // Re-measure cells once web fonts finish loading, or glyph spacing can be off.
     void document.fonts?.ready.then(() => this.applyAppearance());
     this.ctx.registerView(VIEW_TYPE, (leaf) => new TermView(leaf, this));
+    this.ctx.registerView(QUEUE_VIEW_TYPE, (leaf) => new QueueView(leaf, this.hub, () => this.launcher(), (id) => this.focusSession(id)));
+    this.ctx.addCommand({ id: "term-open-queue", name: "Open launch queue", callback: () => void this.openQueue() });
     this.ctx.addRibbonIcon("terminal", "Open terminal", () => void this.activateView());
     this.ctx.addCommand({ id: "term-open", name: "Open terminal", callback: () => void this.activateView() });
     this.ctx.addCommand({
@@ -315,6 +323,53 @@ export default class TermHost {
     if (!id) return void new Notice("kyle-hub: no session needs attention");
     await this.activateView();
     m.setActive(id);
+  }
+
+  private launcherInst: Launcher | null = null;
+
+  /** The launch orchestrator; null while the sessions service is unavailable. Tickets are read per call (module may be off). */
+  launcher(): Launcher | null {
+    const sessions = this.hub.services.get("sessions");
+    if (!sessions) return null;
+    return (this.launcherInst ??= new Launcher({
+      git: realGit,
+      fs: realFs,
+      sessions,
+      tickets: new Proxy({} as TicketService, {
+        get: (_t, k) => {
+          const t = this.hub.services.get("tickets");
+          if (!t) throw new Error("Tickets module disabled.");
+          return (t as unknown as Record<string | symbol, unknown>)[k];
+        },
+      }),
+      clock: () => new Date(),
+      repos: () => (this.hub.settings.module("core").repos as Record<string, RepoConfig> | undefined) ?? {},
+      settings: (): LaunchSettings => {
+        const l = (this.hub.settings.module("core").launch ?? {}) as Partial<LaunchSettings>;
+        return {
+          maxConcurrentRuns: typeof l.maxConcurrentRuns === "number" && l.maxConcurrentRuns >= 1 ? Math.floor(l.maxConcurrentRuns) : 3,
+          defaultModel: l.defaultModel ?? "sonnet",
+          claudeCommand: this.settings.claudeCommand || "claude",
+        };
+      },
+      packDir: (profile) => path.join(dataDir(profile), "packs"),
+      pickRepo: (keys) => new Promise((resolve) => new RepoPicker(this.app, keys, resolve).open()),
+      join: path.join,
+      dirname: path.dirname,
+    }));
+  }
+
+  async focusSession(id: string): Promise<void> {
+    await this.hub.services.get("sessions")?.focus(id);
+  }
+
+  async openQueue(): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(QUEUE_VIEW_TYPE)[0];
+    const leaf = existing ?? workspace.getRightLeaf(false);
+    if (!leaf) return;
+    if (!existing) await leaf.setViewState({ type: QUEUE_VIEW_TYPE, active: true });
+    await workspace.revealLeaf(leaf);
   }
 
   async activateView(): Promise<void> {

@@ -1,6 +1,6 @@
 import type { NewIssueInput } from "./domain/create";
 import type { IssuePatch } from "./domain/issueFile";
-import type { Issue } from "./domain/types";
+import type { Issue, StatusDef } from "./domain/types";
 
 /** Who is acting on a ticket; `agent` marks writes made on behalf of an agent (gates land in 3.1). */
 export interface TicketActor {
@@ -34,6 +34,13 @@ export interface TicketService {
   /** Removes a comment by id. */
   removeComment(id: string, commentId: string): Promise<Issue>;
   childrenOf(id: string): Issue[];
+  /** Queued tickets (agent-ready, unstarted, unblocked) in launch order: priority, then `sortOrder`. */
+  queue(): Issue[];
+  statuses(): StatusDef[];
+  /** The repo-map key of a ticket: its own `repo`, else its project's. */
+  repoOf(id: string): string | undefined;
+  /** Display name of the acting user (no `@`). */
+  userName(): string;
   /** Called after every index change; returns an unsubscribe function. */
   subscribe(cb: () => void): () => void;
 }

@@ -20,7 +20,7 @@ export const ticketsModule: HubModule = {
       console.error("kyle-hub: kyle-tickets settings migration failed", e);
     }
     host = new TicketsHost(hub, ctx);
-    hub.services.register("tickets", createTicketService(host.store, () => ({ ...DEFAULT_FLOOD, ...(hub.settings.module("core").flood as Partial<FloodSettings> | undefined) })));
+    hub.services.register("tickets", createTicketService(host.store, () => ({ ...DEFAULT_FLOOD, ...(hub.settings.module("core").flood as Partial<FloodSettings> | undefined) }), () => host?.data.settings.displayName ?? "me"));
     unregister = () => hub.services.unregister("tickets");
     host.start();
   },

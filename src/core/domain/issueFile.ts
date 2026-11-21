@@ -317,7 +317,7 @@ export function appendEvent(
 }
 
 export type IssuePatch = Partial<
-  Pick<Issue, "title" | "status" | "priority" | "tags" | "pullRequests" | "related" | "description" | "sortOrder" | "blockedBy">
+  Pick<Issue, "title" | "status" | "priority" | "tags" | "pullRequests" | "related" | "description" | "sortOrder" | "blockedBy" | "runs">
 > & {
   assignee?: string | null;
   project?: string | null;

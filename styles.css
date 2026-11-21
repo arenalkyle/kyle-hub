@@ -570,3 +570,16 @@
 .kh-tickets-type-question, .kh-tickets-type-finding { color: var(--text-warning); }
 .kh-tickets-prop-readonly { display: flex; justify-content: space-between; gap: var(--size-4-2); padding: var(--size-4-1) var(--size-4-2); color: var(--text-muted); font-size: var(--font-ui-small); }
 .kh-tickets-prop-static { color: var(--text-normal); }
+
+/* Launch queue (term module, right sidebar) */
+.kh-term-queue { padding: 8px; overflow-y: auto; }
+.kh-term-queue-title { margin: 0 0 8px; }
+.kh-term-queue-empty { color: var(--text-muted); font-size: var(--font-ui-small); }
+.kh-term-queue-item { border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 8px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
+.kh-term-queue-top { display: flex; gap: 6px; align-items: center; }
+.kh-term-queue-id { font-weight: 600; font-size: var(--font-ui-small); }
+.kh-term-queue-chip { font-size: var(--font-ui-smaller); background: var(--background-modifier-hover); border-radius: 8px; padding: 0 6px; color: var(--text-muted); }
+.kh-term-queue-name { font-size: var(--font-ui-small); }
+.kh-term-queue-meta { display: flex; gap: 8px; font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.kh-term-queue-running { align-self: flex-start; color: var(--text-success); }
+.kh-term-queue-launch { align-self: flex-start; }

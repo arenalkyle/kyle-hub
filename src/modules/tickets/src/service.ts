@@ -5,6 +5,8 @@ import type { Issue } from "../../../core/domain/types";
 import { planAgentCreate } from "../../../core/domain/agentCreate";
 import { DEFAULT_FLOOD, type FloodSettings } from "../../../core/domain/flood";
 import { checkAgentLabels, checkAgentStatus, GATE_EXIT } from "../../../core/domain/gates";
+import { effectiveRepo } from "../../../core/domain/fields";
+import { isQueued, queueOrder } from "../../../core/domain/queue";
 import type { TicketActor, TicketQuery, TicketService } from "../../../core";
 import type { IssueStore } from "./store/IssueStore";
 
@@ -37,7 +39,7 @@ const refuseIfAgent = (r: { ok: true } | { ok: false; exitCode: number; message:
 };
 
 /** `TicketService` over `IssueStore`, which stays the only writer. `actor.agent` applies the same gates as `kh`. */
-export function createTicketService(store: IssueStore, flood: () => FloodSettings = () => DEFAULT_FLOOD): TicketService {
+export function createTicketService(store: IssueStore, flood: () => FloodSettings = () => DEFAULT_FLOOD, user: () => string = () => "me"): TicketService {
   const sourceOf = (actor: TicketActor): `agent:${string}` => `agent:${actor.author ?? "session"}`;
   return {
     get: (id) => store.getIssue(id),
@@ -66,6 +68,14 @@ export function createTicketService(store: IssueStore, flood: () => FloodSetting
     logEvent: (id, text, actor = {}) => store.logEvent(id, text, actor.author),
     removeComment: (id, commentId) => store.removeComment(id, commentId),
     childrenOf: (id) => store.childrenOf(id),
+    queue: () => queueOrder(store.getIssues().filter((i) => isQueued(i, store.getIssues(), store.getStatuses()))),
+    statuses: () => [...store.getStatuses()],
+    repoOf: (id) => {
+      const t = store.getIssue(id);
+      if (!t) return undefined;
+      return effectiveRepo(t, t.project ? store.getProject(fromLink(t.project)) : undefined);
+    },
+    userName: () => user().replace(/^@/, ""),
     subscribe: (cb) => store.on("change", cb),
   };
 }

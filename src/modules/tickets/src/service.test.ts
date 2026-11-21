@@ -48,4 +48,14 @@ describe("plugin-side TicketService gates", () => {
     expect(store.logEvent).toHaveBeenCalledWith("T-1", "accepted", "me");
     expect(store.removeComment).toHaveBeenCalledWith("T-1", "L0");
   });
+  it("queue() lists agent-ready, unblocked tickets by priority; repoOf falls back to the project", () => {
+    const mk = (id: string, extra: object) => ({ ...issue(id, "Todo", ["agent-ready"]), priority: "none", ...extra }) as unknown as Issue;
+    const issues = [mk("T-1", { priority: "low" }), mk("T-2", { priority: "high", project: "[[P]]" }), mk("T-3", { blockedBy: ["T-9"] }), issue("T-4", "Todo")];
+    const store = { ...fake(issues), getProject: (n: string) => (n === "P" ? { repo: "hub" } : undefined) };
+    const svc = createTicketService(store as unknown as IssueStore, undefined, () => "@kyle");
+    expect(svc.queue().map((i) => i.id)).toEqual(["T-2", "T-1"]);
+    expect(svc.repoOf("T-2")).toBe("hub");
+    expect(svc.repoOf("T-1")).toBeUndefined();
+    expect(svc.userName()).toBe("kyle");
+  });
 });
