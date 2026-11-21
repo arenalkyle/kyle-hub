@@ -48,3 +48,14 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 5. Group header "+" → New issue preset to that status (and project, in a project view). Header **New issue** works; List|Board toggle disabled; Filter/Display are placeholders.
 6. Collapse a group, drag the sidebar edge wider, select a project view, reload Obsidian → selection, width and collapsed group persist. The header toggle hides/shows the sidebar.
 7. Empty view shows "No issues" + New issue button. Check light and dark themes.
+
+## 4.1 Display popover — LOCK-17
+
+1. Header → **Display**: Grouping = Priority, Sub-grouping = Project → indented sub-sections with their own headers and correct counts (Urgent → Low → No priority; projects alphabetical, "No project" last).
+2. Ordering = Due date → earliest first, no-due last.
+3. Completed issues = None → Done/Canceled disappear; Past week → only recently completed remain.
+4. Turn off the Labels and Created chips → rows update immediately.
+5. Show sub-issues off → child issues hide and the parent row shows "N sub-issues".
+6. Group "+" in a Priority/Project group → New issue is preset with that priority/project.
+7. Set All Issues and Active to different groupings, restart Obsidian → each is remembered. **Reset** restores defaults.
+8. Dropdown pickers inside the popover open above it without closing it.
