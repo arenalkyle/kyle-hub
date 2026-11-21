@@ -9,6 +9,7 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 
 - **Done**: design grilling; PLAN, 11 ADRs, GLOSSARY, phased breakdown, ticket stubs written; Linear tickets LOCK-42…60 created (Phase 9 accounts + usage added).
 - **In progress**: Phase 1.2 (LOCK-44) built locally and in review: tickets module on core, `TicketService`, bus events, settings migration, `kh-tickets-` CSS. Not pushed. Phase 1.1 (LOCK-43) in review.
+- **Also in review**: Phase 7.2 (LOCK-56) built locally: rule-based doc selection in context packs (`core/brain/selectDocs`, `core/domain/packDocs`, budget 8k tokens, "Docs included" section), `kh status draft`, brain health score + `brain:health-changed`, style-convention templates. Not pushed.
 - **Also in review**: Phase 7.1 (LOCK-55) built locally: `core/brain/` (doc types, `lintDoc`, six pure staleness checks, rg-or-Node scan, `New doc` helpers), brain module (`BrainService`, New doc command, templates), `kh lint docs`, `kh brain check [--tickets]`, `brain.autoFindings` in `kh maintain`. Not pushed. Not yet run inside Obsidian (New doc modal needs a manual check).
 - **Next**: review + push 1.1, 1.2, 2.1, 2.2 → Phase 3.1 (LOCK-47).
 - **Also in review**: Phase 2.1 (LOCK-45) built locally: term module on core (`SessionService`, `session:*` bus events, kyle-term settings migration, `kh-term-` CSS, macOS paths removed, Install/Uninstall hooks with diff modal). Not pushed. CDP smoke (`npm run smoke`) needs a manual run in Obsidian.
@@ -34,6 +35,6 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 | 4 Logs | 4.1 · 4.2 | LOCK-49 · LOCK-50 | H · H | 4.1 in review · 4.2 in review |
 | 5 Bridge | 5.1 · 5.2 | LOCK-51 · LOCK-52 | S · S | 5.1 in review · 5.2 not started |
 | 6 Retro | 6.1 · 6.2 | LOCK-53 · LOCK-54 | H · S | 6.1 in review · 6.2 in review |
-| 7 Brain | 7.1 · 7.2 | LOCK-55 · LOCK-56 | H · H | 7.1 in review · 7.2 not started |
+| 7 Brain | 7.1 · 7.2 | LOCK-55 · LOCK-56 | H · H | 7.1 in review · 7.2 in review |
 | 8 Command center + profiles | 8.1 · 8.2 | LOCK-57 · LOCK-58 | H · S | Not started |
 | 9 Accounts + usage | 9.1 · 9.2 | LOCK-59 · LOCK-60 | S · S | Not started |
