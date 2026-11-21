@@ -40,14 +40,20 @@ export function uninstallHooks(settings: Json): Json {
   return Object.keys(out).length > 0 ? { ...others, hooks: out } : others;
 }
 
+/** Command line for one hook event. Windows keeps double quotes; POSIX single-quotes (spaces, `$`, quotes safe). */
+export function hookCommand(scriptPath: string, event: string, platform: string = process.platform): string {
+  if (platform === "win32") return `node "${scriptPath}" ${event}`;
+  return `node '${scriptPath.replace(/'/g, `'\\''`)}' ${event}`;
+}
+
 /** Adds kyle-term's entries (replacing any previous ones, so repeated installs never duplicate). */
-export function installHooks(settings: Json, scriptPath: string): Json {
+export function installHooks(settings: Json, scriptPath: string, platform: string = process.platform): Json {
   const clean = uninstallHooks(settings);
   const hooks: Json = { ...((clean.hooks as Json | undefined) ?? {}) };
   for (const event of HOOK_EVENTS) {
     const group: Json = {
       ...(MATCHER_EVENTS.has(event) ? { matcher: "*" } : {}),
-      hooks: [{ type: "command", command: `node "${scriptPath}" ${event}`, timeout: 5 }],
+      hooks: [{ type: "command", command: hookCommand(scriptPath, event, platform), timeout: 5 }],
     };
     const existing = Array.isArray(hooks[event]) ? (hooks[event] as unknown[]) : [];
     hooks[event] = [...existing, group];

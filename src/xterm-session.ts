@@ -3,6 +3,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { WebglAddon } from "@xterm/addon-webgl";
 import type { TermHandlers, TermLike } from "./session-manager";
+import { decideKey } from "./keys";
 import { clampFont, type XtermTheme } from "./appearance";
 
 export interface TermLook {
@@ -53,24 +54,25 @@ export class XtermSession implements TermLike {
       // Alt+A: jump to next session needing attention.
       if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && k === "a") return false;
       if (e.ctrlKey && !e.altKey && (k === "tab" || (e.shiftKey && k === "t"))) return false;
-      if (e.ctrlKey && !e.altKey && !e.metaKey && (k === "=" || k === "+" || k === "-" || k === "0")) {
+      const action = decideKey(e, process.platform, term.hasSelection());
+      if (action === "zoom-in" || action === "zoom-out" || action === "zoom-reset") {
         e.preventDefault();
         const cur = this.zoom ?? this.look().fontSize;
-        this.zoom = k === "0" ? null : clampFont(cur + (k === "-" ? -1 : 1));
+        this.zoom = action === "zoom-reset" ? null : clampFont(cur + (action === "zoom-out" ? -1 : 1));
         this.applyLook();
         return false;
       }
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && k === "c" && term.hasSelection()) {
+      if (action === "copy") {
         void navigator.clipboard.writeText(term.getSelection());
         term.clearSelection();
         return false;
       }
-      if (e.ctrlKey && !e.altKey && k === "v") {
+      if (action === "paste") {
         e.preventDefault();
         this.pasteClipboard();
         return false;
       }
-      if (k === "enter" && e.shiftKey && !e.ctrlKey && !e.altKey) {
+      if (action === "newline") {
         e.preventDefault();
         h.onInput("\x1b\r");
         return false;

@@ -7,9 +7,9 @@ export interface NodeCheck {
 }
 
 /** Resolve the Node binary: configured path if set, else `node` on PATH. Requires Node >= 18. */
-export function resolveNode(configured: string): NodeCheck {
+export function resolveNode(configured: string, pathEnv?: string): NodeCheck {
   const path = configured.trim() || "node";
-  const r = spawnSync(path, ["-p", "process.versions.node"], { encoding: "utf8", windowsHide: true, timeout: 5000 });
+  const r = spawnSync(path, ["-p", "process.versions.node"], { encoding: "utf8", windowsHide: true, timeout: 5000, ...(pathEnv ? { env: { ...process.env, PATH: pathEnv } } : {}) });
   if (r.error || r.status !== 0) {
     return { ok: false, path, message: `Node.js not found (tried "${path}"). Install Node 18+ or set the Node path in kyle-term settings.` };
   }

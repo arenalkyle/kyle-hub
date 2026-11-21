@@ -4,6 +4,12 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
+/** ';' separates vaults; on macOS/Linux ':' is accepted too (never on Windows: drive letters). */
+export function parseVaults(raw, platform) {
+  const sep = platform === "win32" ? /;/ : /[;:]/;
+  return raw.split(sep).map((v) => v.trim()).filter(Boolean);
+}
+
 export function readVaults() {
   const envFile = path.join(root, ".env.local");
   if (!fs.existsSync(envFile)) {
@@ -13,9 +19,7 @@ export function readVaults() {
   }
   const line = fs.readFileSync(envFile, "utf8").split(/\r?\n/).find((l) => l.startsWith("KYLE_TERM_VAULTS="));
   const raw = line?.slice("KYLE_TERM_VAULTS=".length).trim().replace(/^["']|["']$/g, "") ?? "";
-  // ';' separates vaults; on macOS/Linux ':' is accepted too.
-  const sep = process.platform === "win32" ? /;/ : /[;:]/;
-  const vaults = raw.split(sep).map((v) => v.trim()).filter(Boolean);
+  const vaults = parseVaults(raw, process.platform);
   if (vaults.length === 0) throw new Error("KYLE_TERM_VAULTS is empty in .env.local");
   return vaults;
 }

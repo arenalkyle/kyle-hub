@@ -8,12 +8,13 @@ import { HookServer } from "./hook-server";
 import xtermCss from "@xterm/xterm/css/xterm.css";
 import { PtyManager } from "./pty-manager";
 import { resolveNode } from "./node-path";
+import { realPathDeps, resolvePath } from "./path-env";
 import { DEFAULT_SETTINGS, KyleTermSettingTab, mergeSounds, type KyleTermSettings } from "./settings";
 import { decideAlert, nextAttention, sessionKey, type AlertEvent } from "./alert";
 import { SoundPlayer } from "./sound";
 import { KyleTermView, VIEW_TYPE } from "./view";
 import { SessionManager, type Session } from "./session-manager";
-import { detectProfiles, type ShellProfile } from "./shells";
+import { detectProfiles, pickProfileId, type ShellProfile } from "./shells";
 import { XtermSession, type TermLook } from "./xterm-session";
 import {
   blurPx, buildXtermTheme, DEFAULT_APPEARANCE, mergeAppearance, obsidianPalette, resolvePalette, shouldUseWebgl, toHex, type Palette,
@@ -27,6 +28,9 @@ const SCROLLBACK_SAVE_MS = 30_000;
 export default class KyleTermPlugin extends Plugin {
   override settings: KyleTermSettings = { ...DEFAULT_SETTINGS };
   profiles: ShellProfile[] = [];
+  /** Login-shell PATH on macOS (cached for the session); null elsewhere, where process.env is used as-is. */
+  resolvedPath: string | null = null;
+  nodeInfo = "";
   private pty: PtyManager | null = null;
   private sessions: SessionManager | null = null;
   private styleEl: HTMLStyleElement | null = null;
@@ -43,6 +47,7 @@ export default class KyleTermPlugin extends Plugin {
   override async onload(): Promise<void> {
     await this.loadSettings();
     this.profiles = detectProfiles();
+    if (process.platform === "darwin") this.resolvedPath = await resolvePath(realPathDeps());
     this.styleEl = document.head.createEl("style", { text: xtermCss });
     const server = new HookServer((m) => this.sessions?.handleHook(m.session, m.event, m.payload));
     try {
@@ -184,7 +189,7 @@ export default class KyleTermPlugin extends Plugin {
         return this.app.vault.adapter.getResourcePath(p);
       }
       if (!fs.existsSync(raw)) throw new Error("not found");
-      return Platform.resourcePathPrefix + encodeURI(raw.split("\\").join("/")).replace(/#/g, "%23");
+      return Platform.resourcePathPrefix + encodeURI(process.platform === "win32" ? raw.split("\\").join("/") : raw).replace(/#/g, "%23");
     } catch {
       if (notify) new Notice(`kyle-term: background image not found or unreadable: ${raw.replace(/^vault:/, "")}`);
       return null;
@@ -283,18 +288,17 @@ export default class KyleTermPlugin extends Plugin {
   }
 
   defaultProfileId(): string {
-    const id = this.settings.defaultProfile;
-    return this.profiles.some((p) => p.id === id) ? id : this.profiles[0]!.id;
+    return pickProfileId(this.settings.defaultProfile, this.profiles);
   }
 
   /** Returns the session manager, or an error message string if Node can't be found. */
   getSessions(): SessionManager | string {
     if (this.sessions) return this.sessions;
-    const node = resolveNode(this.settings.nodePath);
+    const node = resolveNode(this.settings.nodePath, this.resolvedPath ?? undefined);
     if (!node.ok) return node.message ?? "Node.js not found.";
     const dir = this.manifest.dir ?? "";
     const helper = path.join(this.vaultRoot(), dir, "helper", "pty-host.js");
-    const pty = new PtyManager(node.path, helper);
+    const pty = new PtyManager(node.path, helper, this.resolvedPath ? { PATH: this.resolvedPath } : undefined);
     pty.onError = (msg) => console.error("[kyle-term]", msg);
     this.pty = pty;
     this.sessions = new SessionManager({
@@ -305,7 +309,7 @@ export default class KyleTermPlugin extends Plugin {
         return t;
       },
       profiles: () => this.profiles,
-      env: () => this.hookEnv,
+      env: () => ({ ...this.hookEnv, ...(this.resolvedPath ? { PATH: this.resolvedPath } : {}) }),
       idleMs: () => this.settings.idleSeconds * 1000,
       resumeCommand: (id) => `${this.settings.claudeCommand || "claude"} --resume ${id}`,
       cwdExists: (p) => fs.existsSync(p),

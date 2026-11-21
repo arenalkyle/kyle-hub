@@ -24,11 +24,11 @@ export class PtyManager {
   private nextId = 1;
   onError: (message: string) => void = () => {};
 
-  constructor(private nodePath: string, private helperPath: string) {}
+  constructor(private nodePath: string, private helperPath: string, private helperEnv?: Record<string, string>) {}
 
   private ensureHelper(): void {
     if (this.child) return;
-    const child = spawn(this.nodePath, [this.helperPath], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    const child = spawn(this.nodePath, [this.helperPath], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true, ...(this.helperEnv ? { env: { ...process.env, ...this.helperEnv } } : {}) });
     this.child = child;
     const dec = new LineDecoder<FromHelper>();
     child.stdout.setEncoding("utf8");

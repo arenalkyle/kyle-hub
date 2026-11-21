@@ -1,3 +1,4 @@
+import { resolveNode } from "./node-path";
 import { FuzzySuggestModal, PluginSettingTab, Setting, type App, type TFile } from "obsidian";
 import fs from "node:fs";
 import type { PathMode } from "./vault-paths";
@@ -89,6 +90,12 @@ export class KyleTermSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         }),
       );
+    const det = resolveNode(s.nodePath, this.plugin.resolvedPath ?? undefined);
+    new Setting(el)
+      .setName("Detected Node / PATH")
+      .setDesc(`Node: ${det.ok ? det.path : "not found"}
+PATH: ${this.plugin.resolvedPath ?? process.env.PATH ?? ""}`)
+      .descEl.style.whiteSpace = "pre-wrap";
     new Setting(el)
       .setName("Default shell profile")
       .setDesc("Shell used by new sessions. Only installed shells are listed.")
