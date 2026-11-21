@@ -35,7 +35,8 @@ export function Avatar({ name, className }: { name: string; className?: string }
   if (isClaudeAuthor(name)) {
     return <span className={`${base} kt-avatar-claude`} title="Claude"><ClaudeMark /></span>;
   }
-  const isSelf = login !== undefined && name.trim().toLowerCase() === settings.displayName.trim().toLowerCase();
+  const who = name.trim().replace(/^@/, "").toLowerCase();
+  const isSelf = login !== undefined && (who === settings.displayName.trim().toLowerCase() || (!!login && who === login.toLowerCase()));
   const url = isSelf && login ? `https://github.com/${encodeURIComponent(login)}.png?size=64` : null;
   if (url && url !== failedUrl) {
     return (

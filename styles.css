@@ -455,6 +455,7 @@
 .kt-avatar-img { overflow: hidden; background: var(--background-modifier-border); }
 .kt-avatar-img img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .kt-avatar-claude { background: transparent; }
+.kt-prop-avatar { width: 18px; height: 18px; font-size: 10px; flex: none; }
 .kt-avatar-claude svg { display: block; }
 /* LOCK-31 */
 .kt-col-header .kt-col-hide { margin-left: 0; opacity: 0; }

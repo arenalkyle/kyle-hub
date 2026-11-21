@@ -3,6 +3,7 @@ import { fromLink } from "../../core/links";
 import { bestState, prLabel, prLabelOfUrl, type PrState } from "../../core/pr";
 import { formatDate } from "../../core/time";
 import { useProjects, usePrs } from "../../store/hooks";
+import { Avatar } from "./Avatar";
 import { Dot, Icon, ProjectGlyph } from "./icons";
 
 export function LabelChip({ label, color }: { label: string; color?: string }) {
@@ -50,7 +51,7 @@ export function DueChip({ due }: { due: string }) {
 export function AssigneeChip({ assignee }: { assignee: string }) {
   return (
     <span className="kt-chip" title={assignee}>
-      <span className="kt-avatar">{assignee.charAt(0).toUpperCase()}</span>
+      <Avatar name={assignee} />
       <span className="kt-chip-text">{assignee}</span>
     </span>
   );

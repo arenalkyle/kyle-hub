@@ -3,6 +3,7 @@ import type { PropKey } from "../../core/display";
 import type { Issue, Settings } from "../../core/types";
 import { DueChip, LabelChip, MilestoneChip, ProjectChip, PullRequestChip, SubIssuesChip } from "../components/chips";
 import { PriorityIcon, StatusIcon } from "../components/icons";
+import { Avatar } from "../components/Avatar";
 
 export interface IssueCardProps {
   issue: Issue;
@@ -21,9 +22,7 @@ export const IssueCard = memo(function IssueCard({ issue, settings, properties: 
       <div className="kt-card-top">
         {p.id ? <span className="kt-card-id">{issue.id}</span> : <span />}
         {p.assignee && initial ? (
-          <span className="kt-avatar kt-card-avatar" title={issue.assignee}>
-            {initial}
-          </span>
+          <Avatar name={issue.assignee ?? ""} className="kt-card-avatar" />
         ) : null}
       </div>
       <div className="kt-card-title">{issue.title}</div>

@@ -8,6 +8,7 @@ import { findProjectByLink } from "../../core/projects";
 import type { Issue, Settings } from "../../core/types";
 import { DueChip, LabelChip, PrStateIcon, shortDate } from "../components/chips";
 import { Icon, PriorityIcon, ProjectGlyph, StatusIcon } from "../components/icons";
+import { Avatar } from "../components/Avatar";
 import { AssigneePicker } from "../components/pickers/AssigneePicker";
 import { DatePicker } from "../components/pickers/DatePicker";
 import { LabelPicker } from "../components/pickers/LabelPicker";
@@ -164,7 +165,7 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
       <Row kind="assignee" label="Assignee" onOpen={onOpen}>
         {issue.assignee ? (
           <>
-            <Icon name="user" size={14} />
+            <Avatar name={issue.assignee} className="kt-prop-avatar" />
             <span>{issue.assignee}</span>
           </>
         ) : (
