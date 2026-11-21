@@ -29,3 +29,12 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 2. Open `TIX-1.md` in source mode, change `status: Backlog` to `status: Todo`, wait ~1 s → exactly one `- … · @external set status: Backlog → Todo` line is appended (no repeats).
 3. Delete the file → count goes to 0. Create another issue → it is `TIX-2` (numbers not reused).
 4. Rename an issue file in the explorer → the count stays the same and nothing is appended.
+
+## 3.1 Pickers and New issue window — LOCK-15
+
+1. Settings → Hotkeys: assign a hotkey to **kyle-tickets: New issue**; press it → the Linear-style window opens (title, description, property buttons, "Create more", **Create issue**).
+2. Enter a title, pick status Todo, priority High, create a new label "bug" (it gets a coloured dot), choose a project if one exists (Milestone enables only then), due date → Tomorrow → `Ctrl+Enter`. A "Created TIX-N" notice appears; its link opens the file; frontmatter matches what you picked.
+3. Keyboard only: open each picker, type to filter, ↑/↓, `Enter` to choose, `Esc` to close. **Esc inside a picker must close only the picker, not the whole window.** Picker popovers must render above the modal.
+4. Assignee: type a free-text name → accepted; reopen → recent names listed. Parent picker: search by ID and by title; "No parent" clears it.
+5. Toggle "Create more" → after creating, the window stays open with title/description cleared and other properties kept.
+6. Switch light/dark theme → icons, chips and popovers stay readable.
