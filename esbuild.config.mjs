@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import { builtinModules } from "node:module";
 import { deploy } from "./scripts/deploy.mjs";
+import { patchXterm } from "./scripts/patch-xterm.mjs";
 
 const watch = process.argv.includes("--watch");
 
@@ -16,9 +17,12 @@ const options = {
   logLevel: "info",
   sourcemap: watch ? "inline" : false,
   loader: { ".css": "text" },
-  plugins: watch
-    ? [{ name: "redeploy", setup(b) { b.onEnd((r) => { if (r.errors.length === 0) { try { deploy(); } catch (e) { console.error(String(e.message ?? e)); } } }); } }]
-    : [],
+  plugins: [
+    patchXterm,
+    ...(watch
+      ? [{ name: "redeploy", setup(b) { b.onEnd((r) => { if (r.errors.length === 0) { try { deploy(); } catch (e) { console.error(String(e.message ?? e)); } } }); } }]
+      : []),
+  ],
 };
 
 if (watch) {
