@@ -2,15 +2,15 @@
 
 _Last updated: 2026-11-21_
 
-Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: _pending_
+Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-10](https://linear.app/divinity/issue/LOCK-10)
 
-- **Done**: design agreed; PLAN + ADR-0001/0002/0003; GLOSSARY.
+- **Done**: design agreed; PLAN + ADR-0001/0002/0003; GLOSSARY; Linear LOCK-10 + sub-tickets LOCK-11…LOCK-28 (one per sub-phase, `ready-for-agent`).
 - **In progress**: —
-- **Next**: create Linear parent + 18 sub-tickets (one per sub-phase); then Phase 1.1 scaffold.
+- **Next**: Phase 1.1 — [LOCK-11](https://linear.app/divinity/issue/LOCK-11) scaffold.
 
 | Phase | Sub-phases | State |
 |---|---|---|
-| 1 Foundation | 1.1 scaffold · 1.2 core model | Todo |
+| 1 Foundation | 1.1 scaffold (LOCK-11) · 1.2 core model (LOCK-12) | Todo |
 | 2 Shell + store | 2.1 shell · 2.2 IssueStore | Todo |
 | 3 Pickers + List | 3.1 pickers/New issue · 3.2 Main view + List | Todo |
 | 4 Display + Board | 4.1 Display popover · 4.2 Board | Todo |
