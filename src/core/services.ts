@@ -78,8 +78,10 @@ export interface SessionService {
   onState(cb: (info: SessionInfo, prev: SessionState) => void): () => void;
 }
 
-/** Stub service interfaces; modules fill these in as they land (logs 4.x, brain 7.x). */
-export interface LogService {}
+import type { LogService } from "./logs/types";
+export type { LogService } from "./logs/types";
+
+/** Stub service interface; the brain module fills it in (7.x). */
 export interface BrainService {}
 
 /** Typed map of cross-module services. A module's service is absent while that module is off. */

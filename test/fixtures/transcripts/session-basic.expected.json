@@ -1,0 +1,114 @@
+{
+  "skipped": 2,
+  "records": [
+    {
+      "type": "usage",
+      "t": "2026-01-01T10:00:01.000Z",
+      "model": "claude-test-1",
+      "inputTokens": 100,
+      "outputTokens": 20,
+      "cacheRead": 300,
+      "cacheWrite": 50,
+      "costUsd": 0.0008775
+    },
+    {
+      "type": "tool_call",
+      "t": "2026-01-01T10:00:03.000Z",
+      "tool": "Bash",
+      "ok": true,
+      "cmdNorm": "git commit <str>",
+      "durationMs": 2000
+    },
+    {
+      "type": "usage",
+      "t": "2026-01-01T10:00:04.000Z",
+      "model": "claude-test-1",
+      "inputTokens": 10,
+      "outputTokens": 5,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "costUsd": 0.000105
+    },
+    {
+      "type": "file_read",
+      "t": "2026-01-01T10:00:04.000Z",
+      "pathRel": "src/a.ts"
+    },
+    {
+      "type": "tool_call",
+      "t": "2026-01-01T10:00:05.000Z",
+      "tool": "Read",
+      "ok": false,
+      "durationMs": 1000
+    },
+    {
+      "type": "error",
+      "t": "2026-01-01T10:00:05.000Z",
+      "tool": "Read",
+      "sigText": "Error: permission denied for <path>"
+    },
+    {
+      "type": "permission_denied",
+      "t": "2026-01-01T10:00:05.000Z",
+      "tool": "Read",
+      "pattern": "Read"
+    },
+    {
+      "type": "usage",
+      "t": "2026-01-01T10:00:06.000Z",
+      "model": "claude-test-1",
+      "inputTokens": 5,
+      "outputTokens": 2,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "costUsd": 0.000045
+    },
+    {
+      "type": "tool_call",
+      "t": "2026-01-01T10:00:08.000Z",
+      "tool": "Bash",
+      "ok": false,
+      "cmdNorm": "npm run build",
+      "durationMs": 2000
+    },
+    {
+      "type": "error",
+      "t": "2026-01-01T10:00:08.000Z",
+      "tool": "Bash",
+      "sigText": "Error: token [REDACTED:github-token] rejected at line <num>"
+    },
+    {
+      "type": "user_correction",
+      "t": "2026-01-01T10:00:10.000Z",
+      "afterTool": "Bash",
+      "excerpt": "no, use password=[REDACTED:password] instead"
+    },
+    {
+      "type": "usage",
+      "t": "2026-01-01T10:00:11.000Z",
+      "model": "claude-test-1",
+      "inputTokens": 1,
+      "outputTokens": 3,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "costUsd": 0.000048
+    },
+    {
+      "type": "file_write",
+      "t": "2026-01-01T10:00:13.000Z",
+      "pathRel": "out/b.md"
+    },
+    {
+      "type": "tool_call",
+      "t": "2026-01-01T10:00:14.000Z",
+      "tool": "Write",
+      "ok": true,
+      "durationMs": 1000
+    },
+    {
+      "type": "interrupt",
+      "t": "2026-01-01T10:00:15.000Z",
+      "afterTool": "Write"
+    }
+  ]
+}
