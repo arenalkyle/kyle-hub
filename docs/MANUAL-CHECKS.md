@@ -201,3 +201,34 @@ CLI steps were run by the agent in a throwaway temp vault (prefix `E2E`, project
 | – | `kt set … status Bogus` → exit 3 with the valid list | pass |
 
 Delete the E2E test tickets and project afterwards.
+
+## Round 1 feedback — LOCK-29 (LOCK-30…34) — 2026-11-21
+
+Fixes from the first manual run. Reload Obsidian after `npm run deploy`.
+
+### LOCK-30 Focus in inputs
+1. New issue → "Add label…" → click into its input and type → text stays. Same for "Set project…". Clicking the picker's padding or rows doesn't drop focus. Esc closes only the picker.
+2. Issue page → click "Add description…" → the editor stays open and accepts typing. Click away, Esc or Ctrl+Enter saves.
+3. If either still fails, paste this into the dev console (Ctrl+Shift+I), reproduce, and share the lines around the failure:
+   ```js
+   for (const t of ["focusin","focusout"]) document.addEventListener(t, e => console.log(t, e.target?.className || e.target?.tagName, "->", e.relatedTarget?.className || e.relatedTarget?.tagName, performance.now()|0), true);
+   document.addEventListener("mousedown", e => console.log("mousedown", e.target.className), true);
+   ```
+
+### LOCK-31 Board drag and hidden columns
+1. Drag a card: the ghost sits under the pointer. Drop it on In Progress (and on empty space in a column) → it moves.
+2. Right-click a column header, or click its eye-off button on hover → the column hides. Display → "Hidden columns" lists it; click to show it again. List view hides the same groups.
+3. Hidden columns are per view and per grouping field (Status vs Priority), and survive a reload.
+
+### LOCK-32 Right-click menu
+1. Right-click a List row or Board card → the menu shows Status and Priority (current value checked), Assignee…, Labels…, Project…, Milestone… (only with a project), Due date…, Open in new tab, Copy link, Delete issue.
+2. Each picker opens at the cursor and writes the change. Right-click doesn't start a drag; left-drag still works.
+
+### LOCK-33 Issue page polish
+1. Sections and comments have clear spacing; each comment is a card.
+2. `@claude` shows an orange spark avatar. Your own name shows your GitHub picture. Others show an initial.
+3. A plain existing ID (e.g. `LOCK-2`) in a description, comment or note in reading view is a link. Inside backticks, lowercase, or `XLOCK-2` → not linked.
+
+### LOCK-34 Colours and milestones
+1. The project chip in List/Board and the issue sidebar use the project's colour. The milestone icon is tinted with the project colour.
+2. Milestone rows: title above a muted description, vertically centred. The progress bar fills (full at 100%).
