@@ -19,3 +19,5 @@ export function useSettings(): Settings {
   const subscribe = useCallback((cb: () => void) => plugin.onSettingsChange(cb), [plugin]);
   return useSyncExternalStore(subscribe, () => plugin.data.settings);
 }
+
+export const useStoreReady = (): boolean => useStoreSelector((s) => s.isReady());

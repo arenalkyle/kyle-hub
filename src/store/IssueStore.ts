@@ -67,6 +67,7 @@ export class IssueStore {
   private projectsCache: readonly Project[] | null = null;
   private malformedCache: readonly MalformedFile[] | null = null;
   private started = false;
+  private loaded = false;
 
   constructor(
     private readonly host: StoreHost,
@@ -101,6 +102,7 @@ export class IssueStore {
     for (const file of this.host.app.vault.getMarkdownFiles()) {
       if (this.kindOf(file.path)) await this.ingest(file, true);
     }
+    this.loaded = true;
     this.emit();
   }
 
@@ -118,6 +120,11 @@ export class IssueStore {
     return () => {
       this.listeners.delete(cb);
     };
+  }
+
+  /** True once the first full index has finished. */
+  isReady(): boolean {
+    return this.loaded;
   }
 
   getIssues(): readonly Issue[] {

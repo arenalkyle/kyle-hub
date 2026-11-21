@@ -8,16 +8,26 @@ import { bootstrapFolder } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
 import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";
 import { IssueStore } from "./store/IssueStore";
+import { IssueView, VIEW_TYPE_ISSUE } from "./views/IssueView";
+import { IssueInterceptor } from "./views/intercept";
 
 export default class KyleTicketsPlugin extends Plugin {
   data: PluginData = mergeData(null);
   /** Public for debugging: `app.plugins.plugins["kyle-tickets"].store`. */
   readonly store = new IssueStore(this);
+  readonly interceptor = new IssueInterceptor(this);
 
   override async onload(): Promise<void> {
     this.data = mergeData(await this.loadData());
 
     this.registerView(VIEW_TYPE_MAIN, (leaf) => new MainView(leaf, this));
+    this.registerView(VIEW_TYPE_ISSUE, (leaf) => new IssueView(leaf, this));
+    this.interceptor.install();
+    this.addCommand({
+      id: "toggle-issue-markdown",
+      name: "Toggle issue / Markdown view",
+      checkCallback: (check) => this.interceptor.toggle(check),
+    });
     this.addRibbonIcon("kanban-square", "kyle-tickets", () => void this.activateMainView());
     this.addCommand({
       id: "open",

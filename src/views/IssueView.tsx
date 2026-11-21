@@ -1,0 +1,267 @@
+import { ItemView, Notice, TFile, type ViewStateResult, type WorkspaceLeaf } from "obsidian";
+import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import type KyleTicketsPlugin from "../main";
+import type { IssuePatch } from "../core/issueFile";
+import { fromLink } from "../core/links";
+import { useIssue, useSettings, useStoreReady } from "../store/hooks";
+import { confirmModal } from "../settings/modals";
+import { PluginContext, usePlugin } from "./PluginContext";
+import { IssueHeader } from "./issue/IssueHeader";
+import { PropertiesSidebar, type PropKind } from "./issue/PropertiesSidebar";
+import { VIEW_TYPE_ISSUE } from "./intercept";
+import { useShortcuts, type ShortcutAction } from "./shortcuts";
+
+export { VIEW_TYPE_ISSUE };
+
+function idOfPath(path: string): string {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  return name.endsWith(".md") ? name.slice(0, -3) : name;
+}
+
+function TitleEditor({ title, onSave }: { title: string; onSave: (t: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft]);
+  useEffect(() => {
+    if (draft !== null) ref.current?.focus();
+  }, [draft === null]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (draft === null) {
+    return (
+      <h1 className="kt-issue-title" tabIndex={0} title="Click to edit" onClick={() => setDraft(title)} onKeyDown={(e) => e.key === "Enter" && setDraft(title)}>
+        {title}
+      </h1>
+    );
+  }
+  const commit = () => {
+    const t = draft.replace(/\s+/g, " ").trim();
+    setDraft(null);
+    if (t !== "" && t !== title) onSave(t);
+  };
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      className="kt-issue-title kt-issue-title-input"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          setDraft(null);
+        }
+      }}
+    />
+  );
+}
+
+interface IssueAppProps {
+  path: string;
+  leaf: WorkspaceLeaf;
+}
+
+function IssueApp({ path, leaf }: IssueAppProps) {
+  const plugin = usePlugin();
+  const id = idOfPath(path);
+  const issue = useIssue(id);
+  const ready = useStoreReady();
+  const settings = useSettings();
+  const parentId = issue?.parent ? fromLink(issue.parent) : undefined;
+  const parent = useIssue(parentId ?? "");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [open, setOpen] = useState<{ kind: PropKind; anchor: HTMLElement | null } | null>(null);
+
+  useEffect(() => rootRef.current?.focus({ preventScroll: true }), []);
+
+  const update = useCallback(
+    (patch: IssuePatch) => {
+      void plugin.store.updateIssue(id, patch).catch((e) => {
+        console.error("kyle-tickets: update failed", e);
+        new Notice("Could not save the change.");
+      });
+    },
+    [plugin, id],
+  );
+
+  const openPicker = useCallback((kind: PropKind, anchor: HTMLElement | null) => {
+    setSidebarOpen(true);
+    setOpen({ kind, anchor });
+  }, []);
+  const closePicker = useCallback(() => {
+    setOpen(null);
+    rootRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  const onShortcut = useCallback(
+    (action: ShortcutAction): boolean => {
+      const kind: Partial<Record<ShortcutAction, PropKind>> = { status: "status", priority: "priority", labels: "labels", assignee: "assignee" };
+      const k = kind[action];
+      if (k) {
+        setSidebarOpen(true);
+        // Anchor after the sidebar is rendered.
+        requestAnimationFrame(() => openPicker(k, rootRef.current?.querySelector<HTMLElement>(`[data-kt-prop="${k}"]`) ?? null));
+        return true;
+      }
+      if (action === "clear") {
+        const hist = (leaf as unknown as { history?: { backHistory?: unknown[]; back(): void } }).history;
+        if (hist?.backHistory && hist.backHistory.length > 0) hist.back();
+        else void plugin.activateMainView();
+        return true;
+      }
+      return false;
+    },
+    [leaf, plugin, openPicker],
+  );
+  useShortcuts(rootRef, onShortcut);
+
+  if (!issue) {
+    return (
+      <div className="kt-issue kt-issue-state" ref={rootRef} tabIndex={-1}>
+        {ready ? (
+          <>
+            <div>This issue was deleted</div>
+            <button type="button" onClick={() => void plugin.activateMainView()}>
+              Back to issues
+            </button>
+          </>
+        ) : (
+          <div>Loading...</div>
+        )}
+      </div>
+    );
+  }
+
+  const file = plugin.app.vault.getAbstractFileByPath(path);
+  const copy = (text: string, what: string) => {
+    void navigator.clipboard.writeText(text).then(() => new Notice(`Copied ${what}`));
+  };
+
+  return (
+    <div
+      className="kt-issue"
+      ref={rootRef}
+      tabIndex={-1}
+      onMouseDown={(e) => {
+        if (!(e.target as HTMLElement).closest("input, textarea, select, [contenteditable]")) rootRef.current?.focus({ preventScroll: true });
+      }}
+    >
+      <IssueHeader
+        issue={issue}
+        parent={parent}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        onOpenProject={(name) => {
+          const f = plugin.app.metadataCache.getFirstLinkpathDest(name, path);
+          if (f instanceof TFile) void plugin.app.workspace.getLeaf(false).openFile(f);
+        }}
+        onOpenIssue={(i) => plugin.openIssue(i)}
+        onOpenMarkdown={() => void plugin.interceptor.showMarkdown(leaf)}
+        onCopyId={() => copy(issue.id, issue.id)}
+        onCopyLink={() => copy(`obsidian://open?vault=${encodeURIComponent(plugin.app.vault.getName())}&file=${encodeURIComponent(path)}`, "link")}
+        onDelete={() => {
+          void (async () => {
+            if (!(file instanceof TFile)) return;
+            const ok = await confirmModal(plugin.app, "Delete issue", `Delete ${issue.id} "${issue.title}"? The file is moved to trash.`, "Delete", true);
+            if (ok) await plugin.store.deleteIssue(issue.id);
+          })();
+        }}
+      />
+      <div className="kt-issue-body">
+        <div className="kt-issue-main">
+          <div className="kt-issue-column">
+            <TitleEditor title={issue.title} onSave={(title) => update({ title })} />
+          </div>
+        </div>
+        {sidebarOpen && <PropertiesSidebar issue={issue} settings={settings} open={open} onOpen={openPicker} onClose={closePicker} onUpdate={update} />}
+      </div>
+    </div>
+  );
+}
+
+export class IssueView extends ItemView {
+  private root: Root | null = null;
+  private path = "";
+  private unsub: (() => void) | null = null;
+
+  constructor(leaf: WorkspaceLeaf, private readonly plugin: KyleTicketsPlugin) {
+    super(leaf);
+    this.navigation = true;
+  }
+
+  override getViewType(): string {
+    return VIEW_TYPE_ISSUE;
+  }
+
+  override getDisplayText(): string {
+    const id = idOfPath(this.path);
+    const issue = this.plugin.store.getIssue(id);
+    return issue ? `${id} ${issue.title}` : id || "Issue";
+  }
+
+  override getIcon(): string {
+    return "circle-dot";
+  }
+
+  override getState(): Record<string, unknown> {
+    return { file: this.path };
+  }
+
+  override async setState(state: unknown, result: ViewStateResult): Promise<void> {
+    const file = (state as { file?: unknown } | null)?.file;
+    if (typeof file === "string") {
+      this.path = file;
+      this.render();
+      this.refreshHeader();
+    }
+    await super.setState(state, result);
+  }
+
+  override async onOpen(): Promise<void> {
+    this.contentEl.addClass("kt-root");
+    this.root = createRoot(this.contentEl);
+    this.render();
+    this.unsub = this.plugin.store.on("change", () => this.refreshHeader());
+    this.registerEvent(
+      this.app.vault.on("rename", (f, old) => {
+        if (old === this.path) {
+          this.path = f.path;
+          this.render();
+          this.refreshHeader();
+        }
+      }),
+    );
+  }
+
+  override async onClose(): Promise<void> {
+    this.unsub?.();
+    this.unsub = null;
+    this.root?.unmount();
+    this.root = null;
+  }
+
+  private refreshHeader(): void {
+    (this.leaf as unknown as { updateHeader?: () => void }).updateHeader?.();
+  }
+
+  private render(): void {
+    if (!this.root || !this.path) return;
+    this.root.render(
+      <StrictMode>
+        <PluginContext.Provider value={this.plugin}>
+          <IssueApp key={this.path} path={this.path} leaf={this.leaf} />
+        </PluginContext.Provider>
+      </StrictMode>,
+    );
+  }
+}
