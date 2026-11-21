@@ -1,0 +1,83 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { applyToFile, HOOK_EVENTS, installHooks, uninstallHooks } from "../src/hook-installer";
+
+const script = "C:\\Vault\\.obsidian\\plugins\\kyle-term\\hooks\\kyle-hook.js";
+const other = { hooks: { Stop: [{ hooks: [{ type: "command", command: "echo done" }] }], PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "guard.sh" }] }] }, model: "x", env: { A: "1" } };
+const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+const count = (s: Record<string, unknown>): number => JSON.stringify(s).split("kyle-hook.js").length - 1;
+
+describe("installHooks / uninstallHooks", () => {
+  it("empty settings get every event", () => {
+    const r = installHooks({}, script) as { hooks: Record<string, Array<{ matcher?: string; hooks: Array<{ command: string; timeout: number }> }>> };
+    expect(Object.keys(r.hooks).sort()).toEqual([...HOOK_EVENTS].sort());
+    expect(r.hooks.PreToolUse![0]!.matcher).toBe("*");
+    expect(r.hooks.Stop![0]!.matcher).toBeUndefined();
+    expect(r.hooks.Stop![0]!.hooks[0]).toEqual({ type: "command", command: `node "${script}" Stop`, timeout: 5 });
+  });
+  it("keeps other settings and hooks untouched", () => {
+    const r = installHooks(clone(other), script) as typeof other & { hooks: Record<string, unknown[]> };
+    expect(r.model).toBe("x");
+    expect(r.env).toEqual({ A: "1" });
+    expect(r.hooks.Stop![0]).toEqual(other.hooks.Stop[0]);
+    expect(r.hooks.PreToolUse![0]).toEqual(other.hooks.PreToolUse[0]);
+    expect(r.hooks.Stop).toHaveLength(2);
+  });
+  it("is idempotent and replaces entries from another vault", () => {
+    const once = installHooks(clone(other), script);
+    expect(installHooks(clone(once), script)).toEqual(once);
+    const moved = installHooks(clone(once), "D:\\v2\\kyle-hook.js");
+    expect(count(moved)).toBe(HOOK_EVENTS.length);
+    expect(JSON.stringify(moved)).not.toContain("C:\\\\Vault");
+  });
+  it("uninstall round-trips back to the original", () => {
+    expect(uninstallHooks(installHooks(clone(other), script))).toEqual(other);
+  });
+  it("uninstall tidies empty arrays/objects", () => {
+    expect(uninstallHooks(installHooks({}, script))).toEqual({});
+    expect(uninstallHooks(installHooks({ model: "x" }, script))).toEqual({ model: "x" });
+  });
+  it("uninstall keeps sibling hooks inside a shared group", () => {
+    const shared = { hooks: { Stop: [{ hooks: [{ type: "command", command: "mine" }, { type: "command", command: `node "${script}" Stop` }] }] } };
+    expect(uninstallHooks(shared)).toEqual({ hooks: { Stop: [{ hooks: [{ type: "command", command: "mine" }] }] } });
+  });
+});
+
+describe("applyToFile (temp files only)", () => {
+  let dir: string;
+  let file: string;
+  beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), "kt-hooks-")); file = path.join(dir, ".claude", "settings.json"); });
+  afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  it("creates a missing file (and directory) without a backup", () => {
+    const r = applyToFile(file, "install", script);
+    expect(r).toMatchObject({ ok: true, changed: true });
+    expect(r.backup).toBeUndefined();
+    expect(count(JSON.parse(fs.readFileSync(file, "utf8")))).toBe(HOOK_EVENTS.length);
+  });
+  it("backs up an existing file byte-for-byte before writing", () => {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const original = JSON.stringify(other, null, 2);
+    fs.writeFileSync(file, original);
+    const r = applyToFile(file, "install", script);
+    expect(fs.readFileSync(r.backup!, "utf8")).toBe(original);
+    expect(path.dirname(r.backup!)).toBe(path.dirname(file));
+  });
+  it("second install changes nothing; uninstall restores the original content", () => {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(other, null, 2));
+    applyToFile(file, "install", script);
+    expect(applyToFile(file, "install", script).changed).toBe(false);
+    applyToFile(file, "uninstall", script);
+    expect(JSON.parse(fs.readFileSync(file, "utf8"))).toEqual(other);
+  });
+  it("refuses to touch invalid JSON", () => {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "{ nope");
+    const r = applyToFile(file, "install", script);
+    expect(r.ok).toBe(false);
+    expect(fs.readFileSync(file, "utf8")).toBe("{ nope");
+  });
+});
