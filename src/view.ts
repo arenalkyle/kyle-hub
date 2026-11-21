@@ -79,11 +79,23 @@ export class KyleTermView extends ItemView {
     wrap.createDiv({ cls: "kt-bg-dim" });
     this.area = wrap.createDiv({ cls: "kt-term-area" });
     this.wrap = wrap;
+    // Accept drops from the explorer (and plain text) onto the terminal.
+    this.area.addEventListener("dragover", (e) => { if (!this.dragId) e.preventDefault(); });
+    this.area.addEventListener("drop", (e) => {
+      if (this.dragId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const s = this.mgr?.active;
+      if (!s || s.status !== "running") return;
+      const text = this.plugin.resolveDrop(e.dataTransfer, s.cwd);
+      if (text) this.mgr?.sendText(s.id, text);
+    }, true);
     this.applyBackground(this.plugin.bgVars(true));
 
     const header = this.sidebar.createDiv({ cls: "kt-header" });
     const newClaude = header.createEl("button", { text: "New Session", cls: "kt-btn-new mod-cta" });
     newClaude.onclick = () => void this.plugin.newClaude();
+    newClaude.oncontextmenu = (e) => { e.preventDefault(); this.plugin.showNewSessionMenu(e); };
     const plus = header.createEl("button", { text: "+", cls: "kt-btn-plus", attr: { "aria-label": "New terminal" } });
     plus.onclick = () => void this.plugin.newShell();
     const mute = header.createEl("button", { cls: "kt-btn-mute" });

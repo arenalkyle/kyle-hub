@@ -32,6 +32,8 @@ class MockTerm implements TermLike {
   cols = 100; rows = 30; out = ""; resets = 0; disposed = false;
   constructor(public h: TermHandlers) {}
   write(d: string): void { this.out += d; }
+  pasted: string[] = [];
+  paste(t: string): void { this.pasted.push(t); }
   reset(): void { this.resets++; this.out = ""; }
   dispose(): void { this.disposed = true; }
   attach(): void {}
@@ -300,5 +302,47 @@ describe("agent state integration", () => {
     expect(n).toBe(1);
     m.handleHook(s.id, "SubagentStop", { agent_id: "x" });
     expect(n).toBe(1);
+  });
+});
+
+describe("sendText / whenReady", () => {
+  const tick = (ms: number) => { clock += ms; vi.advanceTimersByTime(ms); };
+  it("sendText pastes (never Enter) into a running session and fails for exited", () => {
+    const s = shell();
+    expect(m.sendText(s.id, "@a.md")).toBe(true);
+    expect(terms[0]!.pasted).toEqual(["@a.md"]);
+    expect(pty.written).toEqual([]);
+    pty.listeners.get("p1")!.onExit(0);
+    expect(m.sendText(s.id, "x")).toBe(false);
+    expect(m.sendText("nope", "x")).toBe(false);
+  });
+  it("whenReady resolves on a hook event", async () => {
+    const s = m.create({ kind: "claude", profileId: "powershell", cwd: "x", command: "claude" });
+    const p = m.whenReady(s.id);
+    m.handleHook(s.id, "SessionStart", {});
+    tick(100);
+    await expect(p).resolves.toBe(true);
+  });
+  it("whenReady resolves after output is quiet once the command was sent", async () => {
+    const s = m.create({ kind: "claude", profileId: "powershell", cwd: "x", command: "claude" });
+    const p = m.whenReady(s.id);
+    tick(5000); // fallback types the command
+    tick(1400);
+    let done: boolean | undefined;
+    void p.then((v) => { done = v; });
+    await Promise.resolve();
+    expect(done).toBeUndefined();
+    pty.listeners.get("p1")!.onData("banner");
+    tick(1400);
+    await Promise.resolve();
+    expect(done).toBeUndefined();
+    tick(200);
+    await expect(p).resolves.toBe(true);
+  });
+  it("whenReady times out and resolves false", async () => {
+    const s = m.create({ kind: "claude", profileId: "powershell", cwd: "x", command: "claude" });
+    const p = m.whenReady(s.id, 1e9, 3000);
+    tick(3200);
+    await expect(p).resolves.toBe(false);
   });
 });

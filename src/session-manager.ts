@@ -38,6 +38,8 @@ export interface TermLike {
   cols: number;
   rows: number;
   write(data: string): void;
+  /** Type text as user input (bracketed paste when the program enabled it). Never presses Enter. */
+  paste(text: string): void;
   reset(): void;
   dispose(): void;
   attach(parent: HTMLElement): void;
@@ -71,6 +73,7 @@ interface Runtime {
   ptyId: string | null;
   gen: number;
   cmdSent: boolean;
+  cmdSentAt: number;
   inputSeen: boolean;
   idleTimer?: ReturnType<typeof setTimeout>;
   quietTimer?: ReturnType<typeof setTimeout>;
@@ -157,6 +160,38 @@ export class SessionManager {
     this.dispatch(s, { type: "hook", event, payload, at: this.now() });
   }
 
+  /** Paste text into a running session's terminal. Returns false if it can't. */
+  sendText(id: string, text: string): boolean {
+    const s = this.get(id);
+    const rt = this.rt.get(id);
+    if (!s || !rt || s.status !== "running" || !text) return false;
+    rt.term.paste(text);
+    rt.term.focus();
+    return true;
+  }
+
+  /**
+   * Resolves true when a Claude session looks ready for input: a hook event arrived
+   * (SessionStart), or the command was typed and output has been quiet for `quietMs`.
+   * Resolves false on timeout or if the session exits.
+   */
+  whenReady(id: string, quietMs = 1500, timeoutMs = 15_000, pollMs = 100): Promise<boolean> {
+    const started = this.now();
+    return new Promise((resolve) => {
+      const tick = (): void => {
+        const s = this.get(id);
+        const rt = this.rt.get(id);
+        if (!s || !rt || s.status !== "running") return resolve(false);
+        const t = this.now();
+        if (s.agent.hasHookEvents) return resolve(true);
+        if (rt.cmdSent && rt.cmdSentAt > 0 && t - Math.max(s.lastOutputAt, rt.cmdSentAt) >= quietMs) return resolve(true);
+        if (t - started >= timeoutMs) return resolve(false);
+        setTimeout(tick, pollMs);
+      };
+      tick();
+    });
+  }
+
   list(): readonly Session[] { return this.sessions; }
   get(id: string): Session | undefined { return this.sessions.find((s) => s.id === id); }
   get active(): Session | undefined { return this.activeId ? this.get(this.activeId) : undefined; }
@@ -179,7 +214,7 @@ export class SessionManager {
       id, kind: opts.kind, profileId: opts.profileId, cwd: opts.cwd, command: opts.command,
       status: "running", lastOutputAt: this.now(), agent: initialAgent(),
     };
-    const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true, inputSeen: false };
+    const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true, cmdSentAt: 0, inputSeen: false };
     rt.term = this.deps.makeTerm({
       onInput: (d) => {
         if (!rt.ptyId || s.status !== "running") return;
@@ -246,6 +281,7 @@ export class SessionManager {
   private sendCommand(s: Session, rt: Runtime): void {
     if (rt.cmdSent || !rt.ptyId || s.status !== "running") return;
     rt.cmdSent = true;
+    rt.cmdSentAt = this.now();
     this.clearTimers(rt);
     this.deps.pty.write(rt.ptyId, `${s.command}\r`);
   }

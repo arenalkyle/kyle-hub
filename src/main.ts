@@ -1,4 +1,6 @@
-import { FileSystemAdapter, Notice, Platform, Plugin } from "obsidian";
+import { FileSystemAdapter, Menu, Notice, Platform, Plugin, TFile, TFolder, type TAbstractFile } from "obsidian";
+import { FolderSuggest } from "./folder-suggest";
+import { buildRefs, parseDropText } from "./vault-paths";
 import path from "node:path";
 import os from "node:os";
 import { applyToFile } from "./hook-installer";
@@ -76,6 +78,39 @@ export default class KyleTermPlugin extends Plugin {
       callback: () => void this.jumpToAttention(),
     });
     this.addCommand({ id: "toggle-mute", name: "Toggle mute", callback: () => this.setMuted(!this.settings.sounds.muted) });
+    this.addCommand({
+      id: "send-selection",
+      name: "Send selection to kyle-term",
+      editorCallback: (editor) => void this.sendSelection(editor.getSelection()),
+    });
+    this.addCommand({
+      id: "send-note",
+      name: "Send note to kyle-term",
+      checkCallback: (checking) => {
+        const f = this.app.workspace.getActiveFile();
+        if (!f) return false;
+        if (!checking) void this.sendNote(f);
+        return true;
+      },
+    });
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        menu.addItem((i) => i.setTitle("Open terminal here").setIcon("terminal").onClick(() => void this.newShell(true, this.folderOf(file))));
+        menu.addItem((i) => i.setTitle("New Claude session here").setIcon("bot").onClick(() => void this.newClaude(true, { cwd: this.folderOf(file) })));
+        if (file instanceof TFile) {
+          menu.addItem((i) => i.setTitle("Send note to kyle-term").setIcon("send").onClick(() => void this.sendNote(file)));
+        }
+      }),
+    );
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, editor, view) => {
+        if (editor.getSelection()) {
+          menu.addItem((i) => i.setTitle("Send selection to kyle-term").setIcon("send").onClick(() => void this.sendSelection(editor.getSelection())));
+        }
+        const f = view.file;
+        if (f) menu.addItem((i) => i.setTitle("Send note to kyle-term").setIcon("send").onClick(() => void this.sendNote(f)));
+      }),
+    );
     this.player = new SoundPlayer(this.app);
     this.statusEl = this.addStatusBarItem();
     this.statusEl.addClass("mod-clickable", "kt-status");
@@ -276,28 +311,123 @@ export default class KyleTermPlugin extends Plugin {
     new Notice(`kyle-term: ${r.message}`, r.ok ? 6000 : 12000);
   }
 
-  async newShell(reveal = false): Promise<void> {
+  /** Absolute folder for a vault entry; for a note, its parent folder. */
+  folderOf(file: TAbstractFile): string {
+    const dir = file instanceof TFolder ? file : file.parent;
+    return !dir || dir.isRoot() ? this.vaultRoot() : path.join(this.vaultRoot(), dir.path);
+  }
+
+  async newShell(reveal = false, cwd?: string): Promise<void> {
     const m = this.getSessions();
     if (typeof m === "string") return void new Notice(m);
-    m.create({ kind: "shell", profileId: this.defaultProfileId(), cwd: this.vaultRoot() });
+    m.create({ kind: "shell", profileId: this.defaultProfileId(), cwd: cwd ?? this.vaultRoot() });
     if (reveal) await this.activateView();
   }
 
-  async newClaude(reveal = false): Promise<void> {
+  async newClaude(reveal = false, opts: { cwd?: string; args?: string } = {}): Promise<Session | undefined> {
     const m = this.getSessions();
     if (typeof m === "string") return void new Notice(m);
-    m.create({
+    const base = this.settings.claudeCommand || "claude";
+    const s = m.create({
       kind: "claude",
       profileId: this.defaultProfileId(),
-      cwd: this.settings.claudeStartFolder || this.vaultRoot(),
-      command: this.settings.claudeCommand || "claude",
+      cwd: opts.cwd || this.settings.claudeStartFolder || this.vaultRoot(),
+      command: opts.args ? `${base} ${opts.args}` : base,
     });
     if (reveal) await this.activateView();
+    return s;
+  }
+
+  /** Right-click menu on the New Session button. */
+  showNewSessionMenu(e: MouseEvent): void {
+    const menu = new Menu();
+    menu.addItem((i) => i.setTitle("Continue last").setIcon("history").onClick(() => void this.newClaude(true, { args: "--continue" })));
+    menu.addItem((i) =>
+      i.setTitle("Choose folder…").setIcon("folder-search").onClick(() =>
+        new FolderSuggest(this.app, (f) => void this.newClaude(true, { cwd: this.folderOf(f) })).open(),
+      ),
+    );
+    const saved = this.settings.savedFolders.filter((f) => f.path);
+    if (saved.length > 0) {
+      menu.addSeparator();
+      for (const f of saved) {
+        menu.addItem((i) => i.setTitle(f.name || f.path).setIcon("folder").onClick(() => void this.newClaude(true, { cwd: f.path })));
+      }
+      menu.addSeparator();
+    }
+    menu.addItem((i) => i.setTitle("Manage saved folders…").setIcon("settings").onClick(() => this.openSettings()));
+    menu.showAtMouseEvent(e);
+  }
+
+  private openSettings(): void {
+    // Not in the public typings; guard it.
+    const setting = (this.app as unknown as { setting?: { open(): void; openTabById(id: string): void } }).setting;
+    try { setting?.open(); setting?.openTabById(this.manifest.id); } catch { /* ignore */ }
+  }
+
+  /** The running session to type into; starts a Claude session (and waits for it) if none. */
+  private async targetSession(): Promise<Session | undefined> {
+    const m = this.getSessions();
+    if (typeof m === "string") return void new Notice(m);
+    await this.activateView();
+    let s = m.active;
+    if (s && s.status === "running") return s;
+    s = await this.newClaude(true);
+    if (!s) return undefined;
+    if (!(await m.whenReady(s.id))) new Notice("kyle-term: Claude was slow to start; sending anyway");
+    return m.get(s.id)?.status === "running" ? s : undefined;
+  }
+
+  /** Type text into the active session (no Enter), focusing its terminal. */
+  async sendText(text: string): Promise<void> {
+    if (!text) return;
+    const s = await this.targetSession();
+    if (s) this.sessions?.sendText(s.id, text);
+  }
+
+  async sendSelection(text: string): Promise<void> {
+    if (!text) return void new Notice("kyle-term: nothing selected");
+    await this.sendText(text);
+  }
+
+  async sendNote(file: TFile): Promise<void> {
+    const s = await this.targetSession();
+    if (!s) return;
+    this.sessions?.sendText(s.id, this.refsFor([path.join(this.vaultRoot(), file.path)], s.cwd));
+  }
+
+  private refsFor(abs: string[], cwd: string): string {
+    return buildRefs(abs, cwd, this.settings.pathMode);
+  }
+
+  /** Turn a drop into text to type: `@path` refs for explorer drags, else the dropped text. */
+  resolveDrop(dt: DataTransfer | null, cwd: string): string | null {
+    const abs = (f: TAbstractFile) => (f.path === "/" ? this.vaultRoot() : path.join(this.vaultRoot(), f.path));
+    try {
+      // Obsidian's explorer drag uses a private drag manager; guard everything.
+      const d = (this.app as unknown as { dragManager?: { draggable?: { type?: string; file?: TAbstractFile; files?: TAbstractFile[] } } }).dragManager?.draggable;
+      if (d) {
+        const files = d.type === "files" ? d.files : d.file ? [d.file] : [];
+        const ok = (files ?? []).filter((f): f is TAbstractFile => !!f && typeof f.path === "string");
+        if (ok.length > 0) return this.refsFor(ok.map(abs), cwd);
+      }
+    } catch { /* fall through to text */ }
+    const text = dt?.getData("text/plain") ?? "";
+    if (!text) return null;
+    const parsed = parseDropText(text, this.app.vault.getName());
+    if (parsed.kind === "text") return parsed.text;
+    const found: string[] = [];
+    for (const p of parsed.paths) {
+      const f = this.app.vault.getAbstractFileByPath(p) ?? this.app.metadataCache.getFirstLinkpathDest(p, "");
+      if (!f) return text;
+      found.push(abs(f));
+    }
+    return this.refsFor(found, cwd);
   }
 
   async loadSettings(): Promise<void> {
     const saved = (await this.loadData()) as Partial<KyleTermSettings> | null;
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved, { sounds: mergeSounds(saved?.sounds), appearance: mergeAppearance(saved?.appearance) });
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved, { savedFolders: (saved?.savedFolders ?? []).map((f) => ({ ...f })), sounds: mergeSounds(saved?.sounds), appearance: mergeAppearance(saved?.appearance) });
   }
 
   async saveSettings(): Promise<void> {

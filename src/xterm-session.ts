@@ -41,7 +41,7 @@ export class XtermSession implements TermLike {
     this.el.className = "kyle-term-term";
     this.el.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      this.paste();
+      this.pasteClipboard();
     });
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== "keydown") return true;
@@ -64,7 +64,7 @@ export class XtermSession implements TermLike {
       }
       if (e.ctrlKey && !e.altKey && k === "v") {
         e.preventDefault();
-        this.paste();
+        this.pasteClipboard();
         return false;
       }
       if (k === "enter" && e.shiftKey && !e.ctrlKey && !e.altKey) {
@@ -76,7 +76,9 @@ export class XtermSession implements TermLike {
     });
   }
 
-  private paste(): void {
+  paste(text: string): void { this.term.paste(text); }
+
+  private pasteClipboard(): void {
     void navigator.clipboard.readText().then((t) => { if (t) this.term.paste(t); }, () => {});
   }
 

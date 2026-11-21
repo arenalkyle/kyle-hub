@@ -1,4 +1,6 @@
 import { FuzzySuggestModal, PluginSettingTab, Setting, type App, type TFile } from "obsidian";
+import fs from "node:fs";
+import type { PathMode } from "./vault-paths";
 import type KyleTermPlugin from "./main";
 import { DEFAULT_SOUNDS, TONES, type AlertEvent, type SoundSettings } from "./alert";
 import { AUDIO_EXTS } from "./sound";
@@ -7,7 +9,15 @@ import {
   type AppearanceSettings,
 } from "./appearance";
 
+export interface SavedFolder {
+  name: string;
+  /** Absolute path (may be outside the vault). */
+  path: string;
+}
+
 export interface KyleTermSettings {
+  savedFolders: SavedFolder[];
+  pathMode: PathMode;
   nodePath: string;
   defaultProfile: string;
   /** Empty = vault root. */
@@ -22,6 +32,8 @@ export interface KyleTermSettings {
 }
 
 export const DEFAULT_SETTINGS: KyleTermSettings = {
+  savedFolders: [],
+  pathMode: "relative",
   nodePath: "",
   defaultProfile: "powershell",
   claudeStartFolder: "",
@@ -111,8 +123,59 @@ export class KyleTermSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         }),
       );
+    new Setting(el)
+      .setName("@path references")
+      .setDesc("Send note, drag-and-drop: relative to the session's folder when possible, or always absolute. Notes outside the folder are always absolute.")
+      .addDropdown((d) =>
+        d.addOption("relative", "Relative when possible").addOption("absolute", "Always absolute").setValue(s.pathMode).onChange(async (v) => {
+          s.pathMode = v === "absolute" ? "absolute" : "relative";
+          await this.plugin.saveSettings();
+        }),
+      );
+    this.displayFolders(el);
     this.displayAppearance(el);
     this.displaySounds(el);
+  }
+
+  private displayFolders(el: HTMLElement): void {
+    const s = this.plugin.settings;
+    new Setting(el).setName("Saved folders").setHeading();
+    el.createEl("p", { cls: "setting-item-description", text: "Folders offered when you right-click New Session. Absolute paths; repos outside the vault work." });
+    const save = () => void this.plugin.saveSettings();
+    s.savedFolders.forEach((f, i) => {
+      const row = new Setting(el);
+      row.addText((t) => t.setPlaceholder("Name").setValue(f.name).onChange((v) => { f.name = v; save(); }));
+      row.addText((t) => {
+        t.setPlaceholder("C:/path/to/folder").setValue(f.path);
+        const warn = () => {
+          const bad = f.path.trim() !== "" && !folderExists(f.path);
+          t.inputEl.toggleClass("mod-warning", bad);
+          t.inputEl.title = bad ? "Folder does not exist" : "";
+          warnEl.setText(bad ? "Folder does not exist" : "");
+        };
+        t.onChange((v) => { f.path = v.trim(); save(); warn(); });
+        const warnEl = row.descEl;
+        warnEl.addClass("mod-warning");
+        warn();
+      });
+      row.addExtraButton((b) => b.setIcon("arrow-up").setTooltip("Move up").setDisabled(i === 0).onClick(() => { this.swap(i, i - 1); }));
+      row.addExtraButton((b) => b.setIcon("arrow-down").setTooltip("Move down").setDisabled(i === s.savedFolders.length - 1).onClick(() => { this.swap(i, i + 1); }));
+      row.addExtraButton((b) => b.setIcon("trash").setTooltip("Remove").onClick(() => { s.savedFolders.splice(i, 1); save(); this.display(); }));
+    });
+    new Setting(el).addButton((b) =>
+      b.setButtonText("Add folder").onClick(() => {
+        s.savedFolders.push({ name: "", path: "" });
+        save();
+        this.display();
+      }),
+    );
+  }
+
+  private swap(a: number, b: number): void {
+    const l = this.plugin.settings.savedFolders;
+    [l[a], l[b]] = [l[b]!, l[a]!];
+    void this.plugin.saveSettings();
+    this.display();
   }
 
   private displayAppearance(el: HTMLElement): void {
@@ -237,6 +300,10 @@ export class KyleTermSettingTab extends PluginSettingTab {
       );
     }
   }
+}
+
+function folderExists(p: string): boolean {
+  try { return fs.statSync(p).isDirectory(); } catch { return false; }
 }
 
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "avif"];

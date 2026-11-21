@@ -6,7 +6,7 @@ Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-1](https://linear.app
 
 - **Done**: design agreed; PLAN + ADR-0001/0002; Linear tickets LOCK-2…LOCK-9 (one per phase, `ready-for-agent`).
 - **In progress**: —
-- **In review**: Phases 1-5 ([LOCK-2](https://linear.app/divinity/issue/LOCK-2)..[LOCK-6](https://linear.app/divinity/issue/LOCK-6)) built; awaiting manual check in Obsidian (run Install hooks first; Appearance lives in settings).
+- **In review**: Phases 1-6 ([LOCK-2](https://linear.app/divinity/issue/LOCK-2)..[LOCK-7](https://linear.app/divinity/issue/LOCK-7)) built; awaiting manual check in Obsidian (run Install hooks first; Appearance and Saved folders live in settings).
 - **Next**: Phase 6 — [LOCK-7](https://linear.app/divinity/issue/LOCK-7) vault integration.
 
 | Phase | Ticket | State |
@@ -16,6 +16,6 @@ Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-1](https://linear.app
 | 3 Hooks + agent state | LOCK-4 | In Review |
 | 4 Sounds + attention | LOCK-5 | In Review |
 | 5 Appearance | LOCK-6 | In Review |
-| 6 Vault integration | LOCK-7 | Todo |
+| 6 Vault integration | LOCK-7 | In Review |
 | 7 Persistence | LOCK-8 | Todo |
 | 8 macOS pass | LOCK-9 | Todo |
