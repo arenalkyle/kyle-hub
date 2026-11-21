@@ -1,0 +1,32 @@
+# STATUS
+
+_Last updated: 2026-11-21_
+
+Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-10](https://linear.app/divinity/issue/LOCK-10) · Manual checks: [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md)
+
+- **Done** (reviewed, pushed, Linear Done): LOCK-11 → LOCK-28 (all sub-tickets of LOCK-10). Scaffold + CI, `src/core` model (ticket/project files, feed, IDs, query/display pipeline), plugin shell + setup, IssueStore (index, write API, activity log, external-edit detection), pickers + New issue window, main view sidebar + grouped windowed List, Display popover (grouping, sub-grouping, ordering, toggles, chips; per-view state), Board (columns, swimlanes, preview cards, dnd-kit drag-and-drop, manual `sortOrder` reorder), filter bar (AND-ed chips, per-view), keyboard shortcuts + Statuses/Labels settings editors with bulkUpdate, issue page (IssueView, file-open interception, breadcrumb, inline title, properties sidebar), issue page description editor, sub-issues, activity feed and comments, project pages (create, edit, rename, delete; ProjectView + interception), milestones + project-scoped List/Board via shared IssueCollection, live PR status via gh CLI (cache, background refresh, chips), PR auto-link by issue ID for watched repos, kt CLI for agents over src/core (npm link), agent docs (generated AGENTS.md, Claude Code skill, README, PLAN updated). 242 tests passing.
+- **In progress**: round-1 manual-check feedback [LOCK-29](https://linear.app/divinity/issue/LOCK-29) (LOCK-30…34) merged and deployed; awaiting re-check in Obsidian (`docs/MANUAL-CHECKS.md` → "Round 1 feedback"). LOCK-30 focus fixes are unconfirmed in the app.
+- **Done (round 2)**: [LOCK-35](https://linear.app/divinity/issue/LOCK-35) (LOCK-36…41), reviewed in Obsidian 2026-11-21: comment replies and editing; Linear-style sidebar (centered layout, borderless rows, pill labels, PRs on top, no Details); related issues (`related:` frontmatter, `kt relate`/`unrelate`); GitHub avatar for the assignee; flat status/priority pickers; right-click hover submenus with colored icons. 253 tests passing.
+- **Next**: confirm the Round 1 fixes (LOCK-29…34) in Obsidian and mark them Done; finish the remaining full checks; fill README screenshots.
+- **Manual checks**: smoke test run 2026-11-21. Setup and kt passed; the issues it found became LOCK-30…34. Not yet run: the full 1.1–9.2 checks, and the PR checks (8.x), which need a real PR.
+
+| Phase | Sub-phases | State |
+|---|---|---|
+| 1 Foundation | 1.1 scaffold (LOCK-11) · 1.2 core model (LOCK-12) | Done · Done |
+| 2 Shell + store | 2.1 shell (LOCK-13) · 2.2 IssueStore (LOCK-14) | Done · Done |
+| 3 Pickers + List | 3.1 pickers/New issue (LOCK-15) · 3.2 main view + List (LOCK-16) | Done · Done |
+| 4 Display + Board | 4.1 Display popover (LOCK-17) · 4.2 Board (LOCK-18) | Done · Done |
+| 5 Filters + shortcuts | 5.1 filter bar (LOCK-19) · 5.2 shortcuts + settings editors (LOCK-20) | Done · Done |
+| 6 Issue view | 6.1 page + properties (LOCK-21) · 6.2 description/sub-issues/activity (LOCK-22) | Done · Done |
+| 7 Projects | 7.1 project pages (LOCK-23) · 7.2 milestones + project issues (LOCK-24) | Done · Done |
+| 8 Pull requests | 8.1 gh status (LOCK-25) · 8.2 auto-link (LOCK-26) | Done · Done |
+| 9 Agent tooling | 9.1 kt CLI (LOCK-27) · 9.2 agent docs + e2e (LOCK-28) | Done · Done |
+
+## Known limitations
+
+- Windows 10, desktop only; github.com PRs only; `gh` must be installed and authenticated.
+- Board J/K walks cards column by column (no H/L); the default status cannot be deleted until another is default; label names cannot contain spaces.
+- Forced-Markdown tabs and the issue sidebar's collapsed state do not survive a restart.
+- Long activity feeds show the newest 50 entries with "Show earlier" (no virtualization); `main.js` is about 1.1 MB (React production build + bundled `@codemirror/lang-markdown`).
+- External edits made without `updatedBy` are logged as `@external`; `kt` writes log their own events once.
+- The full manual checks in `docs/MANUAL-CHECKS.md` haven't been run beyond the smoke test.
