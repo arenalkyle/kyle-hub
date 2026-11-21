@@ -233,6 +233,37 @@ describe("IssueStore", () => {
     expect(vault.files.get(store.pathOf(a.id)!)).toMatch(/project/i);
   });
 
+  it("manages milestones: add, update, reorder, rename (bulk), delete (clears issues)", async () => {
+    const { store, vault } = setup();
+    await store.start();
+    await store.createProject({ name: "Web", status: "started" });
+    await store.createProject({ name: "Other", status: "started" });
+    await store.addMilestone("Web", { name: "Alpha", target: "2026-12-01" });
+    await store.addMilestone("Web", { name: "Beta" });
+    await expect(store.addMilestone("Web", { name: "alpha" })).rejects.toThrow(/already exists/);
+    await store.updateMilestone("Web", "Beta", { description: "Later", target: "2027-01-01" });
+    await store.reorderMilestones("Web", ["Beta", "Alpha"]);
+    expect(store.getProject("Web")!.milestones).toEqual([
+      { name: "Beta", target: "2027-01-01", description: "Later" },
+      { name: "Alpha", target: "2026-12-01" },
+    ]);
+    const a = await store.createIssue({ title: "A", project: "Web", milestone: "Alpha" });
+    await store.createIssue({ title: "B", project: "Web", milestone: "Alpha" });
+    expect(await store.renameMilestone("Web", "Alpha", "Alpha 1")).toBe(2);
+    await flush();
+    expect(store.getIssue(a.id)!.milestone).toBe("Alpha 1");
+    expect(store.getProject("Web")!.milestones.map((m) => m.name)).toEqual(["Beta", "Alpha 1"]);
+    // Moving to a project without that milestone clears it, with an activity event.
+    await store.updateIssue(a.id, { project: "Other" });
+    await flush();
+    expect(store.getIssue(a.id)!.milestone).toBeUndefined();
+    expect(vault.files.get(store.pathOf(a.id)!)).toMatch(/milestone/i);
+    expect(await store.deleteMilestone("Web", "Alpha 1")).toBe(1);
+    await flush();
+    expect(store.getProject("Web")!.milestones.map((m) => m.name)).toEqual(["Beta"]);
+    expect(store.getIssues().find((i) => i.title === "B")!.milestone).toBeUndefined();
+  });
+
   it("notifies subscribers with stable snapshots", async () => {
     const { store } = setup();
     await store.start();

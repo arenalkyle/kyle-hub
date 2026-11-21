@@ -11,6 +11,7 @@ import {
   type IssuePatch,
 } from "../core/issueFile";
 import { fromLink } from "../core/links";
+import { issueInMilestone, milestoneAfterProjectChange, reorderMilestones, validateMilestoneName } from "../core/milestones";
 import { parseProject, serializeProject } from "../core/projectFile";
 import { issueInProject, rewriteProjectLink, validateProjectName } from "../core/projects";
 import type { Issue, Milestone, Project, ProjectStatus } from "../core/types";
@@ -196,6 +197,7 @@ export class IssueStore {
     const norm: IssuePatch = { ...patch };
     if (typeof norm.project === "string") norm.project = asLink(norm.project);
     if (typeof norm.parent === "string") norm.parent = asLink(norm.parent);
+    this.validateMilestone(id, norm);
     let written = "";
     await this.host.app.vault.process(file, (text) => {
       const before = parseIssue(text, file.name);
@@ -216,6 +218,21 @@ export class IssueStore {
     this.setIssue(path, issue, true);
     this.emit();
     return issue;
+  }
+
+  /** A project change clears a milestone the new project does not have (logged by the normal diff). */
+  private validateMilestone(id: string, patch: IssuePatch): void {
+    if (patch.project === undefined || patch.milestone !== undefined) return;
+    const current = this.getIssue(id);
+    if (!current?.milestone) return;
+    if (patch.project === null) {
+      patch.milestone = null;
+      return;
+    }
+    const name = fromLink(patch.project);
+    const project = this.getProject(name);
+    // An unknown project (e.g. mid-rename) leaves the milestone alone.
+    if (project && milestoneAfterProjectChange(current.milestone, project) === undefined) patch.milestone = null;
   }
 
   /**
@@ -304,6 +321,69 @@ export class IssueStore {
     this.setProject(path, project);
     this.emit();
     return project;
+  }
+
+  private requireProject(name: string): Project {
+    const p = this.getProject(name);
+    if (!p) throw new Error(`Unknown project "${name}"`);
+    return p;
+  }
+
+  /** Appends a milestone to the project. */
+  async addMilestone(project: string, m: Milestone): Promise<Project> {
+    const p = this.requireProject(project);
+    const bad = validateMilestoneName(m.name, p.milestones.map((x) => x.name));
+    if (bad) throw new Error(bad);
+    const entry: Milestone = { name: m.name.trim() };
+    if (m.target) entry.target = m.target;
+    if (m.description) entry.description = m.description;
+    return this.updateProject(project, { milestones: [...p.milestones, entry] });
+  }
+
+  /** Changes target/description (null clears) of a milestone. */
+  async updateMilestone(project: string, name: string, patch: { target?: string | null; description?: string | null }): Promise<Project> {
+    const p = this.requireProject(project);
+    const next = p.milestones.map((m) => {
+      if (m.name !== name) return m;
+      const out: Milestone = { name: m.name };
+      const target = patch.target === undefined ? m.target : (patch.target ?? undefined);
+      const description = patch.description === undefined ? m.description : (patch.description ?? undefined);
+      if (target) out.target = target;
+      if (description) out.description = description;
+      return out;
+    });
+    return this.updateProject(project, { milestones: next });
+  }
+
+  /** Renames a milestone and rewrites `milestone` on every issue of the project that uses it. Returns issues rewritten. */
+  async renameMilestone(
+    project: string,
+    oldName: string,
+    newName: string,
+    opts: { onProgress?: (done: number, total: number) => void } = {},
+  ): Promise<number> {
+    const p = this.requireProject(project);
+    const target = newName.trim();
+    const bad = validateMilestoneName(target, p.milestones.map((x) => x.name), oldName);
+    if (bad) throw new Error(bad);
+    if (target === oldName) return 0;
+    if (!p.milestones.some((m) => m.name === oldName)) throw new Error(`Unknown milestone "${oldName}"`);
+    await this.updateProject(project, { milestones: p.milestones.map((m) => (m.name === oldName ? { ...m, name: target } : m)) });
+    return this.bulkUpdate((i) => issueInMilestone(i, p.name, oldName), { milestone: target }, opts);
+  }
+
+  /** Clears `milestone` on the project's issues that use it (logged as activity), then removes the milestone. */
+  async deleteMilestone(project: string, name: string, opts: { onProgress?: (done: number, total: number) => void } = {}): Promise<number> {
+    const p = this.requireProject(project);
+    const n = await this.bulkUpdate((i) => issueInMilestone(i, p.name, name), { milestone: null }, opts);
+    await this.updateProject(project, { milestones: this.requireProject(project).milestones.filter((m) => m.name !== name) });
+    return n;
+  }
+
+  /** Orders the project's milestones to follow `names`. */
+  async reorderMilestones(project: string, names: readonly string[]): Promise<Project> {
+    const p = this.requireProject(project);
+    return this.updateProject(project, { milestones: reorderMilestones(p.milestones, names) });
   }
 
   /**

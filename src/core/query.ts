@@ -30,6 +30,8 @@ export interface GroupOptions {
   projects?: readonly Project[];
   /** Known label names for empty label groups. */
   labels?: readonly string[];
+  /** Milestone grouping order (a project's milestones); unlisted milestones follow by name. */
+  milestoneOrder?: readonly string[];
 }
 
 export const OTHER_GROUP_KEY = "__other__";
@@ -206,13 +208,23 @@ export function groupIssues(
         groupBy === "project"
           ? (opts.projects ?? []).map((p) => p.name)
           : groupBy === "milestone"
-            ? (opts.projects ?? []).flatMap((p) => p.milestones.map((m) => m.name))
+            ? opts.milestoneOrder
+              ? [...opts.milestoneOrder]
+              : (opts.projects ?? []).flatMap((p) => p.milestones.map((m) => m.name))
             : groupBy === "label"
               ? [...(opts.labels ?? [])]
               : [];
       for (const n of extra) if (!buckets.has(n)) buckets.set(n, []);
     }
-    groups = [...buckets.keys()].sort(byName).map((n) => ({
+    const order = groupBy === "milestone" ? opts.milestoneOrder : undefined;
+    const rank = (n: string) => order?.findIndex((o) => o.toLowerCase() === n.toLowerCase()) ?? -1;
+    const keys = [...buckets.keys()].sort((a, b) => {
+      const ra = rank(a);
+      const rb = rank(b);
+      if (ra < 0 && rb < 0) return byName(a, b);
+      return ra < 0 ? 1 : rb < 0 ? -1 : ra - rb;
+    });
+    groups = keys.map((n) => ({
       key: `${groupBy}:${n}`,
       label: n,
       field: groupBy,
@@ -299,6 +311,8 @@ export function buildView(
   now: Date,
 ): BuiltView {
   let list = selectView(issues, viewId, projects, settings);
+  const scopedName = viewId.startsWith("project:") ? viewId.slice("project:".length) : undefined;
+  const scopedProject = scopedName === undefined ? undefined : projects.find((p) => p.name.toLowerCase() === scopedName.toLowerCase());
   list = filterCompleted(list, display.completed, now, settings);
   if (typeof filters === "function") list = list.filter(filters);
   else if (filters) list = applyFilters(list, filters, now, settings);
@@ -309,6 +323,7 @@ export function buildView(
     orderBy: display.orderBy,
     projects,
     labels: Object.keys(settings.labelColors),
+    milestoneOrder: scopedProject?.milestones.map((m) => m.name),
   };
   const sub = display.subGroupBy === display.groupBy ? "none" : display.subGroupBy;
   const groups = subGroup(groupIssues(list, display.groupBy, settings, opts), sub, settings, opts);

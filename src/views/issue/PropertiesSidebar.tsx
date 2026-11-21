@@ -150,7 +150,7 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
         <ProjectPicker
           anchor={anchor}
           value={project}
-          onChange={(p) => onUpdate({ project: p ?? null, ...(issue.milestone ? { milestone: null } : {}) })}
+          onChange={(p) => onUpdate({ project: p ?? null })}
           onClose={onClose}
         />
       )}
