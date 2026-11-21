@@ -1,0 +1,3 @@
+.kyle-term-root { height: 100%; width: 100%; padding: 4px; box-sizing: border-box; overflow: hidden; }
+.kyle-term-root .xterm { height: 100%; }
+.kyle-term-message { padding: 16px; color: var(--text-error); white-space: pre-wrap; }

@@ -13,7 +13,7 @@ Obsidian terminal plugin built for AI coding agents (Claude Code first-class). M
 ## Install (from source)
 
 ```bash
-git clone https://github.com/<you>/kyle-term.git
+git clone https://github.com/arenalkyle/kyle-term.git
 cd kyle-term
 npm install
 # list target vaults (`;`-separated):

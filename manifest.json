@@ -1,0 +1,9 @@
+{
+  "id": "kyle-term",
+  "name": "kyle-term",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Terminals for AI coding agents, in a dedicated tab.",
+  "author": "kyle-term",
+  "isDesktopOnly": true
+}
