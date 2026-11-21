@@ -1,4 +1,7 @@
+import { useState } from "react";
+import type { DisplayState } from "../../core/display";
 import { Icon } from "../components/icons";
+import { DisplayPopover } from "./DisplayPopover";
 
 export interface HeaderProps {
   title: string;
@@ -6,9 +9,13 @@ export interface HeaderProps {
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   onNewIssue: () => void;
+  display: DisplayState;
+  onDisplayChange: (next: DisplayState) => void;
+  onDisplayReset: () => void;
 }
 
-export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewIssue }: HeaderProps) {
+export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewIssue, display, onDisplayChange, onDisplayReset }: HeaderProps) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
     <div className="kt-header">
       <button
@@ -29,9 +36,18 @@ export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewI
       <button type="button" className="kt-header-btn" disabled title="Filters come later">
         <Icon name="list-filter" size={14} /> Filter
       </button>
-      <button type="button" className="kt-header-btn" disabled title="Display options come later">
+      <button type="button" className="kt-header-btn" onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}>
         <Icon name="sliders-horizontal" size={14} /> Display
       </button>
+      {anchor && (
+        <DisplayPopover
+          anchor={anchor}
+          display={display}
+          onChange={onDisplayChange}
+          onReset={onDisplayReset}
+          onClose={() => setAnchor(null)}
+        />
+      )}
       <button type="button" className="mod-cta" onClick={onNewIssue}>
         New issue
       </button>

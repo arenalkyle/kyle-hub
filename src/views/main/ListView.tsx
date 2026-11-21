@@ -1,7 +1,9 @@
 import { TFile } from "obsidian";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { groupIssues, type Group } from "../../core/query";
+import type { DisplayState } from "../../core/display";
+import type { Group } from "../../core/query";
 import type { Issue, Priority } from "../../core/types";
+import type { NewIssueDefaults } from "../NewIssueModal";
 import { Icon, StatusIcon } from "../components/icons";
 import { PriorityPicker } from "../components/pickers/PriorityPicker";
 import { StatusPicker } from "../components/pickers/StatusPicker";
@@ -11,31 +13,60 @@ import { IssueRow } from "./IssueRow";
 export const ITEM_HEIGHT = 36;
 const OVERSCAN = 12;
 
-type Item = { kind: "header"; group: Group; collapsed: boolean } | { kind: "row"; issue: Issue };
+type Item =
+  | { kind: "header"; group: Group; collapsed: boolean; depth: 0 | 1; parent?: Group }
+  | { kind: "row"; issue: Issue; depth: 0 | 1 };
+
+/** New issue presets for a group (and its parent group) where the grouped field maps to an issue field. */
+export function presetFor(groups: readonly (Group | undefined)[]): NewIssueDefaults {
+  const d: NewIssueDefaults = {};
+  for (const g of groups) {
+    if (!g?.field || g.value === undefined) continue;
+    if (g.field === "status") d.status = g.value;
+    else if (g.field === "priority") d.priority = g.value as Priority;
+    else if (g.field === "project") d.project = g.value;
+    else if (g.field === "assignee") d.assignee = g.value;
+    else if (g.field === "label") d.labels = [g.value];
+    else if (g.field === "milestone") d.milestone = g.value;
+  }
+  return d;
+}
 
 /** Flattens groups into one fixed-height list so it can be windowed. */
 export function flatten(groups: Group[], collapsed: ReadonlySet<string>): Item[] {
   const out: Item[] = [];
   for (const g of groups) {
     const c = collapsed.has(g.key);
-    out.push({ kind: "header", group: g, collapsed: c });
-    if (!c) for (const issue of g.issues) out.push({ kind: "row", issue });
+    out.push({ kind: "header", group: g, collapsed: c, depth: 0 });
+    if (c) continue;
+    if (!g.subgroups) {
+      for (const issue of g.issues) out.push({ kind: "row", issue, depth: 0 });
+      continue;
+    }
+    for (const s of g.subgroups) {
+      const sc = collapsed.has(s.key);
+      out.push({ kind: "header", group: s, collapsed: sc, depth: 1, parent: g });
+      if (!sc) for (const issue of s.issues) out.push({ kind: "row", issue, depth: 1 });
+    }
   }
   return out;
 }
 
 export interface ListViewProps {
-  issues: Issue[];
+  groups: Group[];
+  display: DisplayState;
+  subCounts: ReadonlyMap<string, number>;
+  /** All issues in the view, for resolving picker targets. */
+  issues: readonly Issue[];
   viewId: string;
   project?: string;
   collapsed: ReadonlySet<string>;
   onToggleGroup: (key: string) => void;
 }
 
-export function ListView({ issues, viewId, project, collapsed, onToggleGroup }: ListViewProps) {
+export function ListView({ groups, display, subCounts, issues, viewId, project, collapsed, onToggleGroup }: ListViewProps) {
   const plugin = usePlugin();
   const { settings } = plugin.data;
-  const groups = useMemo(() => groupIssues(issues, "status", settings), [issues, settings]);
   const items = useMemo(() => flatten(groups, collapsed), [groups, collapsed]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -80,14 +111,14 @@ export function ListView({ issues, viewId, project, collapsed, onToggleGroup }: 
           if (item.kind === "row") {
             return (
               <div key={item.issue.id} className="kt-item" style={style}>
-                <IssueRow issue={item.issue} settings={settings} onOpen={open} onStatus={onStatus} onPriority={onPriority} />
+                <IssueRow issue={item.issue} settings={settings} properties={display.properties} sub={item.depth === 1} subCount={subCounts.get(item.issue.id)} onOpen={open} onStatus={onStatus} onPriority={onPriority} />
               </div>
             );
           }
           const g = item.group;
           return (
             <div key={`h:${g.key}`} className="kt-item" style={style}>
-              <div className="kt-group-header" onClick={() => onToggleGroup(g.key)}>
+              <div className={`kt-group-header${item.depth === 1 ? " is-sub" : ""}`} onClick={() => onToggleGroup(g.key)}>
                 <span className={`kt-chevron${item.collapsed ? " is-collapsed" : ""}`}>
                   <Icon name="chevron-down" size={14} />
                 </span>
@@ -100,7 +131,7 @@ export function ListView({ issues, viewId, project, collapsed, onToggleGroup }: 
                   title={`New issue in ${g.label}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    plugin.openNewIssue({ status: g.status?.name, project });
+                    plugin.openNewIssue({ project, ...presetFor([item.parent, g]) });
                   }}
                 >
                   <Icon name="plus" size={14} />

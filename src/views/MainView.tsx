@@ -3,12 +3,13 @@ import { StrictMode, useCallback, useMemo, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type KyleTicketsPlugin from "../main";
 import type { MainUiState } from "../data";
-import { selectView, viewTitle } from "../core/query";
+import { buildView, viewTitle } from "../core/query";
 import { useIssues, useProjects } from "../store/hooks";
 import { PluginContext, usePlugin } from "./PluginContext";
 import { Header } from "./main/Header";
 import { ListView } from "./main/ListView";
 import { Sidebar } from "./main/Sidebar";
+import { useViewState } from "./main/useViewState";
 
 export const VIEW_TYPE_MAIN = "kyle-tickets-main";
 
@@ -30,7 +31,12 @@ function MainApp() {
   );
 
   const view = ui.view;
-  const visible = useMemo(() => selectView(issues, view, projects, settings), [issues, view, projects, settings]);
+  const { display, setDisplay, reset } = useViewState(view);
+  const built = useMemo(
+    () => buildView(issues, view, projects, settings, display, undefined, new Date()),
+    [issues, view, projects, settings, display],
+  );
+  const visible = built.groups;
   const collapsed = useMemo(() => new Set(ui.collapsedGroups[view] ?? []), [ui.collapsedGroups, view]);
   const project = view.startsWith("project:") ? view.slice("project:".length) : undefined;
 
@@ -58,15 +64,18 @@ function MainApp() {
       <div className="kt-content">
         <Header
           title={viewTitle(view)}
-          count={visible.length}
+          count={built.total}
           sidebarCollapsed={ui.sidebarCollapsed}
           onToggleSidebar={() => commit({ ...ui, sidebarCollapsed: !ui.sidebarCollapsed })}
           onNewIssue={newIssue}
+          display={display}
+          onDisplayChange={setDisplay}
+          onDisplayReset={reset}
         />
         {!plugin.data.setupDone && (
           <div className="kt-notice">kyle-tickets setup has not run yet. Finish the setup window or open the plugin settings.</div>
         )}
-        {visible.length === 0 ? (
+        {visible.length === 0 && !display.showEmptyGroups ? (
           <div className="kt-empty">
             <div>No issues</div>
             <button type="button" className="mod-cta" onClick={newIssue}>
@@ -74,7 +83,7 @@ function MainApp() {
             </button>
           </div>
         ) : (
-          <ListView issues={visible} viewId={view} project={project} collapsed={collapsed} onToggleGroup={toggleGroup} />
+          <ListView groups={built.groups} display={display} subCounts={built.subCounts} issues={issues} viewId={view} project={project} collapsed={collapsed} onToggleGroup={toggleGroup} />
         )}
       </div>
     </div>

@@ -59,3 +59,30 @@ export function CreatedChip({ created }: { created: string }) {
     </span>
   );
 }
+
+export function MilestoneChip({ milestone }: { milestone: string }) {
+  return (
+    <span className="kt-chip" title={`Milestone ${milestone}`}>
+      <Icon name="flag" size={12} />
+      <span className="kt-chip-text">{milestone}</span>
+    </span>
+  );
+}
+
+export function PullRequestChip({ count }: { count: number }) {
+  return (
+    <span className="kt-chip" title={`${count} pull request${count === 1 ? "" : "s"}`}>
+      <Icon name="git-pull-request" size={12} />
+      <span className="kt-chip-text">{count}</span>
+    </span>
+  );
+}
+
+export function SubIssuesChip({ count }: { count: number }) {
+  return (
+    <span className="kt-chip" title={`${count} sub-issue${count === 1 ? "" : "s"}`}>
+      <Icon name="list-tree" size={12} />
+      <span className="kt-chip-text">{count} sub-issues</span>
+    </span>
+  );
+}

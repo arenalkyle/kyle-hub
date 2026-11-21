@@ -20,6 +20,10 @@ export interface NewIssueDefaults {
   status?: string;
   project?: string;
   parent?: string;
+  priority?: Priority;
+  assignee?: string;
+  labels?: string[];
+  milestone?: string;
 }
 
 type PickerKind = "status" | "priority" | "assignee" | "labels" | "project" | "milestone" | "due" | "parent";
@@ -53,11 +57,11 @@ function NewIssueForm({ defaults, close }: { defaults: NewIssueDefaults; close: 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState(defaults.status ?? settings.defaultStatus);
-  const [priority, setPriority] = useState<Priority>("none");
-  const [assignee, setAssignee] = useState<string | undefined>();
-  const [labels, setLabels] = useState<string[]>([]);
+  const [priority, setPriority] = useState<Priority>(defaults.priority ?? "none");
+  const [assignee, setAssignee] = useState<string | undefined>(defaults.assignee);
+  const [labels, setLabels] = useState<string[]>(defaults.labels ?? []);
   const [project, setProject] = useState<string | undefined>(defaults.project);
-  const [milestone, setMilestone] = useState<string | undefined>();
+  const [milestone, setMilestone] = useState<string | undefined>(defaults.milestone);
   const [due, setDue] = useState<string | undefined>();
   const [parent, setParent] = useState<string | undefined>(defaults.parent);
   const [more, setMore] = useState(false);
