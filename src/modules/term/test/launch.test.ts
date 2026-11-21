@@ -7,6 +7,7 @@ import type { SessionInfo, SpawnSessionOptions } from "../../../core";
 import type { RepoConfig } from "../../../core/domain/fields";
 import type { Issue } from "../../../core/domain/types";
 import { branchName, branchSlug, defaultBranch, Launcher, makeRunId, type GitPort, type LaunchDeps } from "../launch/launch";
+import type { AccountsSettings } from "../../../core/accounts";
 import { realFs, realGit } from "../launch/git";
 
 const STATUSES = [
@@ -27,6 +28,8 @@ interface Opts {
   pick?: string | undefined;
   gitFail?: boolean;
   vault?: "home" | "work";
+  accounts?: AccountsSettings;
+  pickAccount?: LaunchDeps["pickAccount"];
 }
 
 function setup(opts: Opts = {}) {
@@ -74,6 +77,8 @@ function setup(opts: Opts = {}) {
     settings: () => ({ maxConcurrentRuns: opts.max ?? 3, defaultModel: "sonnet", claudeCommand: "claude" }),
     packDir: () => "C:\\data\\home\\packs",
     pickRepo,
+    accounts: () => opts.accounts ?? { list: [] },
+    pickAccount: opts.pickAccount,
     join: path.win32.join,
     dirname: path.win32.dirname,
   };
@@ -94,6 +99,70 @@ describe("launch guard (ADR-0008)", () => {
   it("launches when the profiles match", async () => {
     const h = setup({ vault: "home" });
     expect(await h.launcher.launch("LOCK-9")).toMatchObject({ ok: true });
+  });
+});
+
+const ACC = (id: string, over: Record<string, unknown> = {}) => ({ id, label: id, kind: "subscription" as const, plan: "max", configDir: `C:/cfg/${id}`, ...over });
+const repoWith = (account?: string): Record<string, RepoConfig> => ({ hub: { path: "C:\dev\hub", profile: "home", worktrees: true, ...(account ? { account } : {}) } });
+
+describe("account routing (ADR-0012)", () => {
+  it("spawns with CLAUDE_CONFIG_DIR of the default account and carries the id on the run", async () => {
+    const onRun = vi.fn();
+    const h = setup({ accounts: { list: [ACC("main"), ACC("alt")], default: "main" } });
+    (h.launcher as unknown as { deps: LaunchDeps }).deps.onRun = onRun;
+    const r = await h.launcher.launch("LOCK-9");
+    expect(r.ok).toBe(true);
+    const env = h.spawn.mock.calls[0]![0].env!;
+    expect(env.CLAUDE_CONFIG_DIR).toBe("C:/cfg/main");
+    expect(env.KH_ACCOUNT).toBe("main");
+    expect(onRun.mock.calls[0]![0].accountId).toBe("main");
+  });
+
+  it("repo account beats the default; ticket override beats the repo", async () => {
+    const accounts = { list: [ACC("main"), ACC("alt"), ACC("third")], default: "main" };
+    const a = setup({ accounts, repos: repoWith("alt") });
+    await a.launcher.launch("LOCK-9");
+    expect(a.spawn.mock.calls[0]![0].env!.CLAUDE_CONFIG_DIR).toBe("C:/cfg/alt");
+    const b = setup({ accounts, repos: repoWith("alt"), ticket: ticket({ account: "third" } as never) });
+    await b.launcher.launch("LOCK-9");
+    expect(b.spawn.mock.calls[0]![0].env!.CLAUDE_CONFIG_DIR).toBe("C:/cfg/third");
+  });
+
+  it("no accounts configured: no CLAUDE_CONFIG_DIR is set", async () => {
+    const h = setup();
+    await h.launcher.launch("LOCK-9");
+    expect(h.spawn.mock.calls[0]![0].env).not.toHaveProperty("CLAUDE_CONFIG_DIR");
+  });
+
+  it("picker choice is used and saved as the ticket override when it differs", async () => {
+    const pick = vi.fn(async () => "alt");
+    const h = setup({ accounts: { list: [ACC("main"), ACC("alt")], default: "main" }, pickAccount: pick });
+    await h.launcher.launch("LOCK-9");
+    expect(pick).toHaveBeenCalledWith(expect.any(Array), "main");
+    expect(h.spawn.mock.calls[0]![0].env!.CLAUDE_CONFIG_DIR).toBe("C:/cfg/alt");
+    expect((h.update.mock.calls[0] as unknown[])[1]).toMatchObject({ account: "alt" });
+  });
+
+  it("dismissed picker cancels before any git or spawn", async () => {
+    const h = setup({ accounts: { list: [ACC("main"), ACC("alt")], default: "main" }, pickAccount: async () => undefined });
+    expect(await h.launcher.launch("LOCK-9")).toMatchObject({ ok: false, reason: "cancelled" });
+    expect(h.gitCalls).toHaveLength(0);
+    expect(h.spawn).not.toHaveBeenCalled();
+  });
+
+  it("refuses an account whose profile mismatches the vault, before git or spawn", async () => {
+    const h = setup({ vault: "home", accounts: { list: [ACC("corp", { profile: "work" })], default: "corp" } });
+    const r = await h.launcher.launch("LOCK-9");
+    expect(r).toMatchObject({ ok: false, reason: "account-profile-mismatch" });
+    expect(!r.ok && r.message).toMatch(/work.*home/);
+    expect(h.gitCalls).toHaveLength(0);
+    expect(h.spawn).not.toHaveBeenCalled();
+  });
+
+  it("refuses a repo naming an unknown account", async () => {
+    const h = setup({ accounts: { list: [ACC("main")], default: "main" }, repos: repoWith("gone") });
+    expect(await h.launcher.launch("LOCK-9")).toMatchObject({ ok: false, reason: "unknown-account" });
+    expect(h.spawn).not.toHaveBeenCalled();
   });
 });
 

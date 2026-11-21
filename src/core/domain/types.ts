@@ -83,6 +83,8 @@ export interface Issue {
   repo?: string;
   blockedBy?: string[];
   model?: Model;
+  /** Account id override for launches of this ticket (`core.accounts`). */
+  account?: string;
   runs?: string[];
   outcome?: Outcome;
   costUsd?: number;

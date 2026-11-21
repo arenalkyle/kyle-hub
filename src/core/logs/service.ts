@@ -24,6 +24,7 @@ interface SessionEntry {
   cwd?: string;
   repo?: string;
   profile: Profile;
+  accountId?: string;
   model?: string;
   start: string;
   end: string;
@@ -42,6 +43,8 @@ export interface LogServiceOptions {
   dataRoot?: (profile: Profile) => string;
   /** Claude projects dir; default `$CLAUDE_CONFIG_DIR/projects` or `~/.claude/projects`. */
   projectsDir?: string;
+  /** Extra Claude accounts: each `<configDir>/projects` is ingested and its records tagged with the account id. */
+  accounts?: readonly { id: string; configDir: string }[] | (() => readonly { id: string; configDir: string }[]);
   repoMap?: readonly RepoMapEntry[];
   denylist?: readonly string[];
   prices?: PriceTable;
@@ -51,6 +54,8 @@ export interface LogServiceOptions {
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
+
+const accountList = (a: LogServiceOptions["accounts"]): readonly { id: string; configDir: string }[] => (typeof a === "function" ? a() : (a ?? []));
 
 export function defaultProjectsDir(env: Record<string, string | undefined> = process.env): string {
   return path.join(env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"), "projects");
@@ -199,6 +204,23 @@ export class FileLogService implements LogService {
     this.projectsDir = opts.projectsDir ?? defaultProjectsDir();
   }
 
+  /** Transcripts of the default projects dir (untagged) and of every account's `<configDir>/projects` (tagged). Reads only `*.jsonl` under `projects`. */
+  private async transcriptSources(): Promise<{ file: string; accountId?: string }[]> {
+    const seen = new Set<string>();
+    const out: { file: string; accountId?: string }[] = [];
+    const dirs: { dir: string; accountId?: string }[] = [
+      ...accountList(this.opts.accounts).map((a) => ({ dir: path.join(a.configDir, "projects"), accountId: a.id })),
+      { dir: this.projectsDir },
+    ];
+    for (const { dir, accountId } of dirs) {
+      const key = normPath(dir);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      for (const file of await listTranscripts(dir)) out.push({ file, accountId });
+    }
+    return out;
+  }
+
   private dirFor(profile: Profile): string {
     return this.opts.dataRoot ? this.opts.dataRoot(profile) : dataDir(profile);
   }
@@ -207,9 +229,9 @@ export class FileLogService implements LogService {
   async ingest(ingestOpts: IngestOptions = {}): Promise<IngestResult> {
     const result: IngestResult = { runsUpdated: 0, records: 0, skipped: 0 };
     const files = await Promise.all(
-      (await listTranscripts(this.projectsDir)).map(async (file) => {
+      (await this.transcriptSources()).map(async ({ file, accountId }) => {
         const cwd = await headCwd(file);
-        return { file, cwd, ...resolveRepo(cwd, this.repoMap) };
+        return { file, cwd, accountId, ...resolveRepo(cwd, this.repoMap) };
       }),
     );
     const profiles = ingestOpts.profile ? [ingestOpts.profile] : PROFILES;
@@ -221,7 +243,7 @@ export class FileLogService implements LogService {
       for (const f of files) {
         if (f.profile !== profile) continue;
         if (ingestOpts.sessionId && path.basename(f.file, ".jsonl") !== ingestOpts.sessionId) continue;
-        changed = (await this.ingestFile(f.file, f.cwd, profile, state, batch, result)) || changed;
+        changed = (await this.ingestFile(f.file, f.cwd, profile, f.accountId, state, batch, result)) || changed;
       }
       const touched = await this.flush(dir, batch, result);
       if (touched.length > 0) this.updateIndex(dir, touched);
@@ -310,14 +332,14 @@ export class FileLogService implements LogService {
       const profile = event.profile ?? resolveRepo(event.cwd, this.repoMap).profile;
       const dir = path.join(this.dirFor(profile), "hooks");
       fs.mkdirSync(dir, { recursive: true });
-      const line = JSON.stringify({ t, sessionId: event.sessionId, name: event.name, state: event.state, runId: event.runId, ticketId: event.ticketId, cwd: event.cwd });
+      const line = JSON.stringify({ t, sessionId: event.sessionId, name: event.name, state: event.state, runId: event.runId, ticketId: event.ticketId, accountId: event.accountId, cwd: event.cwd });
       fs.appendFileSync(path.join(dir, `${t.slice(0, 10)}.jsonl`), `${line}\n`);
     } catch {
       // swallowed on purpose: a failing log write must never break a hook
     }
   }
 
-  private ensureSession(state: State, batch: Batch, sid: string, cwd: string | undefined, profile: Profile, t: string): SessionEntry {
+  private ensureSession(state: State, batch: Batch, sid: string, cwd: string | undefined, profile: Profile, t: string, accountId?: string): SessionEntry {
     const existing = state.sessions[sid];
     if (existing) {
       if (!existing.cwd && cwd) {
@@ -329,8 +351,9 @@ export class FileLogService implements LogService {
     }
     const { repo } = resolveRepo(cwd, this.repoMap);
     const s: SessionEntry = { runId: `s-${sid}`, cwd, repo, profile, start: t, end: t };
+    if (accountId) s.accountId = accountId;
     state.sessions[sid] = s;
-    batch.header(s.runId, { type: "run", t, sessionId: sid, cwd, repo, profile }, cwd);
+    batch.header(s.runId, { type: "run", t, sessionId: sid, cwd, repo, profile, ...(accountId ? { accountId } : {}) }, cwd);
     return s;
   }
 
@@ -359,7 +382,11 @@ export class FileLogService implements LogService {
         const s = this.ensureSession(state, batch, e.sessionId, cwd, profile, t);
         if (typeof e.runId === "string" && e.runId !== s.runId) {
           s.runId = e.runId;
-          batch.header(s.runId, { type: "run", t: s.start, sessionId: e.sessionId, cwd: s.cwd, repo: s.repo, profile }, s.cwd);
+          batch.header(s.runId, { type: "run", t: s.start, sessionId: e.sessionId, cwd: s.cwd, repo: s.repo, profile, ...(s.accountId ? { accountId: s.accountId } : {}) }, s.cwd);
+        }
+        if (typeof e.accountId === "string" && e.accountId !== s.accountId) {
+          s.accountId = e.accountId;
+          batch.push(s.runId, { type: "run_meta", t, accountId: e.accountId });
         }
         if (typeof e.ticketId === "string" && e.ticketId !== s.ticketId) {
           s.ticketId = e.ticketId;
@@ -380,7 +407,7 @@ export class FileLogService implements LogService {
     return changed;
   }
 
-  private async ingestFile(file: string, headCwdValue: string | undefined, profile: Profile, state: State, batch: Batch, result: IngestResult): Promise<boolean> {
+  private async ingestFile(file: string, headCwdValue: string | undefined, profile: Profile, accountId: string | undefined, state: State, batch: Batch, result: IngestResult): Promise<boolean> {
     const entry: TranscriptEntry = state.transcripts[file] ?? { offset: 0, cwd: headCwdValue, parse: { pending: {} } };
     const { lines, consumed } = await readNewLines(file, entry.offset).catch(() => ({ lines: [] as string[], consumed: 0 }));
     const fallbackSid = path.basename(file, ".jsonl");
@@ -401,7 +428,7 @@ export class FileLogService implements LogService {
         continue;
       }
       if (recs.length === 0) continue;
-      const s = this.ensureSession(state, batch, sid, cwd, profile, recs[0]?.t ?? "");
+      const s = this.ensureSession(state, batch, sid, cwd, profile, recs[0]?.t ?? "", accountId);
       for (const r of recs) {
         batch.push(s.runId, r);
         batch.cwdByRun.set(s.runId, s.cwd);

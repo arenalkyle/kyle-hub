@@ -19,6 +19,7 @@ export function summarizeRun(runId: string, records: readonly DerivedRecord[]): 
   let ticketId = str(header.ticketId);
   let outcome: string | undefined;
   let summaryCommented: boolean | undefined;
+  let accountId = str(header.accountId);
   for (const r of records) {
     if (r.t > end) end = r.t;
     switch (r.type) {
@@ -38,6 +39,7 @@ export function summarizeRun(runId: string, records: readonly DerivedRecord[]): 
       case "run_meta":
         ticketId = str(r.ticketId) ?? ticketId;
         outcome = str(r.outcome) ?? outcome;
+        accountId = str(r.accountId) ?? accountId;
         if (typeof r.summaryCommented === "boolean") summaryCommented = r.summaryCommented;
         break;
     }
@@ -59,6 +61,7 @@ export function summarizeRun(runId: string, records: readonly DerivedRecord[]): 
   const repo = str(header.repo);
   if (repo) entry.repo = repo;
   if (model) entry.model = model;
+  if (accountId) entry.accountId = accountId;
   if (outcome) entry.outcome = outcome;
   if (summaryCommented !== undefined) entry.summaryCommented = summaryCommented;
   return entry;
@@ -109,6 +112,7 @@ export function queryRuns(entries: readonly RunIndexEntry[], q: RunQuery = {}): 
     .filter((e) => since === undefined || Date.parse(e.start) >= since)
     .filter((e) => q.ticketId === undefined || e.ticketId === q.ticketId)
     .filter((e) => q.repo === undefined || e.repo === q.repo)
+    .filter((e) => q.accountId === undefined || e.accountId === q.accountId)
     .filter((e) => q.profile === undefined || e.profile === q.profile)
     .sort((a, b) => (a.start < b.start ? 1 : a.start > b.start ? -1 : 0));
   return q.limit !== undefined ? out.slice(0, Math.max(0, q.limit)) : out;

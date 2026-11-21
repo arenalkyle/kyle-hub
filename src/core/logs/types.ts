@@ -26,6 +26,7 @@ export interface HookEvent {
   ticketId?: string;
   cwd?: string;
   profile?: Profile;
+  accountId?: string;
 }
 
 export interface IngestOptions {
@@ -38,6 +39,7 @@ export interface IngestOptions {
 export interface RunMeta {
   outcome?: string;
   summaryCommented?: boolean;
+  accountId?: string;
 }
 
 export interface IngestResult {
@@ -64,6 +66,8 @@ export interface RunIndexEntry {
   denials: number;
   outcome?: string;
   summaryCommented?: boolean;
+  /** Claude account the run used (`core.accounts` id); absent for Claude's own default dir. */
+  accountId?: string;
 }
 
 export interface RunQuery {
@@ -71,6 +75,7 @@ export interface RunQuery {
   since?: string;
   ticketId?: string;
   repo?: string;
+  accountId?: string;
   /** Only runs of this profile (the vault profile for the dashboard and retro). */
   profile?: Profile;
   limit?: number;

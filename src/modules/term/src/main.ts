@@ -28,6 +28,8 @@ import { orphanFiles, scrollbackFile } from "./persist";
 import { dataDir } from "../../../core/paths";
 import { vaultProfileOf } from "../../../core/profile";
 import type { RepoConfig } from "../../../core/domain/fields";
+import { accountsOf } from "../../../core/accounts";
+import { AccountPicker } from "../queue/AccountPicker";
 import { Launcher, type LaunchSettings } from "../launch/launch";
 import { realFs, realGit, realPrMerged } from "../launch/git";
 import { AttentionTracker, StallDetector } from "../run/attention";
@@ -454,6 +456,8 @@ export default class TermHost {
       packDir: (profile) => path.join(dataDir(profile), "packs"),
       vaultProfile: () => vaultProfileOf(this.hub.settings.module("core")),
       brain: () => this.hub.services.get("brain"),
+      accounts: () => accountsOf(this.hub.settings.module("core")),
+      pickAccount: (list, pre) => new Promise((resolve) => new AccountPicker(this.app, list, pre, resolve).open()),
       pickRepo: (keys) => new Promise((resolve) => new RepoPicker(this.app, keys, resolve).open()),
       onRun: (r) => this.registry.register(r),
       join: path.join,

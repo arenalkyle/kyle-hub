@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
+import { accountsOf } from "../../../src/core/accounts";
 import { dataDir } from "../../../src/core/paths";
 import { defaultProjectsDir, FileLogService } from "../../../src/core/logs/service";
 import type { RetentionPolicy } from "../../../src/core/logs/retention";
@@ -18,11 +19,12 @@ interface LogConfig {
   denylist: string[];
   prices: PriceTable;
   retention: Partial<RetentionPolicy>;
+  accounts: { id: string; configDir: string }[];
 }
 
 /** Reads `core.repos` and `core.logs` from the first configured vault's plugin data.json (read-only). */
 export function readLogConfig(env: Record<string, string | undefined>): LogConfig {
-  const empty: LogConfig = { repoMap: [], denylist: [], prices: {}, retention: {} };
+  const empty: LogConfig = { repoMap: [], denylist: [], prices: {}, retention: {}, accounts: [] };
   const vault = (env.KYLE_HUB_VAULTS ?? env.KYLE_TICKETS_VAULTS ?? "").split(";").map((s) => s.trim()).find((s) => s.length > 0);
   if (!vault) return empty;
   let data: unknown;
@@ -31,7 +33,7 @@ export function readLogConfig(env: Record<string, string | undefined>): LogConfi
   } catch {
     return empty;
   }
-  const core = isObj(data) && isObj(data.core) ? data.core : {};
+  const core = isObj(data) && isObj(data.modules) && isObj(data.modules.core) ? data.modules.core : isObj(data) && isObj(data.core) ? data.core : {};
   const repos = isObj(core.repos) ? core.repos : {};
   const logs = isObj(core.logs) ? core.logs : {};
   const repoMap: RepoMapEntry[] = Object.entries(repos).flatMap(([name, v]) =>
@@ -52,7 +54,8 @@ export function readLogConfig(env: Record<string, string | undefined>): LogConfi
   for (const k of ["retentionDays", "packRetentionDays", "spoolDays"] as const) {
     if (typeof logs[k] === "number") retention[k] = logs[k] as number;
   }
-  return { repoMap, denylist, prices, retention };
+  const accounts = accountsOf(core).list.map((a) => ({ id: a.id, configDir: a.configDir }));
+  return { repoMap, denylist, prices, retention, accounts };
 }
 
 /** A service over the configured log roots (`%LOCALAPPDATA%\kyle-hub\<profile>\` unless the env overrides it). */
@@ -63,6 +66,7 @@ export function serviceFor(io: Io): FileLogService {
     denylist: cfg.denylist,
     prices: cfg.prices,
     retention: cfg.retention,
+    accounts: cfg.accounts,
     projectsDir: defaultProjectsDir(io.env),
     dataRoot: (p: Profile) => dataDir(p, { env: io.env, homedir: os.homedir }),
   });

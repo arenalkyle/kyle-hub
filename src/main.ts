@@ -1,4 +1,5 @@
 import { homedir } from "node:os";
+import { mkdirSync } from "node:fs";
 import { Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { runDoctorChecks } from "./core/ops/environment";
 import { logServiceFromSettings, type CoreSettingsLike } from "./core/logs/hubService";
@@ -14,6 +15,7 @@ import {
 } from "./core";
 import { DEFAULT_FLOOD } from "./core/domain/flood";
 import { DEFAULT_PUBLIC_HOSTS } from "./core/domain/scrub";
+import { accountEnv, accountsOf, addAccount, removeAccount, renameAccount, setDefaultAccount, type Account, type AccountsSettings } from "./core/accounts";
 import { vaultProfileOf } from "./core/profile";
 import { termModule, termSettings } from "./modules/term";
 import { ticketsModule, ticketsSettings } from "./modules/tickets";
@@ -37,7 +39,7 @@ export default class KyleHubPlugin extends Plugin {
 
   override async onload(): Promise<void> {
     const parts = createHubParts();
-    parts.settings.register({ id: "core", defaults: { repos: {}, profile: "home", promote: { homeVaultPath: "", publicHosts: [...DEFAULT_PUBLIC_HOSTS], denylist: [] }, flood: { ...DEFAULT_FLOOD }, launch: { maxConcurrentRuns: 3, defaultModel: "sonnet" } } });
+    parts.settings.register({ id: "core", defaults: { repos: {}, accounts: { list: [], default: "" }, profile: "home", promote: { homeVaultPath: "", publicHosts: [...DEFAULT_PUBLIC_HOSTS], denylist: [] }, flood: { ...DEFAULT_FLOOD }, launch: { maxConcurrentRuns: 3, defaultModel: "sonnet" } } });
     parts.settings.register(ticketsSettings);
     parts.settings.register(termSettings);
     parts.settings.register(brainSettings);
@@ -130,6 +132,7 @@ class HubSettingTab extends PluginSettingTab {
       section.render(containerEl.createDiv());
     }
     this.displayProfile(containerEl);
+    this.displayAccounts(containerEl);
     this.displayRepos(containerEl);
     containerEl.createEl("h2", { text: "Log health" });
     const doctorOut = containerEl.createDiv();
@@ -184,10 +187,71 @@ class HubSettingTab extends PluginSettingTab {
     );
   }
 
+  /** Claude accounts (`core.accounts`): one CLAUDE_CONFIG_DIR each (ADR-0012). kyle-hub never reads or stores tokens. */
+  private displayAccounts(el: HTMLElement): void {
+    const core = this.plugin.hub.settings.module("core") as Record<string, unknown>;
+    const acc = (core.accounts ??= { list: [], default: "" }) as AccountsSettings;
+    const view = accountsOf(core);
+    acc.list = view.list;
+    acc.default = view.default;
+    const save = () => this.plugin.hub.save();
+    const login = (a: Account): void => {
+      const sessions = this.plugin.hub.services.get("sessions");
+      if (!sessions) return void new Notice("kyle-hub: enable the Terminals module to log in from Obsidian.");
+      mkdirSync(a.configDir, { recursive: true });
+      sessions.spawn({ command: "claude", env: accountEnv(a), title: `Login: ${a.label}` });
+      new Notice(`kyle-hub: run /login in the new tab (${a.label}).`);
+    };
+    el.createEl("h2", { text: "Claude accounts" });
+    el.createEl("p", { cls: "setting-item-description", text: "Each account has its own CLAUDE_CONFIG_DIR (login and transcripts stay separate). kyle-hub only sets the env var and opens a login tab; it never reads or stores tokens." });
+    for (const a of acc.list) {
+      new Setting(el)
+        .setName(`${a.label}${acc.default === a.id ? " (default)" : ""}`)
+        .setDesc(`${a.kind}${a.plan ? ` ${a.plan}` : ""}${a.profile ? ` · ${a.profile}` : ""} · ${a.configDir}`)
+        .addButton((b) => b.setButtonText("Login").onClick(() => login(a)))
+        .addButton((b) => b.setButtonText("Rename").onClick(async () => {
+          const label = window.prompt("New label", a.label);
+          if (label === null) return;
+          const r = renameAccount(acc, a.id, label);
+          if (!r.ok) return void new Notice(`kyle-hub: ${r.message}`);
+          await save();
+          this.display();
+        }))
+        .addButton((b) => b.setButtonText("Set default").setDisabled(acc.default === a.id).onClick(async () => {
+          setDefaultAccount(acc, a.id);
+          await save();
+          this.display();
+        }))
+        .addButton((b) => b.setButtonText("Remove").onClick(async () => {
+          removeAccount(acc, a.id);
+          await save();
+          this.display();
+        }));
+    }
+    let label = "";
+    let kind: Account["kind"] = "subscription";
+    let plan = "";
+    let profile = "";
+    new Setting(el)
+      .setName("Add account")
+      .setDesc("Label, kind, plan, profile (optional; a profile-bound account is refused in the other vault). Creates the config dir and opens a login tab.")
+      .addText((t) => t.setPlaceholder("label").onChange((v) => (label = v)))
+      .addDropdown((d) => d.addOptions({ subscription: "subscription", enterprise: "enterprise" }).setValue(kind).onChange((v) => (kind = v as Account["kind"])))
+      .addText((t) => t.setPlaceholder("plan (max, team...)").onChange((v) => (plan = v)))
+      .addDropdown((d) => d.addOptions({ "": "any profile", home: "home", work: "work" }).setValue(profile).onChange((v) => (profile = v)))
+      .addButton((b) => b.setButtonText("Add").setCta().onClick(async () => {
+        const r = addAccount(acc, { label, kind, plan, profile: profile === "home" || profile === "work" ? profile : undefined });
+        if (!r.ok) return void new Notice(`kyle-hub: ${r.message}`);
+        await save();
+        login(r.account);
+        this.display();
+      }));
+  }
+
   /** Repo map (`core.repos`) and launch limits, used by the term module's queue. */
   private displayRepos(el: HTMLElement): void {
     const core = this.plugin.hub.settings.module("core") as Record<string, unknown>;
-    const repos = (core.repos ??= {}) as Record<string, { path: string; profile: "work" | "home"; worktrees: boolean; github?: string }>;
+    const repos = (core.repos ??= {}) as Record<string, { path: string; profile: "work" | "home"; worktrees: boolean; github?: string; account?: string }>;
     const launch = (core.launch ??= { maxConcurrentRuns: 3, defaultModel: "sonnet" }) as { maxConcurrentRuns: number; defaultModel: string };
     const save = () => this.plugin.hub.save();
     el.createEl("h2", { text: "Repo map and launch" });
@@ -208,6 +272,13 @@ class HubSettingTab extends PluginSettingTab {
       new Setting(el)
         .setName(key)
         .setDesc(`${r.path} · ${r.profile} · ${r.worktrees === false ? "no worktrees" : "worktrees"}`)
+        .addDropdown((d) =>
+          d.addOptions({ "": "default account", ...Object.fromEntries(accountsOf(core).list.map((a) => [a.id, a.label])) }).setValue(r.account ?? "").onChange(async (v) => {
+            if (v) r.account = v;
+            else delete r.account;
+            await save();
+          }),
+        )
         .addButton((b) => b.setButtonText("Remove").onClick(async () => {
           delete repos[key];
           await save();

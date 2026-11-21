@@ -5,6 +5,7 @@ import type { Model, RepoConfig } from "../../../core/domain/fields";
 import type { RunInfo } from "../run/runs";
 import { checkProfileMatch } from "../../../core/profile";
 import type { Profile } from "../../../core/logs/types";
+import { accountEnv, checkAccountProfile, resolveAccount, type Account, type AccountsSettings } from "../../../core/accounts";
 
 export interface GitPort {
   /** Runs `git <args>` in `cwd`; rejects on a non-zero exit. */
@@ -39,6 +40,10 @@ export interface LaunchDeps {
   /** The vault profile (`core.profile`); a repo of another profile is refused. */
   vaultProfile: () => Profile;
   repos: () => Record<string, RepoConfig>;
+  /** `core.accounts`; an empty list launches under Claude's own default config dir (no `CLAUDE_CONFIG_DIR`). */
+  accounts?: () => AccountsSettings;
+  /** Launch picker, shown when more than one account exists; resolve to an account id or undefined to cancel. */
+  pickAccount?: (accounts: Account[], preselected: string | undefined) => Promise<string | undefined>;
   settings: () => LaunchSettings;
   /** `<localappdata>\kyle-hub\<profile>\packs`. */
   packDir: (profile: RepoConfig["profile"]) => string;
@@ -58,6 +63,8 @@ export type LaunchFailure =
   | "no-started-status"
   | "unsafe-path"
   | "profile-mismatch"
+  | "unknown-account"
+  | "account-profile-mismatch"
   | "git"
   | "spawn";
 
@@ -134,6 +141,23 @@ export class Launcher {
     const repo = repos[key]!;
     const guard = checkProfileMatch(d.vaultProfile(), repo.profile, key);
     if (!guard.ok) return fail("profile-mismatch", guard.message);
+    const acc = d.accounts?.() ?? { list: [] };
+    const resolved = resolveAccount(acc, { ticket: ticket.account, repo: repo.account, repoKey: key });
+    if (!resolved.ok) return fail(resolved.reason, resolved.message);
+    let account = resolved.account;
+    let accountOverride = false;
+    if (acc.list.length > 1 && d.pickAccount) {
+      const chosen = await d.pickAccount(acc.list, account?.id);
+      if (chosen === undefined) return fail("cancelled", "No account chosen.");
+      const picked = acc.list.find((a) => a.id === chosen);
+      if (!picked) return fail("unknown-account", `Launch refused: account "${chosen}" is not in the account list.`);
+      accountOverride = picked.id !== account?.id;
+      account = picked;
+    }
+    if (account) {
+      const ag = checkAccountProfile(d.vaultProfile(), account);
+      if (!ag.ok) return fail("account-profile-mismatch", ag.message);
+    }
     const started = [...d.tickets.statuses()].filter((s) => s.category === "started").sort((a, b) => a.order - b.order)[0];
     if (!started) return fail("no-started-status", "No started-category status exists.");
 
@@ -196,18 +220,18 @@ export class Launcher {
         cwd,
         command: cfg.claudeCommand || "claude",
         args: ["--model", model, `Work ticket ${id}. Context: @${packPath}`],
-        env: { KH_TICKET: id, KH_RUN: runId, KH_AGENT: "1" },
+        env: { KH_TICKET: id, KH_RUN: runId, KH_AGENT: "1", ...accountEnv(account) },
         title: id,
       });
     } catch (e) {
       return fail("spawn", `Could not start the session: ${(e as Error).message}`);
     }
     this.started.set(id, session.id);
-    d.onRun?.({ ticketId: id, runId, sessionId: session.id, startedAt: startedAt.getTime(), worktree: cwd, base, branch, repoPath: repo.path });
+    d.onRun?.({ ticketId: id, runId, sessionId: session.id, startedAt: startedAt.getTime(), worktree: cwd, base, branch, repoPath: repo.path, accountId: account?.id });
 
     const user = d.tickets.userName();
-    await d.tickets.update(id, { status: started.name, runs: [...(ticket.runs ?? []), runId] }, { author: user });
-    await d.tickets.logEvent(id, `launched by @${user} (model ${model}, run ${runId})`, { author: user });
+    await d.tickets.update(id, { status: started.name, runs: [...(ticket.runs ?? []), runId], ...(accountOverride && account ? { account: account.id } : {}) }, { author: user });
+    await d.tickets.logEvent(id, `launched by @${user} (model ${model}, run ${runId}${account ? `, account ${account.id}` : ""})`, { author: user });
     return { ok: true, runId, sessionId: session.id, cwd, branch, reusedWorktree: reused };
   }
 

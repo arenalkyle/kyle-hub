@@ -47,6 +47,8 @@ export interface RepoConfig {
   github?: string;
   profile: "work" | "home";
   worktrees: boolean;
+  /** Default account id for launches in this repo. */
+  account?: string;
 }
 
 /** Category of a status name; undefined when the name is unknown. */

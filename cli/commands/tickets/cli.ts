@@ -472,6 +472,7 @@ function cmdSet(args: string[], io: Io): void {
     }
     case "type": patch.type = clearing ? null : normType(value); break;
     case "repo": patch.repo = clearing ? null : value; break;
+    case "account": patch.account = clearing ? null : value; break;
     case "model": patch.model = clearing ? null : normModel(value); break;
     case "outcome": patch.outcome = clearing ? null : normOutcome(value); break;
     case "blockedby":

@@ -7,7 +7,7 @@ export function forwardHookToLogs(services: Pick<ServiceRegistry, "get">, m: Hoo
     const logs = services.get("logs");
     if (!logs) return;
     const cwd = typeof m.payload.cwd === "string" ? m.payload.cwd : undefined;
-    logs.appendHookEvent({ sessionId: m.session, name: m.event, cwd, runId: m.env?.KH_RUN, ticketId: m.env?.KH_TICKET });
+    logs.appendHookEvent({ sessionId: m.session, name: m.event, cwd, runId: m.env?.KH_RUN, ticketId: m.env?.KH_TICKET, accountId: m.env?.KH_ACCOUNT });
   } catch {
     // hooks must not fail Claude Code; a broken log write is dropped
   }

@@ -11,6 +11,7 @@ export interface RunInfo {
   base?: string;
   branch?: string;
   repoPath?: string;
+  accountId?: string;
 }
 
 const RUN_ID = /^r-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})-(.+)$/;

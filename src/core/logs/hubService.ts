@@ -1,4 +1,5 @@
 import { FileLogService, type LogServiceOptions } from "./service";
+import { accountsOf } from "../accounts";
 import { PROFILES, type PriceTable, type Profile, type RepoMapEntry } from "./types";
 
 /** The `core` settings section as stored in data.json (`repos`, `logs`); unknown or invalid entries are ignored. */
@@ -20,6 +21,7 @@ export function logServiceFromSettings(core: CoreSettingsLike, dataRoot?: LogSer
   const num = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
   const retention = { retentionDays: num(logs.retentionDays), packRetentionDays: num(logs.packRetentionDays), spoolDays: num(logs.spoolDays) };
   return new FileLogService({
+    accounts: () => accountsOf(core).list.map((a) => ({ id: a.id, configDir: a.configDir })),
     repoMap,
     denylist,
     prices,

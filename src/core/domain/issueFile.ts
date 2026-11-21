@@ -51,6 +51,7 @@ function fieldsFromFm(fm: Fields, fileName: string): Fields {
     repo: str(fm.repo),
     blockedBy: strList(fm.blockedBy),
     model: parseModel(fm.model),
+    account: str(fm.account),
     runs: strList(fm.runs),
     outcome: parseOutcome(fm.outcome),
     costUsd: parseCost(fm.costUsd),
@@ -329,6 +330,7 @@ export type IssuePatch = Partial<
   type?: TicketType | null;
   repo?: string | null;
   model?: Model | null;
+  account?: string | null;
   outcome?: Outcome | null;
   costUsd?: number | null;
 };

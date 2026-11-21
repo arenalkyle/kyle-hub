@@ -156,7 +156,7 @@ export async function finishRun(deps: EndDeps, run: RunInfo, end: SessionEnd = {
   }
   await tickets.update(run.ticketId, patch, actor);
   if (hasSummary) await tickets.logEvent(run.ticketId, `run ${run.runId} finished`, actor);
-  if (logs) await logs.annotateRun(run.runId, { outcome, summaryCommented: hasSummary }).catch(() => undefined);
+  if (logs) await logs.annotateRun(run.runId, { outcome, summaryCommented: hasSummary, ...(run.accountId ? { accountId: run.accountId } : {}) }).catch(() => undefined);
 
   return { outcome, summary: hasSummary ? "agent" : "mechanical", costUsd, ...(hasSummary ? {} : { needsAttention: "no agent summary" as const }) };
 }
