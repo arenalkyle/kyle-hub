@@ -9,7 +9,11 @@
 .kt-sidebar.kt-collapsed .kt-btn-new, .kt-sidebar.kt-collapsed .kt-btn-plus, .kt-sidebar.kt-collapsed .kt-list { display: none; }
 .kt-resizer { flex: none; width: 4px; margin-left: -2px; cursor: col-resize; z-index: 1; }
 .kt-resizer:hover { background: var(--interactive-accent); }
-.kt-term-area { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+.kt-term-wrap { flex: 1; min-width: 0; height: 100%; position: relative; overflow: hidden; background: var(--kt-bg, var(--background-primary)); }
+.kt-bg-img { position: absolute; inset: -24px; background-image: var(--kt-img, none); background-size: cover; background-position: center; opacity: var(--kt-img-opacity, 0.6); filter: blur(var(--kt-img-blur, 0px)); pointer-events: none; }
+.kt-bg-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, var(--kt-img-dim, 0)); pointer-events: none; }
+.kt-term-area { position: relative; height: 100%; width: 100%; overflow: hidden; }
+.kyle-term-term .xterm-viewport { background-color: transparent !important; }
 
 .kt-header { display: flex; gap: 4px; padding: 6px; align-items: center; }
 .kt-sidebar.kt-collapsed .kt-header { padding: 6px 2px; justify-content: center; }

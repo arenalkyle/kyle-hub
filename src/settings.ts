@@ -1,7 +1,11 @@
-import { PluginSettingTab, Setting, type App } from "obsidian";
+import { FuzzySuggestModal, PluginSettingTab, Setting, type App, type TFile } from "obsidian";
 import type KyleTermPlugin from "./main";
 import { DEFAULT_SOUNDS, TONES, type AlertEvent, type SoundSettings } from "./alert";
 import { AUDIO_EXTS } from "./sound";
+import {
+  ANSI_KEYS, DEFAULT_APPEARANCE, DEFAULT_FONT_FAMILY, MAX_FONT, MIN_FONT, PRESETS, THEME_CUSTOM, THEME_FOLLOW, clampFont, toHex,
+  type AppearanceSettings,
+} from "./appearance";
 
 export interface KyleTermSettings {
   nodePath: string;
@@ -14,6 +18,7 @@ export interface KyleTermSettings {
   sidebarWidth: number;
   sidebarCollapsed: boolean;
   sounds: SoundSettings;
+  appearance: AppearanceSettings;
 }
 
 export const DEFAULT_SETTINGS: KyleTermSettings = {
@@ -25,6 +30,7 @@ export const DEFAULT_SETTINGS: KyleTermSettings = {
   sidebarWidth: 240,
   sidebarCollapsed: false,
   sounds: DEFAULT_SOUNDS,
+  appearance: DEFAULT_APPEARANCE,
 };
 
 const EVENT_LABEL: Record<AlertEvent, string> = {
@@ -105,7 +111,86 @@ export class KyleTermSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         }),
       );
+    this.displayAppearance(el);
     this.displaySounds(el);
+  }
+
+  private displayAppearance(el: HTMLElement): void {
+    const a: AppearanceSettings = this.plugin.settings.appearance;
+    const apply = (notify = false) => { this.plugin.applyAppearance(notify); void this.plugin.saveSettings(); };
+    new Setting(el).setName("Appearance").setHeading();
+    new Setting(el).setName("Colour theme").addDropdown((d) => {
+      d.addOption(THEME_FOLLOW, "Follow Obsidian");
+      for (const p of PRESETS) d.addOption(p.id, p.name);
+      d.addOption(THEME_CUSTOM, "Custom");
+      d.setValue(a.theme).onChange((v) => { a.theme = v; apply(); this.display(); });
+    });
+    if (a.theme === THEME_CUSTOM) {
+      new Setting(el).setName("Start from preset").setDesc("Copies a preset into the custom palette.").addDropdown((d) => {
+        d.addOption("", "Choose…");
+        for (const p of PRESETS) d.addOption(p.id, p.name);
+        d.onChange((v) => {
+          const p = PRESETS.find((x) => x.id === v);
+          if (!p) return;
+          a.custom = structuredClone(p.palette);
+          apply();
+          this.display();
+        });
+      });
+      const picker = (name: string, get: () => string, set: (v: string) => void) =>
+        new Setting(el).setName(name).addColorPicker((c) => c.setValue(toHex(get())).onChange((v) => { set(v); apply(); }));
+      picker("Background", () => a.custom.background, (v) => (a.custom.background = v));
+      picker("Foreground", () => a.custom.foreground, (v) => (a.custom.foreground = v));
+      picker("Cursor", () => a.custom.cursor, (v) => (a.custom.cursor = v));
+      picker("Selection", () => a.custom.selection, (v) => (a.custom.selection = v));
+      ANSI_KEYS.forEach((k, i) => picker(`ANSI ${i}: ${k}`, () => a.custom.ansi[i]!, (v) => (a.custom.ansi[i] = v)));
+    }
+    new Setting(el)
+      .setName("Font family")
+      .setDesc("CSS font list; monospace fallbacks recommended.")
+      .addText((t) =>
+        t.setPlaceholder(DEFAULT_FONT_FAMILY).setValue(a.fontFamily).onChange((v) => { a.fontFamily = v.trim() || DEFAULT_FONT_FAMILY; apply(); }),
+      );
+    new Setting(el)
+      .setName("Font size")
+      .setDesc(`${MIN_FONT}-${MAX_FONT}. Ctrl+= / Ctrl+- / Ctrl+0 zoom a single session.`)
+      .addText((t) =>
+        t.setValue(String(a.fontSize)).onChange((v) => {
+          const n = Number(v);
+          if (!Number.isFinite(n) || v.trim() === "") return;
+          a.fontSize = clampFont(n);
+          apply();
+        }),
+      );
+    new Setting(el)
+      .setName("Background image")
+      .setDesc("A vault image, or paste an absolute file path.")
+      .addText((t) =>
+        t.setPlaceholder("C:/path/to/image.jpg").setValue(a.bgImage.replace(/^vault:/, "")).onChange((v) => {
+          const x = v.trim();
+          a.bgImage = x && this.app.vault.getAbstractFileByPath(x) ? `vault:${x}` : x;
+          apply();
+        }),
+      )
+      .addButton((b) => b.setButtonText("Pick from vault").onClick(() => {
+        new ImageSuggest(this.app, (f) => { a.bgImage = `vault:${f.path}`; apply(true); this.display(); }).open();
+      }))
+      .addButton((b) => b.setButtonText("Clear").onClick(() => { a.bgImage = ""; apply(); this.display(); }));
+    const slider = (name: string, desc: string, key: "imageOpacity" | "imageBlur" | "imageDim" | "terminalOpacity") =>
+      new Setting(el).setName(name).setDesc(desc).addSlider((sl) =>
+        sl.setLimits(0, 100, 1).setValue(a[key]).setDynamicTooltip().onChange((v) => { a[key] = v; apply(); }),
+      );
+    slider("Image opacity", "How visible the photo is.", "imageOpacity");
+    slider("Image blur", "0 to 20 px.", "imageBlur");
+    slider("Image dim", "Dark overlay over the photo for readability.", "imageDim");
+    slider("Terminal background opacity", "100% hides the image completely.", "terminalOpacity");
+    new Setting(el).addButton((b) =>
+      b.setButtonText("Reset appearance").onClick(() => {
+        Object.assign(a, structuredClone(DEFAULT_APPEARANCE));
+        apply();
+        this.display();
+      }),
+    );
   }
 
   private displaySounds(el: HTMLElement): void {
@@ -151,5 +236,21 @@ export class KyleTermSettingTab extends PluginSettingTab {
         b.setButtonText("Preview").onClick(() => this.plugin.preview(cfg.sound, (snd.master / 100) * (cfg.volume / 100))),
       );
     }
+  }
+}
+
+const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "avif"];
+
+class ImageSuggest extends FuzzySuggestModal<TFile> {
+  constructor(app: App, private choose: (f: TFile) => void) {
+    super(app);
+    this.setPlaceholder("Pick a background image");
+  }
+  override getItems(): TFile[] {
+    return this.app.vault.getFiles().filter((f) => IMAGE_EXTS.includes(f.extension.toLowerCase()));
+  }
+  override getItemText(f: TFile): string { return f.path; }
+  override onChooseItem(f: TFile): void {
+    this.choose(f);
   }
 }

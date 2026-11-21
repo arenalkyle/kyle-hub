@@ -1,4 +1,4 @@
-import { FileSystemAdapter, Notice, Plugin } from "obsidian";
+import { FileSystemAdapter, Notice, Platform, Plugin } from "obsidian";
 import path from "node:path";
 import os from "node:os";
 import { applyToFile } from "./hook-installer";
@@ -12,7 +12,11 @@ import { SoundPlayer } from "./sound";
 import { KyleTermView, VIEW_TYPE } from "./view";
 import { SessionManager, type Session } from "./session-manager";
 import { detectProfiles, type ShellProfile } from "./shells";
-import { XtermSession } from "./xterm-session";
+import { XtermSession, type TermLook } from "./xterm-session";
+import {
+  blurPx, buildXtermTheme, DEFAULT_APPEARANCE, mergeAppearance, obsidianPalette, resolvePalette, toHex, type Palette,
+} from "./appearance";
+import fs from "node:fs";
 
 export default class KyleTermPlugin extends Plugin {
   override settings: KyleTermSettings = { ...DEFAULT_SETTINGS };
@@ -24,6 +28,7 @@ export default class KyleTermPlugin extends Plugin {
   private hookEnv: Record<string, string> = {};
   private player: SoundPlayer | null = null;
   private statusEl: HTMLElement | null = null;
+  private xterms = new Set<XtermSession>();
   private muteListeners = new Set<() => void>();
   private lastPlayed: { bySession: Record<string, number>; byEvent: Partial<Record<AlertEvent, number>> } = { bySession: {}, byEvent: {} };
 
@@ -39,6 +44,7 @@ export default class KyleTermPlugin extends Plugin {
     } catch (e) {
       console.error("[kyle-term] hook server failed to start", e);
     }
+    this.registerEvent(this.app.workspace.on("css-change", () => this.applyAppearance()));
     this.registerView(VIEW_TYPE, (leaf) => new KyleTermView(leaf, this));
     this.addRibbonIcon("terminal", "Open kyle-term", () => void this.activateView());
     this.addCommand({ id: "open", name: "Open terminal", callback: () => void this.activateView() });
@@ -95,6 +101,69 @@ export default class KyleTermPlugin extends Plugin {
   onMuteChange(cb: () => void): () => void {
     this.muteListeners.add(cb);
     return () => this.muteListeners.delete(cb);
+  }
+
+  /** Resolve a CSS variable on <body> to a computed colour string (handles hsl, var chains). */
+  private readCssColor(cssVar: string): string {
+    const probe = document.body.createDiv();
+    probe.style.color = `var(${cssVar})`;
+    probe.style.display = "none";
+    const c = getComputedStyle(probe).color;
+    probe.remove();
+    return c;
+  }
+
+  currentPalette(): Palette {
+    return resolvePalette(this.settings.appearance, obsidianPalette((v) => this.readCssColor(v)));
+  }
+
+  termLook(): TermLook {
+    const a = this.settings.appearance;
+    return {
+      theme: buildXtermTheme(this.currentPalette(), a.terminalOpacity),
+      fontFamily: a.fontFamily || DEFAULT_APPEARANCE.fontFamily,
+      fontSize: a.fontSize,
+    };
+  }
+
+  /** URL for the background image, or null (with a notice when `notify`). */
+  private bgUrl(notify: boolean): string | null {
+    const raw = this.settings.appearance.bgImage;
+    if (!raw) return null;
+    try {
+      if (raw.startsWith("vault:")) {
+        const p = raw.slice(6);
+        if (!this.app.vault.getAbstractFileByPath(p)) throw new Error("not found");
+        return this.app.vault.adapter.getResourcePath(p);
+      }
+      if (!fs.existsSync(raw)) throw new Error("not found");
+      return Platform.resourcePathPrefix + encodeURI(raw.split("\\").join("/")).replace(/#/g, "%23");
+    } catch {
+      if (notify) new Notice(`kyle-term: background image not found or unreadable: ${raw.replace(/^vault:/, "")}`);
+      return null;
+    }
+  }
+
+  /** CSS custom properties for the background layers. */
+  bgVars(notify = false): Record<string, string> {
+    const a = this.settings.appearance;
+    const url = this.bgUrl(notify);
+    return {
+      "--kt-bg": toHex(this.currentPalette().background),
+      "--kt-img": url ? `url("${url}")` : "none",
+      "--kt-img-opacity": String(a.imageOpacity / 100),
+      "--kt-img-blur": `${blurPx(a.imageBlur)}px`,
+      "--kt-img-dim": String(a.imageDim / 100),
+    };
+  }
+
+  /** Re-apply theme, font and background to every open terminal and view. Live, no re-creation. */
+  applyAppearance(notify = false): void {
+    for (const t of this.xterms) t.applyLook();
+    const vars = this.bgVars(notify);
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
+      (leaf.view as KyleTermView).applyBackground?.(vars);
+    }
   }
 
   setMuted(v: boolean): void {
@@ -183,7 +252,11 @@ export default class KyleTermPlugin extends Plugin {
     this.pty = pty;
     this.sessions = new SessionManager({
       pty,
-      makeTerm: (h) => new XtermSession(h),
+      makeTerm: (h) => {
+        const t = new XtermSession(h, () => this.termLook(), (x) => this.xterms.delete(x));
+        this.xterms.add(t);
+        return t;
+      },
       profiles: () => this.profiles,
       env: () => this.hookEnv,
       idleMs: () => this.settings.idleSeconds * 1000,
@@ -223,7 +296,7 @@ export default class KyleTermPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const saved = (await this.loadData()) as Partial<KyleTermSettings> | null;
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved, { sounds: mergeSounds(saved?.sounds) });
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved, { sounds: mergeSounds(saved?.sounds), appearance: mergeAppearance(saved?.appearance) });
   }
 
   async saveSettings(): Promise<void> {

@@ -45,6 +45,7 @@ export class KyleTermView extends ItemView {
   private sidebar!: HTMLElement;
   private list!: HTMLElement;
   private area!: HTMLElement;
+  private wrap: HTMLElement | null = null;
   private mountedId: string | null = null;
   private renamingId: string | null = null;
   private dragId: string | null = null;
@@ -73,7 +74,12 @@ export class KyleTermView extends ItemView {
 
     this.sidebar = root.createDiv({ cls: "kt-sidebar" });
     const resizer = root.createDiv({ cls: "kt-resizer" });
-    this.area = root.createDiv({ cls: "kt-term-area" });
+    const wrap = root.createDiv({ cls: "kt-term-wrap" });
+    wrap.createDiv({ cls: "kt-bg-img" });
+    wrap.createDiv({ cls: "kt-bg-dim" });
+    this.area = wrap.createDiv({ cls: "kt-term-area" });
+    this.wrap = wrap;
+    this.applyBackground(this.plugin.bgVars(true));
 
     const header = this.sidebar.createDiv({ cls: "kt-header" });
     const newClaude = header.createEl("button", { text: "New Session", cls: "kt-btn-new mod-cta" });
@@ -124,6 +130,12 @@ export class KyleTermView extends ItemView {
 
     if (mgr.list().length === 0) await this.plugin.newShell();
     else this.refresh();
+  }
+
+  /** Set the background CSS variables; layers read them, so sliders are smooth. */
+  applyBackground(vars: Record<string, string>): void {
+    if (!this.wrap) return;
+    for (const [k, v] of Object.entries(vars)) this.wrap.style.setProperty(k, v);
   }
 
   override async onClose(): Promise<void> {

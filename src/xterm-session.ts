@@ -2,6 +2,13 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import type { TermHandlers, TermLike } from "./session-manager";
+import { clampFont, type XtermTheme } from "./appearance";
+
+export interface TermLook {
+  theme: XtermTheme;
+  fontFamily: string;
+  fontSize: number;
+}
 
 /** One long-lived xterm per session; its element is moved between views, never recreated. */
 export class XtermSession implements TermLike {
@@ -9,11 +16,16 @@ export class XtermSession implements TermLike {
   private fitAddon = new FitAddon();
   private el = document.createElement("div");
   private opened = false;
+  /** Per-session zoom; null = follow the setting. Not persisted. */
+  private zoom: number | null = null;
 
-  constructor(h: TermHandlers) {
+  constructor(h: TermHandlers, private look: () => TermLook, private onDispose?: (t: XtermSession) => void) {
+    const l = look();
     const term = new Terminal({
-      fontFamily: "Consolas, 'Cascadia Mono', monospace",
-      fontSize: 14,
+      fontFamily: l.fontFamily,
+      fontSize: l.fontSize,
+      theme: l.theme,
+      allowTransparency: true,
       cursorBlink: true,
       allowProposedApi: true,
       scrollback: 5000,
@@ -36,6 +48,13 @@ export class XtermSession implements TermLike {
       // Alt+A: jump to next session needing attention.
       if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && k === "a") return false;
       if (e.ctrlKey && !e.altKey && (k === "tab" || (e.shiftKey && k === "t"))) return false;
+      if (e.ctrlKey && !e.altKey && !e.metaKey && (k === "=" || k === "+" || k === "-" || k === "0")) {
+        e.preventDefault();
+        const cur = this.zoom ?? this.look().fontSize;
+        this.zoom = k === "0" ? null : clampFont(cur + (k === "-" ? -1 : 1));
+        this.applyLook();
+        return false;
+      }
       if (e.ctrlKey && !e.altKey && !e.shiftKey && k === "c" && term.hasSelection()) {
         void navigator.clipboard.writeText(term.getSelection());
         term.clearSelection();
@@ -59,11 +78,20 @@ export class XtermSession implements TermLike {
     void navigator.clipboard.readText().then((t) => { if (t) this.term.paste(t); }, () => {});
   }
 
+  /** Re-read theme/font from settings (keeps this session's zoom) and re-fit. */
+  applyLook(): void {
+    const l = this.look();
+    this.term.options.theme = l.theme;
+    this.term.options.fontFamily = l.fontFamily;
+    this.term.options.fontSize = this.zoom ?? l.fontSize;
+    this.fit();
+  }
+
   get cols(): number { return this.term.cols; }
   get rows(): number { return this.term.rows; }
   write(data: string): void { this.term.write(data); }
   reset(): void { this.term.reset(); }
-  dispose(): void { this.el.remove(); this.term.dispose(); }
+  dispose(): void { this.onDispose?.(this); this.el.remove(); this.term.dispose(); }
   focus(): void { this.term.focus(); }
 
   attach(parent: HTMLElement): void {
