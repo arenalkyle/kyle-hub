@@ -83,8 +83,28 @@ export const MAX_FONT = 32;
  */
 export function resolveFontFamily(setting: string, obsidianMono: string): string {
   const s = setting.trim();
-  if (s && s !== DEFAULT_FONT_FAMILY) return s;
-  return obsidianMono.trim() || DEFAULT_FONT_FAMILY;
+  if (s && s !== DEFAULT_FONT_FAMILY) return sanitizeFontList(s);
+  return sanitizeFontList(obsidianMono);
+}
+
+const GENERIC_FAMILIES = new Set(["monospace", "ui-monospace", "serif", "sans-serif", "system-ui", "cursive", "fantasy"]);
+
+/**
+ * Normalise a CSS font list for xterm, which hands it to canvas `ctx.font`. An invalid list is
+ * silently ignored there (canvas falls back to 10px sans-serif inside monospace-sized cells, i.e.
+ * tiny "spread out" text). Obsidian's `--font-monospace` contains `??` placeholders and may leave
+ * empty slots, so drop those, quote every named family, and always end with `monospace`.
+ */
+export function sanitizeFontList(raw: string): string {
+  const names: string[] = [];
+  for (const part of raw.split(",")) {
+    const n = part.trim().replace(/^["']|["']$/g, "").trim();
+    if (!n || n.includes("?") || n.includes("var(") || /["';{}]/.test(n)) continue;
+    if (!names.some((x) => x.toLowerCase() === n.toLowerCase())) names.push(n);
+  }
+  if (names.length === 0) return DEFAULT_FONT_FAMILY;
+  if (!names.some((n) => n.toLowerCase() === "monospace")) names.push("monospace");
+  return names.map((n) => (GENERIC_FAMILIES.has(n.toLowerCase()) ? n.toLowerCase() : `"${n}"`)).join(", ");
 }
 
 export const DEFAULT_APPEARANCE: AppearanceSettings = {

@@ -17,7 +17,7 @@ import { SessionManager, type Session } from "./session-manager";
 import { detectProfiles, pickProfileId, type ShellProfile } from "./shells";
 import { XtermSession, type TermLook } from "./xterm-session";
 import {
-  blurPx, buildXtermTheme, mergeAppearance, resolveFontFamily, obsidianPalette, resolvePalette, shouldUseWebgl, toHex, type Palette,
+  blurPx, buildXtermTheme, DEFAULT_FONT_FAMILY, mergeAppearance, resolveFontFamily, obsidianPalette, resolvePalette, shouldUseWebgl, toHex, type Palette,
 } from "./appearance";
 import fs from "node:fs";
 import { orphanFiles, parsePersisted, PERSIST_VERSION, scrollbackFile, type PersistedSession } from "./persist";
@@ -176,6 +176,15 @@ export default class KyleTermPlugin extends Plugin {
     return f;
   }
 
+  /** xterm draws with canvas `ctx.font`, which silently ignores an invalid font list. */
+  private canvasAccepts(family: string): string {
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (!ctx) return family;
+    ctx.font = "1px __kt_sentinel__";
+    ctx.font = `14px ${family}`;
+    return ctx.font.startsWith("14px") ? family : DEFAULT_FONT_FAMILY;
+  }
+
   currentPalette(): Palette {
     return resolvePalette(this.settings.appearance, obsidianPalette((v) => this.readCssColor(v)));
   }
@@ -184,7 +193,7 @@ export default class KyleTermPlugin extends Plugin {
     const a = this.settings.appearance;
     return {
       theme: buildXtermTheme(this.currentPalette(), a.terminalOpacity),
-      fontFamily: resolveFontFamily(a.fontFamily, this.readObsidianMono()),
+      fontFamily: this.canvasAccepts(resolveFontFamily(a.fontFamily, this.readObsidianMono())),
       fontSize: a.fontSize,
       webgl: shouldUseWebgl(a.terminalOpacity),
     };

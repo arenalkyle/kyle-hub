@@ -57,12 +57,22 @@ describe("appearance", () => {
 describe("resolveFontFamily", () => {
   it("follows Obsidian's monospace font when empty or the old default", async () => {
     const { resolveFontFamily, DEFAULT_FONT_FAMILY } = await import("../src/appearance");
-    expect(resolveFontFamily("", "'JetBrains Mono', monospace")).toBe("'JetBrains Mono', monospace");
-    expect(resolveFontFamily(DEFAULT_FONT_FAMILY, "Fira Code")).toBe("Fira Code");
+    expect(resolveFontFamily("", "'JetBrains Mono', monospace")).toBe('"JetBrains Mono", monospace');
+    expect(resolveFontFamily(DEFAULT_FONT_FAMILY, "Fira Code")).toBe('"Fira Code", monospace');
     expect(resolveFontFamily("  ", "")).toBe(DEFAULT_FONT_FAMILY);
   });
   it("keeps a user font list", async () => {
     const { resolveFontFamily } = await import("../src/appearance");
-    expect(resolveFontFamily("Iosevka, monospace", "Fira Code")).toBe("Iosevka, monospace");
+    expect(resolveFontFamily("Iosevka, monospace", "Fira Code")).toBe('"Iosevka", monospace');
+  });
+});
+
+describe("sanitizeFontList", () => {
+  it("drops Obsidian's ?? placeholders and empty slots, quotes names, ends with monospace", async () => {
+    const { sanitizeFontList } = await import("../src/appearance");
+    expect(sanitizeFontList(`??, "??", , Menlo, SFMono-Regular, Consolas, "Source Code Pro", monospace`))
+      .toBe(`"Menlo", "SFMono-Regular", "Consolas", "Source Code Pro", monospace`);
+    expect(sanitizeFontList("JetBrains Mono")).toBe(`"JetBrains Mono", monospace`);
+    expect(sanitizeFontList("??")).toContain("Consolas");
   });
 });
