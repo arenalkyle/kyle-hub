@@ -38,6 +38,7 @@ function fieldsFromFm(fm: Fields, fileName: string): Fields {
     tags: strList(fm.tags),
     due: str(fm.due),
     parent: str(fm.parent),
+    linearId: str(fm.linearId),
     pullRequests: strList(fm.pullRequests),
     related: strList(fm.related),
     created: str(fm.created),

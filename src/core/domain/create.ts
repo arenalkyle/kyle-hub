@@ -17,6 +17,9 @@ export interface NewIssueInput {
   pullRequests?: string[];
   description?: string;
   sortOrder?: number;
+  linearId?: string;
+  created?: Date;
+  updated?: Date;
 }
 
 export interface NewProjectInput {
@@ -47,8 +50,9 @@ export function buildIssueText(id: string, input: NewIssueInput, defaultStatus: 
   if (input.due) fm.due = input.due;
   if (input.parent) fm.parent = asLink(input.parent);
   if (input.pullRequests?.length) fm.pullRequests = input.pullRequests;
-  fm.created = formatIso(now);
-  fm.updated = formatIso(now);
+  if (input.linearId) fm.linearId = input.linearId;
+  fm.created = formatIso(input.created ?? now);
+  fm.updated = formatIso(input.updated ?? now);
   if (input.sortOrder !== undefined) fm.sortOrder = input.sortOrder;
   const text = stringify(fm, { lineWidth: 0, flowCollectionPadding: false }).replace(/\n$/, "");
   const desc = (input.description ?? "").trim();

@@ -74,6 +74,8 @@ export interface Issue {
   tags: string[];
   due?: string;
   parent?: string;
+  /** Linear identifier (e.g. `LOCK-14`) for tickets imported by `kh import linear`. */
+  linearId?: string;
   pullRequests: string[];
   /** IDs of related issues listed by this issue (display is symmetric; see `relatedIds`). */
   related: string[];
