@@ -27,3 +27,15 @@ Things that need a person using Obsidian. Agents ran the automated checks (`npm 
 9. Row context menu: Rename, Colour tag (opens a second menu), Restart, Kill (asks to confirm), Copy working folder.
 10. Commands: New terminal (Ctrl+Shift+T), Next/Previous session (Ctrl+Tab / Ctrl+Shift+Tab). If Ctrl+Tab clashes with Obsidian, rebind under Settings → Hotkeys.
 11. Settings → Default shell profile lists pwsh / Git Bash only when installed; Claude start folder and Claude command are honoured by `New Session`.
+
+## Phase 3 — Hooks + agent state (LOCK-4)
+
+1. Run **kyle-term: Install hooks**, then open `~/.claude/settings.json`: old entries intact, kyle-term's added (incl. `PostToolUse`, `SubagentStart`), a timestamped backup next to it. Run Install again: no duplicates.
+2. In a `New Session`, ask Claude to do a few tool calls: light goes working (blue pulse), activity line changes ("Editing …", "Running …"), then steady green on finish.
+3. Ask for a command needing permission: light blinks red; after approving it returns to working.
+4. Ask Claude to use 2 sub-agents in parallel: badge ⚙ 2, list shows both with spinners, then ✓ and fade.
+5. Title shows Claude's first prompt when there is no manual name / terminal title.
+6. Click another session and back: the red/green mark clears (note: an already-active session keeps its mark until you switch away and back).
+7. Run `claude` in Windows Terminal: works normally, no errors.
+8. A non-Claude CLI ringing the bell shows needs-input; a hookless session going quiet after typed input shows finished after the idle timeout (default 10 s).
+9. Run **kyle-term: Uninstall hooks**: only kyle-term's entries are gone.
