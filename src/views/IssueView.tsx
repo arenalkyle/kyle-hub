@@ -6,7 +6,7 @@ import type { IssuePatch } from "../core/issueFile";
 import { fromLink } from "../core/links";
 import { parsePrUrl } from "../core/pr";
 import { useIssue, useIssues, useSettings, useStoreReady } from "../store/hooks";
-import { confirmModal } from "../settings/modals";
+import { copyText, deleteIssueConfirmed, issueLinkUri } from "./issueActions";
 import { PluginContext, usePlugin } from "./PluginContext";
 import { ActivityFeed } from "./issue/ActivityFeed";
 import { CommentBox } from "./issue/CommentBox";
@@ -128,10 +128,6 @@ function IssueApp({ path, leaf }: IssueAppProps) {
     );
   }
 
-  const file = plugin.app.vault.getAbstractFileByPath(path);
-  const copy = (text: string, what: string) => {
-    void navigator.clipboard.writeText(text).then(() => new Notice(`Copied ${what}`));
-  };
 
   return (
     <div
@@ -153,15 +149,9 @@ function IssueApp({ path, leaf }: IssueAppProps) {
         }}
         onOpenIssue={(i) => plugin.openIssue(i)}
         onOpenMarkdown={() => void plugin.interceptor.showMarkdown(leaf)}
-        onCopyId={() => copy(issue.id, issue.id)}
-        onCopyLink={() => copy(`obsidian://open?vault=${encodeURIComponent(plugin.app.vault.getName())}&file=${encodeURIComponent(path)}`, "link")}
-        onDelete={() => {
-          void (async () => {
-            if (!(file instanceof TFile)) return;
-            const ok = await confirmModal(plugin.app, "Delete issue", `Delete ${issue.id} "${issue.title}"? The file is moved to trash.`, "Delete", true);
-            if (ok) await plugin.store.deleteIssue(issue.id);
-          })();
-        }}
+        onCopyId={() => copyText(issue.id, issue.id)}
+        onCopyLink={() => copyText(issueLinkUri(plugin.app, path), "link")}
+        onDelete={() => void deleteIssueConfirmed(plugin.app, plugin.store, issue, path)}
       />
       <div className="kt-issue-body">
         <div className="kt-issue-main">

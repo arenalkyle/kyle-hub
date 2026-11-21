@@ -1,18 +1,25 @@
 import { Notice } from "obsidian";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { fromLink } from "../../core/links";
 import { applyPatch, type IssuePatch } from "../../core/issueFile";
 import { buildView, OTHER_GROUP_KEY } from "../../core/query";
 import { useIssues, useProjects, useSettings } from "../../store/hooks";
 import { usePlugin } from "../PluginContext";
+import { DatePicker } from "../components/pickers/DatePicker";
+import { MilestonePicker } from "../components/pickers/MilestonePicker";
+import { ProjectPicker } from "../components/pickers/ProjectPicker";
 import { AssigneePicker } from "../components/pickers/AssigneePicker";
 import { LabelPicker } from "../components/pickers/LabelPicker";
 import { PriorityPicker } from "../components/pickers/PriorityPicker";
 import { StatusPicker } from "../components/pickers/StatusPicker";
+import { copyText, deleteIssueConfirmed, issueLinkUri } from "../issueActions";
 import { moveSelection, useShortcuts, type ShortcutAction } from "../shortcuts";
 import { BoardView, type BoardMove } from "./BoardView";
 import { FilterBar } from "./FilterBar";
 import { Header } from "./Header";
 import { flatten, ListView } from "./ListView";
+import { showIssueContextMenu } from "./issueContextMenu";
+import type { MenuAction, PickerKind } from "./issueMenuModel";
 import { useViewState } from "./useViewState";
 
 export interface IssueCollectionProps {
@@ -42,7 +49,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
   const rootRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterSignal, setFilterSignal] = useState(0);
-  const [sp, setSp] = useState<{ kind: "status" | "priority" | "labels" | "assignee"; id: string; anchor: HTMLElement | null } | null>(null);
+  const [sp, setSp] = useState<{ kind: "status" | "priority" | "labels" | "assignee" | PickerKind; id: string; anchor: HTMLElement | null } | null>(null);
   const [, setCollapseTick] = useState(0);
 
   // Board moves show immediately; each entry is dropped once its write settles (the store has emitted by then).
@@ -163,6 +170,50 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
     setSp(null);
     rootRef.current?.focus({ preventScroll: true });
   }, []);
+  // Context-menu pickers anchor to a zero-size element at the mouse position; remove it once the picker closes.
+  useEffect(() => {
+    const el = sp?.anchor;
+    return () => {
+      if (el?.dataset.ktVirtual) el.remove();
+    };
+  }, [sp?.anchor]);
+  const onContextMenu = (e: React.MouseEvent) => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>("[data-kt-id]");
+    const issue = el ? issues.find((i) => i.id === el.dataset.ktId) : undefined;
+    if (!issue) return;
+    e.preventDefault();
+    setSelectedId(issue.id);
+    const { clientX, clientY } = e;
+    const run = (a: MenuAction) => {
+      switch (a.type) {
+        case "status":
+        case "priority":
+          void plugin.store.updateIssue(issue.id, { [a.type]: a.value }).catch((err) => console.error("kyle-tickets: update failed", err));
+          break;
+        case "picker": {
+          const anchor = document.body.createEl("span");
+          anchor.dataset.ktVirtual = "1";
+          anchor.setCssProps({ position: "fixed", left: `${clientX}px`, top: `${clientY}px`, width: "0", height: "0" });
+          setSp({ kind: a.kind, id: issue.id, anchor });
+          break;
+        }
+        case "open":
+          plugin.openIssue(issue.id, a.newTab);
+          break;
+        case "copyLink": {
+          const path = plugin.store.pathOf(issue.id);
+          if (path) copyText(issueLinkUri(plugin.app, path), "link");
+          break;
+        }
+        case "delete": {
+          const path = plugin.store.pathOf(issue.id);
+          if (path) void deleteIssueConfirmed(plugin.app, plugin.store, issue, path);
+          break;
+        }
+      }
+    };
+    showIssueContextMenu(e.nativeEvent, issue, settings, run);
+  };
   const spIssue = sp ? issues.find((i) => i.id === sp.id) : undefined;
   const spUpdate = (patch: IssuePatch) => {
     if (sp) void plugin.store.updateIssue(sp.id, patch).catch((e) => console.error("kyle-tickets: update failed", e));
@@ -173,6 +224,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
       className="kt-collection"
       ref={rootRef}
       tabIndex={-1}
+      onContextMenu={onContextMenu}
       onMouseDown={(e) => {
         const t = e.target as HTMLElement;
         if (!t.closest("input, textarea, select, [contenteditable]")) rootRef.current?.focus({ preventScroll: true });
@@ -217,6 +269,13 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
       {sp && spIssue && sp.kind === "assignee" && (
         <AssigneePicker anchor={sp.anchor} value={spIssue.assignee} onChange={(a) => spUpdate({ assignee: a ?? null })} onClose={closeSp} />
       )}
+      {sp && spIssue && sp.kind === "project" && (
+        <ProjectPicker anchor={sp.anchor} value={spIssue.project ? fromLink(spIssue.project) : undefined} onChange={(p) => spUpdate({ project: p ?? null })} onClose={closeSp} />
+      )}
+      {sp && spIssue && sp.kind === "milestone" && (
+        <MilestonePicker anchor={sp.anchor} project={spIssue.project} value={spIssue.milestone} onChange={(m) => spUpdate({ milestone: m ?? null })} onClose={closeSp} />
+      )}
+      {sp && spIssue && sp.kind === "due" && <DatePicker anchor={sp.anchor} value={spIssue.due} onChange={(d) => spUpdate({ due: d ?? null })} onClose={closeSp} />}
     </div>
   );
 }
