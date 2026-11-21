@@ -9,7 +9,8 @@ export interface HeaderProps {
   title: string;
   count: number;
   sidebarCollapsed: boolean;
-  onToggleSidebar: () => void;
+  /** Omit when there is no sidebar to toggle. */
+  onToggleSidebar?: () => void;
   onNewIssue: () => void;
   display: DisplayState;
   onDisplayChange: (next: DisplayState) => void;
@@ -37,14 +38,16 @@ export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewI
   };
   return (
     <div className="kt-header">
-      <button
-        type="button"
-        className="kt-icon-btn"
-        title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
-        onClick={onToggleSidebar}
-      >
-        <Icon name="panel-left" size={16} />
-      </button>
+      {onToggleSidebar && (
+        <button
+          type="button"
+          className="kt-icon-btn"
+          title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+          onClick={onToggleSidebar}
+        >
+          <Icon name="panel-left" size={16} />
+        </button>
+      )}
       <h2 className="kt-header-title">{title}</h2>
       <span className="kt-header-count">{count}</span>
       <div className="kt-header-spacer" />

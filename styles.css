@@ -161,7 +161,8 @@
   height: 100%; padding: 0 var(--size-4-4); border-bottom: 1px solid var(--background-modifier-border); cursor: pointer;
 }
 .kt-row:hover { background: var(--background-modifier-hover); }
-.kt-main:focus { outline: none; }
+.kt-main:focus, .kt-collection:focus { outline: none; }
+.kt-collection { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .kt-row.is-selected { background: var(--background-modifier-active-hover); box-shadow: inset 2px 0 0 var(--interactive-accent); }
 .kt-card.is-selected { border-color: var(--interactive-accent); box-shadow: 0 0 0 1px var(--interactive-accent); }
 .kt-row-btn { display: inline-flex; align-items: center; justify-content: center; padding: 2px; background: transparent; border: 0; box-shadow: none; cursor: pointer; }
