@@ -5,7 +5,8 @@
   "private": true,
   "license": "MIT",
   "bin": {
-    "kt": "src/modules/tickets/cli/kt.js"
+    "kh": "bin/kh.js",
+    "kt": "bin/kt.js"
   },
   "scripts": {
     "build": "tsc --noEmit && node esbuild.config.mjs",

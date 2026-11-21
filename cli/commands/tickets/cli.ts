@@ -1,18 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { buildIssueText } from "../../../core/domain/create";
-import { PRIORITY_ORDER, defaultSettings } from "../../../core/domain/defaults";
-import { formatId, nextId, parseId } from "../../../core/domain/ids";
-import { appendEvent, parseIssue } from "../../../core/domain/issueFile";
-import type { IssuePatch } from "../../../core/domain/issueFile";
-import { fromLink } from "../../../core/domain/links";
-import { milestoneAfterProjectChange } from "../../../core/domain/milestones";
-import { addRelatedList, relatedIds, removeRelatedLists } from "../../../core/domain/related";
-import { addReplyText, commentIssueText, issueToJson, linkPrText, patchIssueText } from "../../../core/domain/ops";
-import { parseProject } from "../../../core/domain/projectFile";
-import type { Issue, Priority, Project, Settings } from "../../../core/domain/types";
-import { mergeData } from "../src/data";
+import { buildIssueText } from "../../../src/core/domain/create";
+import { PRIORITY_ORDER, defaultSettings } from "../../../src/core/domain/defaults";
+import { formatId, nextId, parseId } from "../../../src/core/domain/ids";
+import { appendEvent, parseIssue } from "../../../src/core/domain/issueFile";
+import type { IssuePatch } from "../../../src/core/domain/issueFile";
+import { fromLink } from "../../../src/core/domain/links";
+import { milestoneAfterProjectChange } from "../../../src/core/domain/milestones";
+import { addRelatedList, relatedIds, removeRelatedLists } from "../../../src/core/domain/related";
+import { addReplyText, commentIssueText, issueToJson, linkPrText, patchIssueText } from "../../../src/core/domain/ops";
+import { parseProject } from "../../../src/core/domain/projectFile";
+import type { Issue, Priority, Project, Settings } from "../../../src/core/domain/types";
+import { mergeData } from "../../../src/modules/tickets/src/data";
 
 export interface Io {
   cwd: string;
@@ -23,7 +23,7 @@ export interface Io {
   now: () => Date;
 }
 
-export const EXIT = { ok: 0, usage: 1, notFound: 2, validation: 3 } as const;
+export const EXIT = { ok: 0, usage: 1, notFound: 2, validation: 3, config: 2, remote: 4 } as const;
 
 export class KtError extends Error {
   constructor(public code: number, message: string) {
@@ -83,7 +83,7 @@ export function discoverFolder(dirOpt: string | undefined, io: Pick<Io, "cwd" | 
   throw notFound(`No tickets folder found from "${io.cwd}" upward (looked for ${MARKER}). Run from inside the vault, or use --dir <path> / KT_DIR.`);
 }
 
-interface Ctx {
+export interface Ctx {
   folder: string;
   settings: Settings;
   counter: number;
@@ -91,7 +91,7 @@ interface Ctx {
   projectsDir: string;
 }
 
-function loadCtx(folder: string): Ctx {
+export function loadCtx(folder: string): Ctx {
   const settings = defaultSettings();
   let counter = 0;
   const marker = readJson(path.join(folder, MARKER)) as { prefix?: unknown } | undefined;
@@ -118,12 +118,12 @@ function loadCtx(folder: string): Ctx {
 
 // ---- files ---------------------------------------------------------------
 
-function mdFiles(dir: string): string[] {
+export function mdFiles(dir: string): string[] {
   if (!isDir(dir)) return [];
   return fs.readdirSync(dir).filter((n) => n.toLowerCase().endsWith(".md") && !n.startsWith("."));
 }
 
-function loadIssues(ctx: Ctx): Issue[] {
+export function loadIssues(ctx: Ctx): Issue[] {
   const out: Issue[] = [];
   for (const n of mdFiles(ctx.issuesDir)) {
     try {
@@ -178,7 +178,7 @@ export function atomicWrite(file: string, text: string): void {
 }
 
 /** Atomic create: returns false when `file` already exists. */
-function atomicCreate(file: string, text: string): boolean {
+export function atomicCreate(file: string, text: string): boolean {
   const tmp = writeTemp(path.dirname(file), text);
   try {
     fs.linkSync(tmp, file);
@@ -229,7 +229,7 @@ function normMilestone(project: Project, v: string): string {
   return hit.name;
 }
 
-function normAuthor(v: string): string {
+export function normAuthor(v: string): string {
   const a = v.trim().replace(/^@/, "");
   if (a === "" || /\s/.test(a)) throw usage(`Invalid author "${v}" (no spaces).`);
   return a;
@@ -327,7 +327,7 @@ Use "none" to clear assignee, project, milestone, due or parent.`,
 
 // ---- commands ------------------------------------------------------------
 
-function authorOf(ctx: Ctx, io: Io, v: unknown): string {
+export function authorOf(ctx: Ctx, io: Io, v: unknown): string {
   return normAuthor(str(v) ?? (io.env.KT_AUTHOR || ctx.settings.displayName || "kt"));
 }
 

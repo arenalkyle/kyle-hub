@@ -1,6 +1,6 @@
 node_modules/
 dist/
 main.js
-src/modules/tickets/cli/kt.js
+bin/*.js
 .env.local
 *.log

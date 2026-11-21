@@ -19,7 +19,7 @@ const crossModule = (self) => ({
 
 export default tseslint.config(
   { linterOptions: { reportUnusedDisableDirectives: "off" } },
-  { ignores: ["main.js", "node_modules/**", "dist/**", "**/*.mjs", "src/modules/tickets/cli/kt.js", "src/modules/term/helper/**", "src/modules/term/hooks/**"] },
+  { ignores: ["main.js", "node_modules/**", "dist/**", "**/*.mjs", "bin/**", "src/modules/term/helper/**", "src/modules/term/hooks/**"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -60,6 +60,18 @@ export default tseslint.config(
           { name: "react-dom", message: "core/domain is pure: no React." },
         ],
         patterns: [{ group: ["**/modules/**"], message: "core may not import modules." }],
+      }],
+    },
+  },
+  {
+    files: ["cli/**/*.ts"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        paths: [
+          { name: "obsidian", message: "kh CLI is Obsidian-free (ADR-0003)." },
+          { name: "react", message: "kh CLI is Obsidian-free (ADR-0003)." },
+          { name: "react-dom", message: "kh CLI is Obsidian-free (ADR-0003)." },
+        ],
       }],
     },
   },

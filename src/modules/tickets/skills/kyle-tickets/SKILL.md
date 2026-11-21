@@ -5,7 +5,7 @@ description: Work with kyle-tickets issues in an Obsidian vault (create, update,
 
 # kyle-tickets
 
-Tickets are Markdown files in a vault folder (usually `Tickets/`), managed by the kyle-tickets Obsidian plugin. Use the `kt` CLI; it writes the same file format and activity events as the plugin.
+Tickets are Markdown files in a vault folder (usually `Tickets/`), managed by the kyle-tickets Obsidian plugin. Use the `kh tickets` CLI (`kt` is the same command and stays valid); it writes the same file format and activity events as the plugin.
 
 ## Steps
 

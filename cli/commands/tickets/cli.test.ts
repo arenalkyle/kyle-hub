@@ -2,7 +2,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { run, type Io } from "./cli";
+import { run as ticketsRun, type Io } from "./cli";
+import { run as khRun } from "../../kh";
+import { run as ktRun } from "../../kt";
+
+/** Same suite through three entries: `KH_E2E=kh` (kh tickets) or `KH_E2E=kt` (kt shim); default is the tickets runner. */
+const ENTRIES: Record<string, (args: string[], io: Io) => number> = {
+  kh: (a, io) => khRun(["tickets", ...a], io),
+  kt: ktRun,
+};
+const run = ENTRIES[process.env.KH_E2E ?? ""] ?? ticketsRun;
 
 let root: string;
 let out: string[];

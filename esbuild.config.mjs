@@ -54,12 +54,12 @@ const options = {
 // node-pty is never bundled (kyle-term ADR-0001): it lives in helper/pty-host.js, shipped next to main.js by deploy.
 /** @type {import('esbuild').BuildOptions} */
 const cliOptions = {
-  entryPoints: ["src/modules/tickets/cli/kt.ts"],
+  entryPoints: { kh: "cli/bin/kh.ts", kt: "cli/bin/kt.ts" },
   bundle: true,
   format: "cjs",
   platform: "node",
   target: "node18",
-  outfile: "src/modules/tickets/cli/kt.js",
+  outdir: "bin",
   banner: { js: "#!/usr/bin/env node" },
   logLevel: "info",
 };
