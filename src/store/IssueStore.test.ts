@@ -188,6 +188,11 @@ describe("IssueStore", () => {
     expect(store.childrenOf("TIX-1").map((i) => i.id)).toEqual(["TIX-2"]);
     await store.addComment("TIX-1", "hello", "claude");
     expect(vault.files.get("Tickets/Issues/TIX-1.md")).toMatch(/### @claude · .*\nhello/);
+    await store.updateDescription("TIX-1", "New **desc**\n");
+    const t1 = vault.files.get("Tickets/Issues/TIX-1.md")!;
+    expect(t1).toMatch(/\nNew \*\*desc\*\*\n\n## Activity/);
+    expect(store.getIssue("TIX-1")!.description).toBe("New **desc**");
+    expect(t1).toMatch(/### @claude · .*\nhello/);
     const proj = await store.createProject({ name: "Proj" });
     expect(proj.name).toBe("Proj");
     await store.updateProject("Proj", { status: "started" });

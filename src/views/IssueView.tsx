@@ -1,13 +1,17 @@
 import { ItemView, Notice, TFile, type ViewStateResult, type WorkspaceLeaf } from "obsidian";
-import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type KyleTicketsPlugin from "../main";
 import type { IssuePatch } from "../core/issueFile";
 import { fromLink } from "../core/links";
-import { useIssue, useSettings, useStoreReady } from "../store/hooks";
+import { useIssue, useIssues, useSettings, useStoreReady } from "../store/hooks";
 import { confirmModal } from "../settings/modals";
 import { PluginContext, usePlugin } from "./PluginContext";
+import { ActivityFeed } from "./issue/ActivityFeed";
+import { CommentBox } from "./issue/CommentBox";
+import { Description } from "./issue/Description";
 import { IssueHeader } from "./issue/IssueHeader";
+import { SubIssues } from "./issue/SubIssues";
 import { PropertiesSidebar, type PropKind } from "./issue/PropertiesSidebar";
 import { VIEW_TYPE_ISSUE } from "./intercept";
 import { useShortcuts, type ShortcutAction } from "./shortcuts";
@@ -78,6 +82,8 @@ function IssueApp({ path, leaf }: IssueAppProps) {
   const settings = useSettings();
   const parentId = issue?.parent ? fromLink(issue.parent) : undefined;
   const parent = useIssue(parentId ?? "");
+  const allIssues = useIssues();
+  const children = useMemo(() => allIssues.filter((i) => i.parent !== undefined && fromLink(i.parent) === id), [allIssues, id]);
   const rootRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [open, setOpen] = useState<{ kind: PropKind; anchor: HTMLElement | null } | null>(null);
@@ -113,6 +119,10 @@ function IssueApp({ path, leaf }: IssueAppProps) {
         requestAnimationFrame(() => openPicker(k, rootRef.current?.querySelector<HTMLElement>(`[data-kt-prop="${k}"]`) ?? null));
         return true;
       }
+      if (action === "new") {
+        plugin.openNewIssue({ parent: id });
+        return true;
+      }
       if (action === "clear") {
         const hist = (leaf as unknown as { history?: { backHistory?: unknown[]; back(): void } }).history;
         if (hist?.backHistory && hist.backHistory.length > 0) hist.back();
@@ -121,7 +131,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
       }
       return false;
     },
-    [leaf, plugin, openPicker],
+    [leaf, plugin, openPicker, id],
   );
   useShortcuts(rootRef, onShortcut);
 
@@ -181,6 +191,36 @@ function IssueApp({ path, leaf }: IssueAppProps) {
         <div className="kt-issue-main">
           <div className="kt-issue-column">
             <TitleEditor title={issue.title} onSave={(title) => update({ title })} />
+            <Description
+              description={issue.description}
+              sourcePath={path}
+              onSave={(md) => {
+                void plugin.store.updateDescription(id, md).catch((e) => {
+                  console.error("kyle-tickets: description save failed", e);
+                  new Notice("Could not save the description.");
+                });
+              }}
+            />
+            <SubIssues
+              children={children}
+              settings={settings}
+              onOpen={(c, newTab) => plugin.openIssue(c.id, newTab)}
+              onStatus={(c, status) => void plugin.store.updateIssue(c.id, { status })}
+              onAdd={() => plugin.openNewIssue({ parent: id })}
+            />
+            <ActivityFeed feed={issue.feed} sourcePath={path} />
+            <CommentBox
+              onPost={(body) =>
+                plugin.store.addComment(id, body).then(
+                  () => undefined,
+                  (e) => {
+                    console.error("kyle-tickets: comment failed", e);
+                    new Notice("Could not post the comment.");
+                    throw e;
+                  },
+                )
+              }
+            />
           </div>
         </div>
         {sidebarOpen && <PropertiesSidebar issue={issue} settings={settings} open={open} onOpen={openPicker} onClose={closePicker} onUpdate={update} />}

@@ -234,6 +234,11 @@ export class IssueStore {
     return done;
   }
 
+  /** Replace only the description part of the file; logs no activity event, bumps `updated`. */
+  async updateDescription(id: string, md: string, author?: string): Promise<Issue> {
+    return this.updateIssue(id, { description: md.replace(/^(?:[ \t]*\r?\n)+/, "").replace(/\s+$/, "") }, author);
+  }
+
   async addComment(id: string, body: string, author?: string): Promise<Issue> {
     const { path, file } = this.requireIssueFile(id);
     const now = new Date();

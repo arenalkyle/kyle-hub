@@ -46,6 +46,21 @@ function fieldsFromFm(fm: Fields, fileName: string): Fields {
 
 const FIELD_KEYS = Object.keys(fieldsFromFm({}, ""));
 
+/** Body lines that would be read as feed structure are escaped with a leading backslash in files. */
+const STRUCTURAL = String.raw`(###|- \d{4}-\d{2}-\d{2} \d{2}:\d{2} )`;
+const ESCAPE_LINE = new RegExp(String.raw`^\\*${STRUCTURAL}`);
+const UNESCAPE_LINE = new RegExp(String.raw`^\\+${STRUCTURAL}`);
+
+/** Escape comment-body lines that start a `###` heading or an event bullet (adds one backslash). */
+export function escapeCommentBody(body: string): string {
+  return body.split(/\r?\n/).map((l) => (ESCAPE_LINE.test(l) ? `\\${l}` : l)).join("\n");
+}
+
+/** Inverse of {@link escapeCommentBody}: removes one leading backslash from escaped structural lines. */
+export function unescapeCommentBody(body: string): string {
+  return body.split("\n").map((l) => (UNESCAPE_LINE.test(l) ? l.slice(1) : l)).join("\n");
+}
+
 function trimBlankEdges(s: string): string {
   return s.replace(/^(?:[ \t]*\r?\n)+/, "").replace(/(?:\r?\n[ \t]*)+$/, "");
 }
@@ -61,7 +76,7 @@ export function parseFeed(feedRaw: string | null): FeedEntry[] {
         type: "comment",
         author: cur.author,
         time: cur.time,
-        body: trimBlankEdges(cur.body.join("\n")),
+        body: unescapeCommentBody(trimBlankEdges(cur.body.join("\n"))),
       });
       cur = null;
     }
@@ -164,7 +179,7 @@ export function appendComment(
   now: Date,
 ): string {
   const e = issue.raw.eol;
-  const body = trimBlankEdges(input.body).replace(/\r?\n/g, e);
+  const body = escapeCommentBody(trimBlankEdges(input.body)).replace(/\n/g, e);
   const head = `### @${input.author} · ${formatFeedTime(now)}`;
   return appendToFeed(issue, body === "" ? head : head + e + body, false);
 }

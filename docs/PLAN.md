@@ -96,7 +96,7 @@ Rules:
 - `priority`: `none | urgent | high | medium | low` (default `none`).
 - `tags` are **labels**. Label colors live in plugin settings (auto-assigned on first sight).
 - `parent` links make sub-issues. `project` links a project note; `milestone` is a milestone name from that project.
-- Everything below the first `## Activity` heading is the activity feed. A **comment** is a `### @author · YYYY-MM-DD HH:mm` heading plus a Markdown body (until the next `###` or EOF). An **event** is a single bullet `- YYYY-MM-DD HH:mm · @author <text>`. Feed entries keep file order (chronological; new entries are appended).
+- Everything below the first `## Activity` heading is the activity feed. A **comment** is a `### @author · YYYY-MM-DD HH:mm` heading plus a Markdown body (until the next `###` or EOF). An **event** is a single bullet `- YYYY-MM-DD HH:mm · @author <text>`. Feed entries keep file order (chronological; new entries are appended). **Escaping**: when a comment is written, any body line starting with `###` or an event-bullet prefix (`- YYYY-MM-DD HH:mm `) gets one leading `\`; the parser removes one leading `\` from such lines, so bodies round-trip exactly and cannot break feed parsing.
 - Unknown frontmatter keys and unknown body content are preserved on save (round-trip safe).
 - Times are local time; `created`/`updated` ISO without zone.
 
