@@ -64,3 +64,11 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Open `%LOCALAPPDATA%\kyle-hub\home\runs\`: one file has tool_call, usage and file_* records, and no secrets (check for tokens/keys).
 - [ ] `kh logs ingest` again: runs updated 0, records 0 (apart from skipped lines from a live session).
 - [ ] Note: LogService isn't registered on the hub and the hook server doesn't call `appendHookEvent` yet; `core.repos`/`core.logs` settings shapes are assumed (see ticket comment).
+
+## 4.2 Run index, retention, maintain/doctor/schedule — LOCK-50
+
+- [ ] `kh schedule install` prints the schtasks command; review, then `kh schedule install --yes`. `kh schedule status` shows the next run; Task Scheduler lists `kyle-hub-maintain` (real registration not done unattended).
+- [ ] Obsidian → kyle-hub settings → Log health → Run doctor. If it warns about `cleanupPeriodDays`, set `"cleanupPeriodDays": 30` in `~/.claude/settings.json`; if it warns about kyle-hook, install the hook from term settings.
+- [ ] Set the `core.logs.prices` table in plugin settings for cost figures (CLI reads it from data.json); without it costs show $0.
+- [ ] Close Obsidian, run a Claude session, wait 30 min (or `schtasks /Run /TN kyle-hub-maintain`): `kh logs runs --since 2026-11-01` includes the session.
+- [ ] With the term hook installed, hook events land in `%LOCALAPPDATA%\kyle-hub\<profile>\hooks\<date>.jsonl`.
