@@ -84,3 +84,17 @@ Things that need a person using Obsidian. Agents ran the automated checks (`npm 
 7. Turn off "Restore scrollback": saved files under the plugin's `sessions/` folder are deleted; metadata and Resume still work.
 8. Delete/rename a session's folder, then Resume/Restart: starts in the vault root with a notice.
 9. Kill Obsidian from Task Manager mid-session, reopen: at most a few seconds of state lost.
+
+## Phase 8 — macOS pass (LOCK-9)
+
+On Windows (regression): re-run the Phase 1 and Phase 2 checks above.
+
+On the Mac (Apple Silicon; darwin-x64 untested):
+
+1. Fresh clone → `npm i` → `.env.local` (`KYLE_TERM_VAULTS=/Users/<name>/path/to/vault`) → `npm run deploy`; enable the plugin. Native module loads.
+2. Launch Obsidian **from the Dock**; open kyle-term; `+` gives a bash login prompt; `which node claude` both resolve. Settings shows the detected PATH / Node readout.
+3. Default shell profile lists bash / zsh only; `New Session` starts Claude.
+4. Install hooks: `~/.claude/settings.json` has correctly quoted POSIX paths; a tool call and a permission prompt drive lights and sound.
+5. Cmd+C copies (with selection), Cmd+V pastes, Ctrl+C always interrupts, Cmd+= / Cmd+- / Cmd+0 zoom, Shift+Enter inserts a newline in Claude.
+6. Background image from an absolute POSIX path; send note / drag notes give POSIX `@` refs.
+7. Quit and reopen: Resume works.

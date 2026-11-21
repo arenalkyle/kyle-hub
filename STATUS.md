@@ -2,20 +2,20 @@
 
 _Last updated: 2026-11-21_
 
-Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-1](https://linear.app/divinity/issue/LOCK-1)
+Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-1](https://linear.app/divinity/issue/LOCK-1) · Repo: https://github.com/arenalkyle/kyle-term
 
-- **Done**: design agreed; PLAN + ADR-0001/0002; Linear tickets LOCK-2…LOCK-9 (one per phase, `ready-for-agent`).
+- **Done**: Phases 1–8 built, agent-reviewed and pushed (LOCK-2…LOCK-9 Done). `npm run build` ✅, `npm test` 141/141 ✅, `npm run deploy` ✅.
 - **In progress**: —
-- **In review**: Phases 1-8 ([LOCK-2](https://linear.app/divinity/issue/LOCK-2)..[LOCK-9](https://linear.app/divinity/issue/LOCK-9)) built; awaiting manual check in Obsidian (run Install hooks first; Appearance and Saved folders live in settings).
-- **Next**: manual checks (Windows in Obsidian; macOS per LOCK-9 checklist).
+- **Next**: run [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) in Obsidian (Windows first, starting with **Install hooks**; then the macOS section on a Mac).
+- **Open risks**: `@"path with spaces"` quoting unverified against real Claude Code (Phase 6); macOS logic only unit-tested; `npm audit` flags dev-only vitest deps.
 
 | Phase | Ticket | State |
 |---|---|---|
-| 1 First terminal | LOCK-2 | In Review |
-| 2 Sessions + sidebar | LOCK-3 | In Review |
-| 3 Hooks + agent state | LOCK-4 | In Review |
-| 4 Sounds + attention | LOCK-5 | In Review |
-| 5 Appearance | LOCK-6 | In Review |
-| 6 Vault integration | LOCK-7 | In Review |
-| 7 Persistence | LOCK-8 | In Review |
-| 8 macOS pass | LOCK-9 | In Review |
+| 1 First terminal | LOCK-2 | Done |
+| 2 Sessions + sidebar | LOCK-3 | Done |
+| 3 Hooks + agent state | LOCK-4 | Done |
+| 4 Sounds + attention | LOCK-5 | Done |
+| 5 Appearance | LOCK-6 | Done |
+| 6 Vault integration | LOCK-7 | Done |
+| 7 Persistence | LOCK-8 | Done |
+| 8 macOS pass | LOCK-9 | Done |
