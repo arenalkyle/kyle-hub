@@ -1,5 +1,5 @@
 import type { App, EventRef, TAbstractFile, TFile } from "obsidian";
-import { asLink, buildIssueText, buildProjectText, type NewIssueInput, type NewProjectInput } from "../core/create";
+import { buildIssueText, buildProjectText, type NewIssueInput, type NewProjectInput } from "../core/create";
 import { diffToEvents } from "../core/diff";
 import { nextId } from "../core/ids";
 import {
@@ -12,6 +12,7 @@ import {
 } from "../core/issueFile";
 import { fromLink } from "../core/links";
 import { issueInMilestone, milestoneAfterProjectChange, reorderMilestones, validateMilestoneName } from "../core/milestones";
+import { patchIssueText } from "../core/ops";
 import { parsePrUrl, prLabelOfUrl } from "../core/pr";
 import { clearUnlinked, markUnlinked } from "../core/prMatch";
 import { parseProject, serializeProject } from "../core/projectFile";
@@ -197,22 +198,11 @@ export class IssueStore {
     const now = new Date();
     const who = author ?? this.host.data.settings.displayName;
     const norm: IssuePatch = { ...patch };
-    if (typeof norm.project === "string") norm.project = asLink(norm.project);
-    if (typeof norm.parent === "string") norm.parent = asLink(norm.parent);
     this.validateMilestone(id, norm);
     let written = "";
     await this.host.app.vault.process(file, (text) => {
-      const before = parseIssue(text, file.name);
-      const after = applyPatch(before, norm, now);
-      const events = diffToEvents(before, after, who, now);
-      // No-op patch: leave the file untouched.
-      if (events.length === 0 && serializeIssue({ ...after, updated: before.updated }) === text) {
-        written = text;
-        return text;
-      }
-      let out = serializeIssue(after);
-      for (const e of events) out = appendEvent(parseIssue(out, file.name), { author: e.author, text: e.text }, now);
-      this.expected.set(path, out);
+      const out = patchIssueText(text, file.name, norm, who, now);
+      if (out !== text) this.expected.set(path, out);
       written = out;
       return out;
     });
@@ -526,6 +516,11 @@ export class IssueStore {
     }
     const snap = this.snapshots.get(path);
     if (!snap) {
+      this.snapshots.set(path, current);
+      return;
+    }
+    // A writer that already logged its own events (the kt CLI) must not be logged twice.
+    if (current.feed.length > snap.feed.length) {
       this.snapshots.set(path, current);
       return;
     }

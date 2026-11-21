@@ -1,3 +1,4 @@
+import { patchIssueText } from "../core/ops";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultData } from "../data";
 import { IssueStore } from "./IssueStore";
@@ -161,6 +162,22 @@ describe("IssueStore", () => {
     await flush();
     const text = vault.files.get(p)!;
     expect(text.match(/@external set status: Backlog → Todo/g)).toHaveLength(1);
+  });
+
+  it("does not re-log a CLI write that already carries its own event", async () => {
+    const { store, vault } = setup();
+    await store.start();
+    await store.createIssue({ title: "One" });
+    const p = "Tickets/Issues/TIX-1.md";
+    vault.external(p, patchIssueText(vault.files.get(p)!, "TIX-1.md", { status: "Todo", updatedBy: "claude" }, "claude", new Date()));
+    await flush();
+    vi.advanceTimersByTime(600);
+    await flush();
+    vi.advanceTimersByTime(2000);
+    await flush();
+    const text = vault.files.get(p)!;
+    expect(text.match(/set status: Backlog → Todo/g)).toHaveLength(1);
+    expect(text).not.toMatch(/@external/);
   });
 
   it("attributes to updatedBy when the edit bumps it, and ignores activity-only edits", async () => {
