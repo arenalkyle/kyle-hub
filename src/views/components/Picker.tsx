@@ -20,10 +20,13 @@ export interface PickerProps<T> {
   create?: { label: (query: string) => string; onCreate: (query: string) => void };
   placeholder?: string;
   footer?: ReactNode;
+  /** Show the filter input (default true). When false the popover itself takes focus and handles the keys. */
+  searchable?: boolean;
 }
 
 export function Picker<T>(p: PickerProps<T>) {
   const { anchor, items, multi, onClose } = p;
+  const searchable = p.searchable !== false;
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
@@ -67,13 +70,14 @@ export function Picker<T>(p: PickerProps<T>) {
 
   // The popover is rendered hidden until positioned; focus only once it is visible.
   useEffect(() => {
-    if (placed) inputRef.current?.focus({ preventScroll: true });
+    if (placed) (searchable ? inputRef.current : ref.current)?.focus({ preventScroll: true });
   }, [placed]);
   // Safety net: if something other than a click elsewhere drops focus to nothing, take it back.
   const onInputBlur = () => {
     requestAnimationFrame(() => {
       const a = document.activeElement;
-      if (ref.current && inputRef.current && (!a || a === document.body)) inputRef.current.focus({ preventScroll: true });
+      const target = searchable ? inputRef.current : ref.current;
+      if (ref.current && target && (!a || a === document.body)) target.focus({ preventScroll: true });
     });
   };
   useEffect(() => setActive(0), [query]);
@@ -151,20 +155,24 @@ export function Picker<T>(p: PickerProps<T>) {
     <div
       ref={ref}
       className="kt-picker"
+      tabIndex={searchable ? undefined : -1}
+      onBlur={searchable ? undefined : onInputBlur}
       style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? "visible" : "hidden" }}
       onKeyDown={onKeyDown}
       // Portals bubble React events to ancestors (e.g. a root onMouseDown that refocuses itself); keep them out.
       onMouseDown={(e) => e.stopPropagation()}
       onFocus={(e) => e.stopPropagation()}
     >
-      <input
-        className="kt-picker-input"
-        ref={inputRef}
-        value={query}
-        placeholder={p.placeholder ?? "Filter..."}
-        onChange={(e) => setQuery(e.target.value)}
-        onBlur={onInputBlur}
-      />
+      {searchable && (
+        <input
+          className="kt-picker-input"
+          ref={inputRef}
+          value={query}
+          placeholder={p.placeholder ?? "Filter..."}
+          onChange={(e) => setQuery(e.target.value)}
+          onBlur={onInputBlur}
+        />
+      )}
       <div className="kt-picker-list" ref={listRef}>
         {rows.length === 0 && <div className="kt-picker-empty">No results</div>}
         {rows}

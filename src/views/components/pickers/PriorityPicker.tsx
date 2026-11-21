@@ -20,7 +20,7 @@ export function PriorityPicker({ anchor, value, onChange, onClose }: PriorityPic
       getKey={(p) => p}
       getSearch={(p) => [PRIORITY_LABELS[p]]}
       selectedKeys={[value]}
-      placeholder="Set priority..."
+      searchable={false}
       renderItem={(p) => (
         <>
           <PriorityIcon priority={p} />

@@ -24,6 +24,7 @@
   color: var(--text-normal);
   overflow: hidden;
 }
+.kt-picker:focus { outline: none; }
 .kt-picker-input {
   border: none !important;
   border-bottom: 1px solid var(--background-modifier-border) !important;
