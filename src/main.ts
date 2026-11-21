@@ -16,8 +16,9 @@ import { DEFAULT_FLOOD } from "./core/domain/flood";
 import { termModule, termSettings } from "./modules/term";
 import { ticketsModule, ticketsSettings } from "./modules/tickets";
 import { brainModule, brainSettings } from "./modules/brain";
+import { commandCenterModule } from "./modules/command-center";
 
-const MODULES: HubModule[] = [ticketsModule, termModule, brainModule];
+const MODULES: HubModule[] = [ticketsModule, termModule, brainModule, commandCenterModule];
 const MODULE_LABELS: Record<ModuleId, string> = {
   core: "Core (always on)",
   tickets: "Tickets",

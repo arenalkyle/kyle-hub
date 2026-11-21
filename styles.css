@@ -594,3 +594,19 @@
 .kh-term-retro-since.is-nudge { color: var(--text-accent); font-weight: 600; }
 .kh-tickets-retro-actions { display: flex; gap: 6px; padding: 4px 0; }
 .kh-term-draft-diff { max-height: 300px; overflow: auto; white-space: pre; font-family: var(--font-monospace); font-size: var(--font-smallest); padding: 8px; background: var(--background-secondary); border-radius: 4px; }
+
+/* Command center (kh-command-center-) */
+.kh-command-center { padding: 8px 12px; }
+.kh-command-center-title { margin: 0 0 8px; }
+.kh-command-center-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.kh-command-center-tile { border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 8px; }
+.kh-command-center-tile-label { font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.kh-command-center-tile-value { font-size: var(--font-ui-large); font-weight: 600; }
+.kh-command-center-tile-detail { font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.kh-command-center-tile-disabled .kh-command-center-tile-value,
+.kh-command-center-tile-error .kh-command-center-tile-value { color: var(--text-faint); font-weight: 400; }
+.kh-command-center-list { margin: 0; padding-left: 16px; }
+.kh-command-center-row { cursor: default; }
+.kh-command-center-row:hover { color: var(--text-accent); }
+.kh-command-center-spend-total { font-size: var(--font-ui-large); font-weight: 600; }
+.kh-command-center-sparkline { width: 100%; height: 48px; display: block; }
