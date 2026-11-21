@@ -56,3 +56,11 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Display popover: group, order and filter by Type; chip shows in List, Board and issue header; dragging a card between type groups sets the type.
 - [ ] Issue page sidebar edits Type, Repo, Model, Blocked by; Runs, Outcome, Cost, Source are read-only.
 - [ ] `Triage.base`, `Queue.base`, `Proposals.base`, `Blocked.base` open; the `r` ticket appears in Queue; a hand-edited `.base` survives a restart.
+
+## 4.1 LogService + redaction — LOCK-49
+
+- [ ] Run a short Claude Code session in any repo, then exit.
+- [ ] `kh logs ingest` prints "runs updated: N, records: M, skipped: K".
+- [ ] Open `%LOCALAPPDATA%\kyle-hub\home\runs\`: one file has tool_call, usage and file_* records, and no secrets (check for tokens/keys).
+- [ ] `kh logs ingest` again: runs updated 0, records 0 (apart from skipped lines from a live session).
+- [ ] Note: LogService isn't registered on the hub and the hook server doesn't call `appendHookEvent` yet; `core.repos`/`core.logs` settings shapes are assumed (see ticket comment).
