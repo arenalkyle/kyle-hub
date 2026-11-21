@@ -116,3 +116,11 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] `kh brain check` on kyle-hub lists ~14 findings (shorthand paths like `core/domain/pack` in STATUS.md, PLAN.md, ADR-0003): fix the docs or add `brain.ignoreSymbols`.
 - [ ] `kh brain check --repo kyle-term` works (needs a kyle-term entry in the vault repo map).
 - [ ] Findings cap is only tested with a fake sink, not the real CLI; `kh brain check --tickets` twice adds no duplicate tickets.
+
+## 7.2 Doc retrieval + brain health — LOCK-56
+
+- [ ] Run "Create style conventions": `Brain/conventions/agent.md` and `human.md` appear in the vault; running again says they already exist.
+- [ ] Add kyle-hub to the vault repo map, then `kh status draft --repo kyle-hub` prints a skeleton and changes no files (until the repo is mapped it reports "unknown repo").
+- [ ] Launch a ticket linked to an ADR: the pack's "Docs included" section lists the ADR with its reason.
+- [ ] Turn the brain module off, launch again: the pack has no docs section (parent/blocker/previous-run sections remain).
+- [ ] Health score appears where expected (emitted on plugin load; `kh maintain` does not recompute it).
