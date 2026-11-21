@@ -8,6 +8,7 @@ import { checkRepo, lintVaultBrain, type ScanOptions } from "./scan";
 import type { Finding } from "./checks";
 import { DEFAULT_HEALTH_WEIGHTS, healthScore, sumCounts, type HealthCounts, type HealthWeights } from "./health";
 import { selectBrainDocs } from "./selectDocs";
+import { brainInventory, type BrainInventory } from "./inventory";
 
 export interface RepoEntry {
   path: string;
@@ -46,6 +47,8 @@ export interface BrainService {
   refreshHealth(): BrainHealth;
   /** Last computed health snapshot (computed on first call when nothing was checked yet). */
   health(): BrainHealth;
+  /** Counts of docs, scripts, skills and agents the brain draws on. */
+  inventory(): BrainInventory;
   /** Rule-based doc selection for a context pack; `budgetTokens` defaults to 8k. */
   selectDocs(ticket: { repo: string; title: string; description: string }, project: { description: string } | undefined, budgetTokens?: number): { docs: SelectedDoc[] };
 }
@@ -132,6 +135,21 @@ export function createBrainService(deps: BrainServiceDeps): BrainService {
     },
     health() {
       return snapshot ?? this.refreshHealth();
+    },
+    inventory() {
+      const keys = Object.keys(deps.repos());
+      let repoDocs = 0;
+      const repoRoots: string[] = [];
+      for (const k of keys) {
+        try {
+          repoDocs += this.docs(k).length;
+          repoRoots.push(rootOf(k));
+        } catch {
+          /* missing repo path: skipped, reported by `kh doctor` */
+        }
+      }
+      const vaultBrainDir = deps.vaultBrainDir?.();
+      return brainInventory({ repoRoots, repoDocs, ...(vaultBrainDir ? { vaultBrainDir } : {}) });
     },
     selectDocs(ticket, project, budgetTokens = DOC_BUDGET_TOKENS) {
       const docs = selectBrainDocs({

@@ -11,7 +11,7 @@ export interface CommandCenterReader {
   sessions?: Pick<SessionService, "list">;
   attention?: Pick<AttentionService, "list">;
   retro?: Pick<RetroService, "status">;
-  brain?: Pick<BrainService, "health">;
+  brain?: Pick<BrainService, "health" | "inventory">;
   logs?: Pick<LogService, "runs" | "spendByDay">;
   usage?: Pick<UsageService, "snapshot">;
 }
