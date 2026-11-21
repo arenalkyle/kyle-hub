@@ -96,7 +96,12 @@ export class CommandCenterView extends ItemView {
 
     this.paintSection(grid, "Recent runs", m.recentRuns, (list, rows) => {
       if (rows.length === 0) list.createEl("li", { text: "No runs yet" });
-      for (const r of rows) list.createEl("li", { cls: "kh-command-center-row", text: `${r.ticketId ?? r.runId} · ${r.outcome} · $${r.costUsd.toFixed(2)}` });
+      for (const r of rows) {
+        const li = list.createEl("li", { cls: "kh-command-center-row kh-command-center-run" });
+        li.createSpan({ cls: "kh-command-center-run-id", text: r.ticketId ?? r.runId, attr: { title: r.runId } });
+        li.createSpan({ cls: `kh-command-center-badge is-${r.outcome}`, text: r.outcome });
+        li.createSpan({ cls: "kh-command-center-run-cost", text: `$${r.costUsd.toFixed(2)}` });
+      }
     });
 
     this.paintSection(grid, "Open proposals", m.proposals, (list, rows) => {

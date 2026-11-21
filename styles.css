@@ -599,10 +599,10 @@
 .kh-command-center { padding: 16px 20px; max-width: 1100px; margin: 0 auto; }
 .kh-command-center-title { margin: 0 0 16px; font-size: var(--font-ui-large); }
 .kh-command-center h4 { margin: 0 0 8px; font-size: var(--font-ui-small); font-weight: var(--font-semibold); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.kh-command-center-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kh-command-center-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .kh-command-center-tile { background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
 .kh-command-center-tile-label { font-size: var(--font-ui-smaller); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.kh-command-center-tile-value { font-size: 1.6em; font-weight: 600; line-height: 1.2; }
+.kh-command-center-tile-value { font-size: 1.3em; font-weight: 600; line-height: 1.25; }
 .kh-command-center-tile-detail { font-size: var(--font-ui-smaller); color: var(--text-muted); }
 .kh-command-center-tile-disabled .kh-command-center-tile-value,
 .kh-command-center-tile-error .kh-command-center-tile-value { color: var(--text-faint); font-weight: 400; font-size: var(--font-ui-medium); }
@@ -614,6 +614,12 @@
 .kh-command-center-list li:first-child { border-top: none; }
 .kh-command-center-row { cursor: default; }
 .kh-command-center-row:hover { color: var(--text-accent); }
+.kh-command-center-run { display: flex; align-items: center; gap: 8px; }
+.kh-command-center-run-id { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-monospace); font-size: var(--font-ui-smaller); }
+.kh-command-center-run-cost { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.kh-command-center-badge { font-size: var(--font-ui-smaller); padding: 1px 8px; border-radius: 10px; background: var(--background-modifier-border); color: var(--text-muted); }
+.kh-command-center-badge.is-running { background: var(--interactive-accent); color: var(--text-on-accent); }
+.kh-command-center-badge.is-failed, .kh-command-center-badge.is-error { background: var(--text-error); color: var(--text-on-accent); }
 .kh-command-center-empty { color: var(--text-faint); font-size: var(--font-ui-small); }
 .kh-command-center-spend-total { font-size: 1.6em; font-weight: 600; }
 .kh-command-center-sparkline { width: 100%; height: 56px; display: block; margin-top: 8px; }
