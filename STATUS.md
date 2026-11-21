@@ -4,10 +4,9 @@ _Last updated: 2026-11-21_
 
 Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-10](https://linear.app/divinity/issue/LOCK-10) · Manual checks: [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md)
 
-- **Done** (reviewed, pushed, Linear Done): LOCK-11 → LOCK-23. Scaffold + CI, `src/core` model (ticket/project files, feed, IDs, query/display pipeline), plugin shell + setup, IssueStore (index, write API, activity log, external-edit detection), pickers + New issue window, main view sidebar + grouped windowed List, Display popover (grouping, sub-grouping, ordering, toggles, chips; per-view state), Board (columns, swimlanes, preview cards, dnd-kit drag-and-drop, manual `sortOrder` reorder), filter bar (AND-ed chips, per-view), keyboard shortcuts + Statuses/Labels settings editors with bulkUpdate, issue page (IssueView, file-open interception, breadcrumb, inline title, properties sidebar), issue page description editor, sub-issues, activity feed and comments, project pages (create, edit, rename, delete; ProjectView + interception). 161 tests passing.
-- **In review**: LOCK-24 (7.2): milestones on project pages (add/edit/reorder by drag/rename/delete, progress, overdue, click-to-filter), project-scoped List/Board via shared `IssueCollection`, milestone order in grouping, project change clears an invalid milestone. 169 tests passing.
+- **Done** (reviewed, pushed, Linear Done): LOCK-11 → LOCK-24. Scaffold + CI, `src/core` model (ticket/project files, feed, IDs, query/display pipeline), plugin shell + setup, IssueStore (index, write API, activity log, external-edit detection), pickers + New issue window, main view sidebar + grouped windowed List, Display popover (grouping, sub-grouping, ordering, toggles, chips; per-view state), Board (columns, swimlanes, preview cards, dnd-kit drag-and-drop, manual `sortOrder` reorder), filter bar (AND-ed chips, per-view), keyboard shortcuts + Statuses/Labels settings editors with bulkUpdate, issue page (IssueView, file-open interception, breadcrumb, inline title, properties sidebar), issue page description editor, sub-issues, activity feed and comments, project pages (create, edit, rename, delete; ProjectView + interception), milestones + project-scoped List/Board via shared IssueCollection. 169 tests passing.
 - **Next**: LOCK-25 → LOCK-28.
-- **Manual checks**: 1.1–7.1 (LOCK-11…23) are written up in `docs/MANUAL-CHECKS.md` and have not been run in Obsidian yet.
+- **Manual checks**: 1.1–7.2 (LOCK-11…24) are written up in `docs/MANUAL-CHECKS.md` and have not been run in Obsidian yet.
 
 | Phase | Sub-phases | State |
 |---|---|---|
@@ -17,6 +16,6 @@ Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-10](https://linear.ap
 | 4 Display + Board | 4.1 Display popover (LOCK-17) · 4.2 Board (LOCK-18) | Done · Done |
 | 5 Filters + shortcuts | 5.1 filter bar (LOCK-19) · 5.2 shortcuts + settings editors (LOCK-20) | Done · Done |
 | 6 Issue view | 6.1 page + properties (LOCK-21) · 6.2 description/sub-issues/activity (LOCK-22) | Done · Done |
-| 7 Projects | 7.1 project pages (LOCK-23) · 7.2 milestones + project issues (LOCK-24) | Done · In Review |
+| 7 Projects | 7.1 project pages (LOCK-23) · 7.2 milestones + project issues (LOCK-24) | Done · Done |
 | 8 Pull requests | 8.1 gh status (LOCK-25) · 8.2 auto-link (LOCK-26) | Todo |
 | 9 Agent tooling | 9.1 kt CLI (LOCK-27) · 9.2 agent docs + e2e (LOCK-28) | Todo |

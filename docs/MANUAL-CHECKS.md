@@ -122,10 +122,24 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 ## 7.1 Project pages — LOCK-23
 
 1. Sidebar → **+** next to Projects → create "Website" with icon, color, status and target date → it appears in the sidebar and `Projects/Website.md` exists.
-2. Click it → project page in the main view content area: edit title, description, status, lead, target date, color and icon inline. Progress bar = completed / (total − canceled). "View issues" shows its issue list; "Project page" goes back.
+2. Click it → project page in the main view content area: edit title, description, status, lead, target date, color and icon inline. Progress bar = completed / (total − canceled). (Since LOCK-24 the project's issues are embedded below the milestones; there is no "View issues" button.)
 3. Rename it to "Web" via the title → file renamed; an issue's `project:` reads `[[Web]]` (try with Obsidian's "Automatically update internal links" both on and off).
 4. "…" → Delete, confirm → file trashed; its issues lose `project` (and `milestone`) with activity lines.
 5. Open a project file from the file explorer → project page. "…" → Open as Markdown → raw file; header button "Open in kyle-tickets view" switches back.
 6. On an issue page, click the breadcrumb project → project page opens.
 7. Set a project to Completed or Canceled → it moves under "Archived" in the sidebar. Sidebar shows icons and colors, ordered by status then name; status icons are Linear-style (dashed, empty, half, pause, check, x).
 8. Invalid or duplicate names (`a/b`, an existing name) → notice; nothing created or renamed.
+
+## 7.2 Milestones and project issues — LOCK-24
+
+1. Project "Web" → Milestones → **+** → add "Alpha" (target next week) and "Beta" (next month). Drag Beta above Alpha; the order persists after reload.
+2. Assign three issues to Alpha and mark one Done → Alpha shows 1/3 · 33% with a mini bar (canceled issues don't count toward the total).
+3. Give a milestone with open issues a past target date → it's highlighted as overdue.
+4. Project page issues section (below milestones; default grouping Status): switch to Board, group by Milestone → columns in milestone order, "No milestone" last. Drag a card Alpha → Beta → its milestone changes. Display/filter state is separate from the main view's.
+5. Click Alpha's name → a Milestone filter chip appears; click again → it clears.
+6. Milestone "…" → Edit → rename Alpha → "Alpha 1" → its issues follow.
+7. Open an issue, change its project → milestone clears with an activity line.
+8. Delete a milestone that has issues → confirmation; issues lose the milestone with activity lines.
+9. New issue window: pick a project → the Milestone picker lists only that project's milestones.
+10. Open the project file from the file explorer → same milestones and issues.
+11. Main view List/Board/Display/Filter behave exactly as before (IssueCollection refactor; collapsed groups still remembered).
