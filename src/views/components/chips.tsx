@@ -1,8 +1,9 @@
+import { findProjectByLink } from "../../core/projects";
 import { fromLink } from "../../core/links";
 import { bestState, prLabel, prLabelOfUrl, type PrState } from "../../core/pr";
 import { formatDate } from "../../core/time";
-import { usePrs } from "../../store/hooks";
-import { Dot, Icon } from "./icons";
+import { useProjects, usePrs } from "../../store/hooks";
+import { Dot, Icon, ProjectGlyph } from "./icons";
 
 export function LabelChip({ label, color }: { label: string; color?: string }) {
   return (
@@ -15,9 +16,10 @@ export function LabelChip({ label, color }: { label: string; color?: string }) {
 
 export function ProjectChip({ project }: { project: string }) {
   const name = fromLink(project);
+  const def = findProjectByLink(useProjects(), project);
   return (
     <span className="kt-chip" title={name}>
-      <Icon name="box" size={12} />
+      <ProjectGlyph icon={def?.icon} color={def?.color} size={12} />
       <span className="kt-chip-text">{name}</span>
     </span>
   );
