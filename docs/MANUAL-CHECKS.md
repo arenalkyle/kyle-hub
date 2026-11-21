@@ -22,3 +22,10 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 5. Settings → kyle-tickets: change the display name, reload Obsidian → it persists and the setup window does not reappear.
 6. Change the folder in settings to a new name and click away → it offers to create the structure there (nothing is moved). Change it back.
 7. Disable and re-enable the plugin → no console errors.
+
+## 2.2 IssueStore — LOCK-14
+
+1. Dev console (Ctrl+Shift+I): `app.plugins.plugins['kyle-tickets'].store.createIssue({ title: 'Test' })` → `Tickets/Issues/TIX-1.md` appears with frontmatter and a "created the issue" event; the main view shows "1 issues".
+2. Open `TIX-1.md` in source mode, change `status: Backlog` to `status: Todo`, wait ~1 s → exactly one `- … · @external set status: Backlog → Todo` line is appended (no repeats).
+3. Delete the file → count goes to 0. Create another issue → it is `TIX-2` (numbers not reused).
+4. Rename an issue file in the explorer → the count stays the same and nothing is appended.
