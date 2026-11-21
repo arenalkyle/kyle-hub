@@ -8,13 +8,13 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 
 
 - **Done**: design grilling; PLAN, 11 ADRs, GLOSSARY, phased breakdown, ticket stubs written; Linear tickets LOCK-42…60 created (Phase 9 accounts + usage added).
-- **In progress**: plan approved 2026-11-21; nothing being built yet.
-- **Next**: close LOCK-29…41 in the old repos → Phase 1.1 (LOCK-43).
-- **Not started**: no code, no git repo yet (created in 1.1 via subtree import).
+- **In progress**: Phase 1.1 (LOCK-43) built locally and in review: repo, subtree imports, build/test/lint/CI, core skeleton. Not pushed.
+- **Next**: review + push 1.1 → Phase 1.2 (LOCK-44).
+- **Not started**: tickets/term modules are stubs until 1.2/2.1; nothing user-visible yet.
 
 | Phase | Sub-phases | Ticket | Model | State |
 |---|---|---|---|---|
-| 1 Foundation | 1.1 · 1.2 | LOCK-43 · LOCK-44 | S · S | Not started |
+| 1 Foundation | 1.1 · 1.2 | LOCK-43 · LOCK-44 | S · S | 1.1 in review |
 | 2 Term + cutover | 2.1 · 2.2 | LOCK-45 · LOCK-46 | S · H | Not started |
 | 3 Schema + triage | 3.1 · 3.2 | LOCK-47 · LOCK-48 | H · S | Not started |
 | 4 Logs | 4.1 · 4.2 | LOCK-49 · LOCK-50 | H · H | Not started |

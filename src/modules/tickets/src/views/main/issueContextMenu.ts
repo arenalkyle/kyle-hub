@@ -2,7 +2,7 @@ import { Menu, type MenuItem as ObsidianMenuItem } from "obsidian";
 import { createElement, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { Issue, Settings } from "../../core/types";
+import type { Issue, Settings } from "../../../../../core/domain/types";
 import type KyleTicketsPlugin from "../../main";
 import { Avatar } from "../components/Avatar";
 import { PriorityIcon, StatusIcon } from "../components/icons";

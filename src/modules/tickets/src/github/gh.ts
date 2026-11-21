@@ -1,5 +1,5 @@
 import { execFile } from "child_process";
-import { parsePrUrl, toPrState, type PrInfo } from "../core/pr";
+import { parsePrUrl, toPrState, type PrInfo } from "../../../../core/domain/pr";
 
 export type GhErrorKind = "not-installed" | "not-authenticated" | "not-found" | "timeout" | "other";
 

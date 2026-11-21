@@ -1,0 +1,9 @@
+{
+  "id": "kyle-hub",
+  "name": "kyle-hub",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Tickets, terminals, logs, retros and brain in one plugin.",
+  "author": "Kyle",
+  "isDesktopOnly": true
+}

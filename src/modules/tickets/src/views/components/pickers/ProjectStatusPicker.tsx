@@ -1,5 +1,5 @@
-import type { ProjectStatus } from "../../../core/types";
-import { PROJECT_STATUSES, PROJECT_STATUS_LABELS } from "../../../core/projects";
+import type { ProjectStatus } from "../../../../../../core/domain/types";
+import { PROJECT_STATUSES, PROJECT_STATUS_LABELS } from "../../../../../../core/domain/projects";
 import { Picker } from "../Picker";
 import { ProjectStatusIcon } from "../icons";
 

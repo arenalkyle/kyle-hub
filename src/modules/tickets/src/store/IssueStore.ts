@@ -1,7 +1,7 @@
 import type { App, EventRef, TAbstractFile, TFile } from "obsidian";
-import { buildIssueText, buildProjectText, type NewIssueInput, type NewProjectInput } from "../core/create";
-import { diffToEvents } from "../core/diff";
-import { nextId } from "../core/ids";
+import { buildIssueText, buildProjectText, type NewIssueInput, type NewProjectInput } from "../../../../core/domain/create";
+import { diffToEvents } from "../../../../core/domain/diff";
+import { nextId } from "../../../../core/domain/ids";
 import {
   appendComment,
   appendEvent,
@@ -9,16 +9,16 @@ import {
   parseIssue,
   serializeIssue,
   type IssuePatch,
-} from "../core/issueFile";
-import { fromLink } from "../core/links";
-import { issueInMilestone, milestoneAfterProjectChange, reorderMilestones, validateMilestoneName } from "../core/milestones";
-import { addReplyText, editCommentIssueText, patchIssueText } from "../core/ops";
-import { addRelatedList, removeRelatedLists } from "../core/related";
-import { parsePrUrl, prLabelOfUrl } from "../core/pr";
-import { clearUnlinked, markUnlinked } from "../core/prMatch";
-import { parseProject, serializeProject } from "../core/projectFile";
-import { issueInProject, rewriteProjectLink, validateProjectName } from "../core/projects";
-import type { Issue, Milestone, Project, ProjectStatus } from "../core/types";
+} from "../../../../core/domain/issueFile";
+import { fromLink } from "../../../../core/domain/links";
+import { issueInMilestone, milestoneAfterProjectChange, reorderMilestones, validateMilestoneName } from "../../../../core/domain/milestones";
+import { addReplyText, editCommentIssueText, patchIssueText } from "../../../../core/domain/ops";
+import { addRelatedList, removeRelatedLists } from "../../../../core/domain/related";
+import { parsePrUrl, prLabelOfUrl } from "../../../../core/domain/pr";
+import { clearUnlinked, markUnlinked } from "../../../../core/domain/prMatch";
+import { parseProject, serializeProject } from "../../../../core/domain/projectFile";
+import { issueInProject, rewriteProjectLink, validateProjectName } from "../../../../core/domain/projects";
+import type { Issue, Milestone, Project, ProjectStatus } from "../../../../core/domain/types";
 import type { PluginData } from "../data";
 
 export const EXTERNAL_DEBOUNCE_MS = 500;

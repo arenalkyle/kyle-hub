@@ -1,4 +1,4 @@
-import { patchIssueText } from "../core/ops";
+import { patchIssueText } from "../../../../core/domain/ops";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultData } from "../data";
 import { IssueStore } from "./IssueStore";

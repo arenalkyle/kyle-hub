@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { DisplayState } from "../../core/display";
-import { setFilterValues, type Filter, type FilterField } from "../../core/filters";
-import type { Group } from "../../core/query";
+import type { DisplayState } from "../../../../../core/domain/display";
+import { setFilterValues, type Filter, type FilterField } from "../../../../../core/domain/filters";
+import type { Group } from "../../../../../core/domain/query";
 import { Icon } from "../components/icons";
 import { DisplayPopover } from "./DisplayPopover";
 import { FieldPicker, ValuePicker } from "./FilterMenu";

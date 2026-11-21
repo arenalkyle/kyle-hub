@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FILTER_FIELD_LABELS, OP_LABELS, setFilterValues, type Filter } from "../../core/filters";
+import { FILTER_FIELD_LABELS, OP_LABELS, setFilterValues, type Filter } from "../../../../../core/domain/filters";
 import { Icon } from "../components/icons";
 import { ValuePicker, valueLabel } from "./FilterMenu";
 

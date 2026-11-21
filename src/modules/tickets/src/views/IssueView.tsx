@@ -2,9 +2,9 @@ import { ItemView, Notice, TFile, type ViewStateResult, type WorkspaceLeaf } fro
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type KyleTicketsPlugin from "../main";
-import type { IssuePatch } from "../core/issueFile";
-import { fromLink } from "../core/links";
-import { parsePrUrl } from "../core/pr";
+import type { IssuePatch } from "../../../../core/domain/issueFile";
+import { fromLink } from "../../../../core/domain/links";
+import { parsePrUrl } from "../../../../core/domain/pr";
 import { useIssue, useIssues, useSettings, useStoreReady } from "../store/hooks";
 import { copyText, deleteIssueConfirmed, issueLinkUri } from "./issueActions";
 import { PluginContext, usePlugin } from "./PluginContext";

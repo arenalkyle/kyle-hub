@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { setIcon } from "obsidian";
-import type { Priority, ProjectStatus, StatusCategory } from "../../core/types";
+import type { Priority, ProjectStatus, StatusCategory } from "../../../../../core/domain/types";
 
 interface StatusIconProps {
   category: StatusCategory;

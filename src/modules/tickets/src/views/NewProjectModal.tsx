@@ -1,8 +1,8 @@
 import { Modal, Notice } from "obsidian";
 import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { PROJECT_STATUS_LABELS, validateProjectName } from "../core/projects";
-import type { ProjectStatus } from "../core/types";
+import { PROJECT_STATUS_LABELS, validateProjectName } from "../../../../core/domain/projects";
+import type { ProjectStatus } from "../../../../core/domain/types";
 import type KyleTicketsPlugin from "../main";
 import { useProjects } from "../store/hooks";
 import { PluginContext, usePlugin } from "./PluginContext";

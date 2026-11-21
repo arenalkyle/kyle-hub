@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { defaultDisplay, mergeDisplay, type DisplayState } from "../../core/display";
-import { mergeFilters, type Filter } from "../../core/filters";
+import { defaultDisplay, mergeDisplay, type DisplayState } from "../../../../../core/domain/display";
+import { mergeFilters, type Filter } from "../../../../../core/domain/filters";
 import { usePlugin } from "../PluginContext";
 
 const SAVE_DELAY_MS = 400;

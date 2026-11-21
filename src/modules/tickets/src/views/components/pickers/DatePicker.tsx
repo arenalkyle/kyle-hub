@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { formatDate } from "../../../core/time";
+import { formatDate } from "../../../../../../core/domain/time";
 import { Picker } from "../Picker";
 import { Icon } from "../icons";
 

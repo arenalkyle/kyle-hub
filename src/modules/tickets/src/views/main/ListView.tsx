@@ -1,8 +1,8 @@
 import { TFile } from "obsidian";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DisplayState } from "../../core/display";
-import type { Group } from "../../core/query";
-import type { Issue, Priority } from "../../core/types";
+import type { DisplayState } from "../../../../../core/domain/display";
+import type { Group } from "../../../../../core/domain/query";
+import type { Issue, Priority } from "../../../../../core/domain/types";
 import type { NewIssueDefaults } from "../NewIssueModal";
 import { Icon, StatusIcon } from "../components/icons";
 import { PriorityPicker } from "../components/pickers/PriorityPicker";

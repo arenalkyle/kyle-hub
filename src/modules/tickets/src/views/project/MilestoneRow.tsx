@@ -2,8 +2,8 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Menu } from "obsidian";
 import { useState } from "react";
-import type { MilestoneProgress } from "../../core/milestones";
-import type { Milestone } from "../../core/types";
+import type { MilestoneProgress } from "../../../../../core/domain/milestones";
+import type { Milestone } from "../../../../../core/domain/types";
 import { DatePicker } from "../components/pickers/DatePicker";
 import { Icon } from "../components/icons";
 

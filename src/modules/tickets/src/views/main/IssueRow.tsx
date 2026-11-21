@@ -1,6 +1,6 @@
 import { memo, type MouseEvent } from "react";
-import type { PropKey } from "../../core/display";
-import type { Issue, Settings } from "../../core/types";
+import type { PropKey } from "../../../../../core/domain/display";
+import type { Issue, Settings } from "../../../../../core/domain/types";
 import {
   AssigneeChip, CreatedChip, DueChip, LabelChip, MilestoneChip, ProjectChip, PullRequestChip, SubIssuesChip,
 } from "../components/chips";

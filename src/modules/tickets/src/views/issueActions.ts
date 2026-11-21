@@ -1,5 +1,5 @@
 import { Notice, TFile, type App } from "obsidian";
-import type { Issue } from "../core/types";
+import type { Issue } from "../../../../core/domain/types";
 import type { IssueStore } from "../store/IssueStore";
 import { confirmModal } from "../settings/modals";
 

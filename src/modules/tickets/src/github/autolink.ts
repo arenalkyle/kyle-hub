@@ -1,5 +1,5 @@
-import { parsePrUrl, toPrState, type PrInfo } from "../core/pr";
-import { planLinks, type CandidatePr, type LinkTarget } from "../core/prMatch";
+import { parsePrUrl, toPrState, type PrInfo } from "../../../../core/domain/pr";
+import { planLinks, type CandidatePr, type LinkTarget } from "../../../../core/domain/prMatch";
 import type { PluginData } from "../data";
 import { GhError, runGh, type RunGhOptions } from "./gh";
 

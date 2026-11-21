@@ -1,8 +1,8 @@
 import { Menu, Notice } from "obsidian";
 import { useRef, useState, type ReactNode } from "react";
-import { projectViewId } from "../../core/query";
-import { PROJECT_STATUS_LABELS, issueInProject, projectProgress, validateProjectName } from "../../core/projects";
-import type { Project, ProjectStatus } from "../../core/types";
+import { projectViewId } from "../../../../../core/domain/query";
+import { PROJECT_STATUS_LABELS, issueInProject, projectProgress, validateProjectName } from "../../../../../core/domain/projects";
+import type { Project, ProjectStatus } from "../../../../../core/domain/types";
 import { ColorInput } from "../../settings/ColorInput";
 import { confirmModal, withProgressNotice } from "../../settings/modals";
 import { useIssues, useProjects, useSettings, useStoreReady } from "../../store/hooks";

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { matchesQuery } from "../../core/match";
+import { matchesQuery } from "../../../../../core/domain/match";
 
 /** Where popovers are portalled; inside an Obsidian modal this is the modal container so the modal keeps them in its focus scope. */
 export const PickerContainerContext = createContext<HTMLElement | null>(null);

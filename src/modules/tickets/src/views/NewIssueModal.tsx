@@ -1,9 +1,9 @@
 import { Modal, Notice, TFile } from "obsidian";
 import { StrictMode, useEffect, useRef, useState, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { PRIORITY_LABELS } from "../core/defaults";
-import { fromLink } from "../core/links";
-import type { Priority } from "../core/types";
+import { PRIORITY_LABELS } from "../../../../core/domain/defaults";
+import { fromLink } from "../../../../core/domain/links";
+import type { Priority } from "../../../../core/domain/types";
 import type KyleTicketsPlugin from "../main";
 import { PluginContext, usePlugin } from "./PluginContext";
 import { Dot, Icon, PriorityIcon, StatusIcon } from "./components/icons";

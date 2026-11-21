@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent } from "react";
-import { splitArchived } from "../../core/projects";
-import { projectViewId } from "../../core/query";
-import type { Project } from "../../core/types";
+import { splitArchived } from "../../../../../core/domain/projects";
+import { projectViewId } from "../../../../../core/domain/query";
+import type { Project } from "../../../../../core/domain/types";
 import { Icon, ProjectGlyph } from "../components/icons";
 
 export const SIDEBAR_MIN = 160;

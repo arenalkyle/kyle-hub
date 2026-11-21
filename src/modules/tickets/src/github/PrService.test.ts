@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { PrInfo } from "../core/pr";
+import type { PrInfo } from "../../../../core/domain/pr";
 import { defaultData } from "../data";
 import { GhError } from "./gh";
 import { MAX_CONCURRENT, PrService } from "./PrService";

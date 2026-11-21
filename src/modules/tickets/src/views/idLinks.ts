@@ -1,4 +1,4 @@
-import { findIdMatches } from "../core/idLinks";
+import { findIdMatches } from "../../../../core/domain/idLinks";
 
 /** Subtrees whose text must stay untouched: existing links, code, math and raw editors. */
 const SKIP = "a, code, pre, script, style, textarea, input, .internal-link, .math";

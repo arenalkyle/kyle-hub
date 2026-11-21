@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { nextLabelColor } from "../../../core/match";
+import { nextLabelColor } from "../../../../../../core/domain/match";
 import { useIssues } from "../../../store/hooks";
 import { usePlugin } from "../../PluginContext";
 import { Picker } from "../Picker";

@@ -1,6 +1,6 @@
 import { Modal, Notice, Setting, type App } from "obsidian";
-import type { Issue } from "../core/types";
-import type { IssuePatch } from "../core/issueFile";
+import type { Issue } from "../../../../core/domain/types";
+import type { IssuePatch } from "../../../../core/domain/issueFile";
 import { BULK_PROGRESS_THRESHOLD } from "../store/IssueStore";
 import type KyleTicketsPlugin from "../main";
 

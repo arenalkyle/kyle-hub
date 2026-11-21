@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { fromLink } from "../../../core/links";
+import { fromLink } from "../../../../../../core/domain/links";
 import { useProjects } from "../../../store/hooks";
 import { Picker } from "../Picker";
 import { Icon } from "../icons";

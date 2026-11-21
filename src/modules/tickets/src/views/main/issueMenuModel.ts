@@ -1,5 +1,5 @@
-import { PRIORITY_LABELS, PRIORITY_ORDER } from "../../core/defaults";
-import type { Issue, Priority, Settings, StatusDef } from "../../core/types";
+import { PRIORITY_LABELS, PRIORITY_ORDER } from "../../../../../core/domain/defaults";
+import type { Issue, Priority, Settings, StatusDef } from "../../../../../core/domain/types";
 
 /** Pickers the context menu can open at the mouse position (same ones the S/P/L/A shortcuts use, plus project/milestone/due). */
 export type PickerKind = "labels" | "assignee" | "project" | "milestone" | "due";

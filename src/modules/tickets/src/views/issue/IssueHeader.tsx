@@ -1,6 +1,6 @@
 import { Menu } from "obsidian";
-import type { Issue } from "../../core/types";
-import { fromLink } from "../../core/links";
+import type { Issue } from "../../../../../core/domain/types";
+import { fromLink } from "../../../../../core/domain/links";
 import { Icon } from "../components/icons";
 
 export interface IssueHeaderProps {

@@ -1,9 +1,9 @@
 import { Notice } from "obsidian";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { fromLink } from "../../core/links";
-import { hiddenFor, toggleHidden, visibleGroups } from "../../core/hidden";
-import { applyPatch, type IssuePatch } from "../../core/issueFile";
-import { buildView, OTHER_GROUP_KEY } from "../../core/query";
+import { fromLink } from "../../../../../core/domain/links";
+import { hiddenFor, toggleHidden, visibleGroups } from "../../../../../core/domain/hidden";
+import { applyPatch, type IssuePatch } from "../../../../../core/domain/issueFile";
+import { buildView, OTHER_GROUP_KEY } from "../../../../../core/domain/query";
 import { useIssues, useProjects, useSettings } from "../../store/hooks";
 import { usePlugin } from "../PluginContext";
 import { DatePicker } from "../components/pickers/DatePicker";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { defaultSettings } from "../../core/defaults";
-import type { Issue } from "../../core/types";
+import { defaultSettings } from "../../../../../core/domain/defaults";
+import type { Issue } from "../../../../../core/domain/types";
 import { buildIssueMenu, type MenuEntry, type MenuItem } from "./issueMenuModel";
 
 const issue = (over: Partial<Issue> = {}): Issue =>

@@ -1,4 +1,4 @@
-import { isStale, type PrCacheEntry, type PrInfo } from "../core/pr";
+import { isStale, type PrCacheEntry, type PrInfo } from "../../../../core/domain/pr";
 import type { PluginData } from "../data";
 import { getPr, type GhError, type GhErrorKind } from "./gh";
 

@@ -1,7 +1,0 @@
-node_modules/
-main.js
-cli/kt.js
-.env.local
-*.log
-
-.claude/worktrees/

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { orderSubIssues, subIssueProgress } from "../../core/activity";
-import type { Issue, Settings } from "../../core/types";
+import { orderSubIssues, subIssueProgress } from "../../../../../core/domain/activity";
+import type { Issue, Settings } from "../../../../../core/domain/types";
 import { AssigneeChip } from "../components/chips";
 import { StatusIcon } from "../components/icons";
 import { StatusPicker } from "../components/pickers/StatusPicker";

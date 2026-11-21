@@ -2,10 +2,10 @@ import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type D
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Notice } from "obsidian";
 import { useMemo, useState } from "react";
-import { setFilterValues, type Filter } from "../../core/filters";
-import { isMilestoneOverdue, milestoneProgress, moveItem, validateMilestoneName } from "../../core/milestones";
-import { formatDate } from "../../core/time";
-import type { Project } from "../../core/types";
+import { setFilterValues, type Filter } from "../../../../../core/domain/filters";
+import { isMilestoneOverdue, milestoneProgress, moveItem, validateMilestoneName } from "../../../../../core/domain/milestones";
+import { formatDate } from "../../../../../core/domain/time";
+import type { Project } from "../../../../../core/domain/types";
 import { confirmModal, withProgressNotice } from "../../settings/modals";
 import { useIssues, useSettings } from "../../store/hooks";
 import { usePlugin } from "../PluginContext";

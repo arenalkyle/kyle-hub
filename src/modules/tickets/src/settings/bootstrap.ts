@@ -1,6 +1,6 @@
 import type { DataAdapter } from "obsidian";
-import { AGENTS_NAME, isGeneratedAgentsDoc, renderAgentsDoc } from "../core/agentsDoc";
-import type { Settings } from "../core/types";
+import { AGENTS_NAME, isGeneratedAgentsDoc, renderAgentsDoc } from "../../../../core/domain/agentsDoc";
+import type { Settings } from "../../../../core/domain/types";
 
 export const MARKER_NAME = ".kyle-tickets.json";
 export const BASE_NAME = "All Issues.base";

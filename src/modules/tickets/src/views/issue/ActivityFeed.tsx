@@ -1,8 +1,8 @@
 import type { EditorView } from "@codemirror/view";
 import { memo, useRef, useState } from "react";
-import { humanizeEvent, type EventIcon } from "../../core/activity";
-import { relativeTime } from "../../core/time";
-import type { ActivityEvent, Comment, FeedEntry } from "../../core/types";
+import { humanizeEvent, type EventIcon } from "../../../../../core/domain/activity";
+import { relativeTime } from "../../../../../core/domain/time";
+import type { ActivityEvent, Comment, FeedEntry } from "../../../../../core/domain/types";
 import { Avatar } from "../components/Avatar";
 import { Icon } from "../components/icons";
 import { Markdown } from "../components/Markdown";

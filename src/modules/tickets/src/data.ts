@@ -1,6 +1,6 @@
-import { defaultSettings } from "./core/defaults";
-import type { PrCacheEntry } from "./core/pr";
-import type { Settings } from "./core/types";
+import { defaultSettings } from "../../../core/domain/defaults";
+import type { PrCacheEntry } from "../../../core/domain/pr";
+import type { Settings } from "../../../core/domain/types";
 
 export interface MainUiState {
   /** Selected sidebar view id (`all`, `active`, `backlog`, `project:<name>`). */

@@ -3,9 +3,9 @@ import { createPortal } from "react-dom";
 import {
   COMPLETED_LABELS, GROUP_BY_LABELS, GROUP_BY_OPTIONS, ORDER_BY_LABELS, ORDER_BY_OPTIONS, PROP_KEYS, PROP_LABELS,
   type CompletedMode, type DisplayState, type Layout,
-} from "../../core/display";
-import { hiddenFor, toggleHidden } from "../../core/hidden";
-import type { Group } from "../../core/query";
+} from "../../../../../core/domain/display";
+import { hiddenFor, toggleHidden } from "../../../../../core/domain/hidden";
+import type { Group } from "../../../../../core/domain/query";
 import { Icon } from "../components/icons";
 import { Picker } from "../components/Picker";
 

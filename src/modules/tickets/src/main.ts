@@ -1,11 +1,11 @@
 import { Notice, Plugin, TFile } from "obsidian";
-import { defaultSettings } from "./core/defaults";
-import { parsePrUrl } from "./core/pr";
-import type { Settings } from "./core/types";
+import { defaultSettings } from "../../../core/domain/defaults";
+import { parsePrUrl } from "../../../core/domain/pr";
+import type { Settings } from "../../../core/domain/types";
 import { mergeData, type PluginData } from "./data";
 import { KyleTicketsSettingTab } from "./settings/SettingsTab";
 import { SetupModal } from "./settings/SetupModal";
-import { renderAgentsDoc } from "./core/agentsDoc";
+import { renderAgentsDoc } from "../../../core/domain/agentsDoc";
 import { bootstrapFolder, syncAgentsDoc } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
 import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";

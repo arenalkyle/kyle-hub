@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 import {
   CATEGORY_LABELS, normalizeOrder, renameStatusIn, sortedStatuses, STATUS_CATEGORIES, uniqueStatusName,
   validateDelete, validateStatuses,
-} from "../core/statuses";
-import type { StatusCategory, StatusDef } from "../core/types";
+} from "../../../../core/domain/statuses";
+import type { StatusCategory, StatusDef } from "../../../../core/domain/types";
 import { useIssues, useSettings } from "../store/hooks";
 import { usePlugin } from "../views/PluginContext";
 import { ColorInput } from "./ColorInput";

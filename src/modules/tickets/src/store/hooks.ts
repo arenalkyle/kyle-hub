@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-import { parsePrUrl, type PrInfo } from "../core/pr";
-import type { Issue, Project, Settings } from "../core/types";
+import { parsePrUrl, type PrInfo } from "../../../../core/domain/pr";
+import type { Issue, Project, Settings } from "../../../../core/domain/types";
 import { usePlugin } from "../views/PluginContext";
 import type { IssueStore } from "./IssueStore";
 

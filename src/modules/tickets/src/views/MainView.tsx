@@ -3,7 +3,7 @@ import { StrictMode, useCallback, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type KyleTicketsPlugin from "../main";
 import type { MainUiState } from "../data";
-import { projectViewId, viewTitle } from "../core/query";
+import { projectViewId, viewTitle } from "../../../../core/domain/query";
 import { useProjects } from "../store/hooks";
 import { PluginContext, usePlugin } from "./PluginContext";
 import { ProjectPage } from "./project/ProjectPage";

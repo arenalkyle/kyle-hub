@@ -2,10 +2,10 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy, type SortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { memo } from "react";
-import type { DropKeys } from "../../core/dnd";
-import type { PropKey } from "../../core/display";
-import type { Group } from "../../core/query";
-import type { Issue, Settings } from "../../core/types";
+import type { DropKeys } from "../../../../../core/domain/dnd";
+import type { PropKey } from "../../../../../core/domain/display";
+import type { Group } from "../../../../../core/domain/query";
+import type { Issue, Settings } from "../../../../../core/domain/types";
 import { Icon, StatusIcon } from "../components/icons";
 import { IssueCard } from "./IssueCard";
 

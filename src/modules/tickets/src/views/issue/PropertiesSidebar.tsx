@@ -1,10 +1,10 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import type { IssuePatch } from "../../core/issueFile";
-import { fromLink } from "../../core/links";
-import { prLabel, prLabelOfUrl } from "../../core/pr";
+import type { IssuePatch } from "../../../../../core/domain/issueFile";
+import { fromLink } from "../../../../../core/domain/links";
+import { prLabel, prLabelOfUrl } from "../../../../../core/domain/pr";
 import { useProjects, usePrs } from "../../store/hooks";
-import { findProjectByLink } from "../../core/projects";
-import type { Issue, Settings } from "../../core/types";
+import { findProjectByLink } from "../../../../../core/domain/projects";
+import type { Issue, Settings } from "../../../../../core/domain/types";
 import { DueChip, LabelChip, PrStateIcon } from "../components/chips";
 import { Icon, PriorityIcon, ProjectGlyph, StatusIcon } from "../components/icons";
 import { Avatar } from "../components/Avatar";

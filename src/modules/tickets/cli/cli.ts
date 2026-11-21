@@ -1,17 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { buildIssueText } from "../src/core/create";
-import { PRIORITY_ORDER, defaultSettings } from "../src/core/defaults";
-import { formatId, nextId, parseId } from "../src/core/ids";
-import { appendEvent, parseIssue } from "../src/core/issueFile";
-import type { IssuePatch } from "../src/core/issueFile";
-import { fromLink } from "../src/core/links";
-import { milestoneAfterProjectChange } from "../src/core/milestones";
-import { addRelatedList, relatedIds, removeRelatedLists } from "../src/core/related";
-import { addReplyText, commentIssueText, issueToJson, linkPrText, patchIssueText } from "../src/core/ops";
-import { parseProject } from "../src/core/projectFile";
-import type { Issue, Priority, Project, Settings } from "../src/core/types";
+import { buildIssueText } from "../../../core/domain/create";
+import { PRIORITY_ORDER, defaultSettings } from "../../../core/domain/defaults";
+import { formatId, nextId, parseId } from "../../../core/domain/ids";
+import { appendEvent, parseIssue } from "../../../core/domain/issueFile";
+import type { IssuePatch } from "../../../core/domain/issueFile";
+import { fromLink } from "../../../core/domain/links";
+import { milestoneAfterProjectChange } from "../../../core/domain/milestones";
+import { addRelatedList, relatedIds, removeRelatedLists } from "../../../core/domain/related";
+import { addReplyText, commentIssueText, issueToJson, linkPrText, patchIssueText } from "../../../core/domain/ops";
+import { parseProject } from "../../../core/domain/projectFile";
+import type { Issue, Priority, Project, Settings } from "../../../core/domain/types";
 import { mergeData } from "../src/data";
 
 export interface Io {

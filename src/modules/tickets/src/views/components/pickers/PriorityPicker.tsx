@@ -1,5 +1,5 @@
-import type { Priority } from "../../../core/types";
-import { PRIORITY_LABELS } from "../../../core/defaults";
+import type { Priority } from "../../../../../../core/domain/types";
+import { PRIORITY_LABELS } from "../../../../../../core/domain/defaults";
 import { Picker } from "../Picker";
 import { PriorityIcon } from "../icons";
 

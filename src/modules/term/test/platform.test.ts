@@ -5,7 +5,7 @@ import { detectProfiles, pickProfileId, type DetectDeps } from "../src/shells";
 import { hookCommand, installHooks } from "../src/hook-installer";
 import { buildRef } from "../src/vault-paths";
 // @ts-expect-error plain JS module
-import { parseVaults } from "../scripts/deploy.mjs";
+import { parseVaults } from "../../../../scripts/deploy.mjs";
 
 describe("PATH merge", () => {
   it("dedupes, keeps order, uses platform separator", () => {

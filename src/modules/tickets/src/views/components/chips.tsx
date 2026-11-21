@@ -1,7 +1,7 @@
-import { findProjectByLink } from "../../core/projects";
-import { fromLink } from "../../core/links";
-import { bestState, prLabel, prLabelOfUrl, type PrState } from "../../core/pr";
-import { formatDate } from "../../core/time";
+import { findProjectByLink } from "../../../../../core/domain/projects";
+import { fromLink } from "../../../../../core/domain/links";
+import { bestState, prLabel, prLabelOfUrl, type PrState } from "../../../../../core/domain/pr";
+import { formatDate } from "../../../../../core/domain/time";
 import { useProjects, usePrs } from "../../store/hooks";
 import { Avatar } from "./Avatar";
 import { Dot, Icon, ProjectGlyph } from "./icons";

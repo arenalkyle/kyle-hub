@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
-import { relatedIds } from "../../core/related";
-import type { Issue, Settings } from "../../core/types";
+import { relatedIds } from "../../../../../core/domain/related";
+import type { Issue, Settings } from "../../../../../core/domain/types";
 import { useIssues } from "../../store/hooks";
 import { Icon, StatusIcon } from "../components/icons";
 import { Picker } from "../components/Picker";

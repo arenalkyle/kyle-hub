@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { StatusDef } from "../../../core/types";
+import type { StatusDef } from "../../../../../../core/domain/types";
 import { usePlugin } from "../../PluginContext";
 import { Picker } from "../Picker";
 import { StatusIcon } from "../icons";

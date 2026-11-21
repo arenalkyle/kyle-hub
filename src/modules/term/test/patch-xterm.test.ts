@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error untyped build script
-import { patchWebglAtlasFont } from "../scripts/patch-xterm.mjs";
+import { patchWebglAtlasFont } from "../../../../scripts/patch-xterm.mjs";
 
 /** Evaluate the patched template literal with the given style/weight. */
 const fontOf = (style: string, weight: string, src: string): string => {

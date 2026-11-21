@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { PRIORITY_LABELS, PRIORITY_ORDER } from "../../core/defaults";
+import { PRIORITY_LABELS, PRIORITY_ORDER } from "../../../../../core/domain/defaults";
 import {
   DUE_LABELS, DUE_VALUES, FILTER_FIELDS, FILTER_FIELD_LABELS, NONE_VALUE, type FilterField,
-} from "../../core/filters";
-import { fromLink } from "../../core/links";
+} from "../../../../../core/domain/filters";
+import { fromLink } from "../../../../../core/domain/links";
 import { useIssues, useProjects } from "../../store/hooks";
 import { usePlugin } from "../PluginContext";
 import { Picker } from "../components/Picker";
