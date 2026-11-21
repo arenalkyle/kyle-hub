@@ -12,7 +12,7 @@ import {
 } from "../core/issueFile";
 import { fromLink } from "../core/links";
 import { issueInMilestone, milestoneAfterProjectChange, reorderMilestones, validateMilestoneName } from "../core/milestones";
-import { patchIssueText } from "../core/ops";
+import { addReplyText, editCommentIssueText, patchIssueText } from "../core/ops";
 import { parsePrUrl, prLabelOfUrl } from "../core/pr";
 import { clearUnlinked, markUnlinked } from "../core/prMatch";
 import { parseProject, serializeProject } from "../core/projectFile";
@@ -313,6 +313,32 @@ export class IssueStore {
     await this.host.app.vault.process(file, (text) => {
       const bumped = applyPatch(parseIssue(text, file.name), {}, now);
       written = appendComment(bumped, { author: who, body }, now);
+      this.expected.set(path, written);
+      return written;
+    });
+    const issue = parseIssue(written, file.name);
+    this.setIssue(path, issue, true);
+    this.emit();
+    return issue;
+  }
+
+  /** Reply to comment `parentId` (threads are one level deep). */
+  async addReply(id: string, parentId: string, body: string, author?: string): Promise<Issue> {
+    const who = author ?? this.host.data.settings.displayName;
+    return this.rewriteText(id, (text, name, now) => addReplyText(text, name, parentId, who, body, now));
+  }
+
+  /** Replace a comment's body and mark it edited. */
+  async editComment(id: string, commentId: string, body: string): Promise<Issue> {
+    return this.rewriteText(id, (text, name, now) => editCommentIssueText(text, name, commentId, body, now));
+  }
+
+  private async rewriteText(id: string, fn: (text: string, fileName: string, now: Date) => string): Promise<Issue> {
+    const { path, file } = this.requireIssueFile(id);
+    const now = new Date();
+    let written = "";
+    await this.host.app.vault.process(file, (text) => {
+      written = fn(text, file.name, now);
       this.expected.set(path, written);
       return written;
     });

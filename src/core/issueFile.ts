@@ -14,7 +14,9 @@ const PRIORITIES: readonly Priority[] = ["none", "urgent", "high", "medium", "lo
 const FEED_HEADING = /^##[ \t]+Activity[ \t]*$/;
 const TIME = String.raw`(\d{4}-\d{2}-\d{2} \d{2}:\d{2})`;
 const SEP = String.raw`[·—-]`;
-const COMMENT_HEAD = new RegExp(String.raw`^###[ \t]+@(\S+)[ \t]+${SEP}[ \t]+${TIME}[ \t]*$`);
+const COMMENT_HEAD = new RegExp(
+  String.raw`^###[ \t]+@(\S+)[ \t]+${SEP}[ \t]+${TIME}(?:[ \t]+<!--[ \t]*kt((?:[ \t]+[a-z]+(?::[\w-]+)?)*)[ \t]*-->)?[ \t]*$`,
+);
 const EVENT_LINE = new RegExp(String.raw`^-[ \t]+${TIME}[ \t]+${SEP}[ \t]+@(\S+)(?:[ \t]+(.*))?$`);
 
 type Fields = Record<string, unknown>;
@@ -65,19 +67,48 @@ function trimBlankEdges(s: string): string {
   return s.replace(/^(?:[ \t]*\r?\n)+/, "").replace(/(?:\r?\n[ \t]*)+$/, "");
 }
 
+interface Meta {
+  id?: string;
+  reply?: string;
+  edited: boolean;
+}
+
+function parseMeta(raw: string | undefined): Meta {
+  const m: Meta = { edited: false };
+  for (const tok of (raw ?? "").trim().split(/\s+/)) {
+    if (tok === "edited") m.edited = true;
+    else if (tok.startsWith("id:")) m.id = tok.slice(3);
+    else if (tok.startsWith("reply:")) m.reply = tok.slice(6);
+  }
+  return m;
+}
+
+function metaSuffix(m: Meta): string {
+  const t = [m.id ? `id:${m.id}` : "", m.reply ? `reply:${m.reply}` : "", m.edited ? "edited" : ""].filter(Boolean);
+  return t.length === 0 ? "" : ` <!-- kt ${t.join(" ")} -->`;
+}
+
+const LEGACY_ID = /^L\d+$/;
+
 export function parseFeed(feedRaw: string | null): FeedEntry[] {
   if (feedRaw === null) return [];
   const lines = feedRaw.split(/\r?\n/).slice(1); // skip heading
   const feed: FeedEntry[] = [];
-  let cur: { author: string; time: string; body: string[] } | null = null;
+  let cur: { author: string; time: string; meta: Meta; body: string[] } | null = null;
+  let n = 0;
   const flush = (): void => {
     if (cur) {
-      feed.push({
+      const c: Comment = {
         type: "comment",
         author: cur.author,
         time: cur.time,
         body: unescapeCommentBody(trimBlankEdges(cur.body.join("\n"))),
-      });
+        id: cur.meta.id ?? `L${n}`,
+      };
+      if (cur.meta.reply) c.replyTo = cur.meta.reply;
+      if (cur.meta.edited) c.edited = true;
+      feed.push(c);
+      n++;
       cur = null;
     }
   };
@@ -85,7 +116,7 @@ export function parseFeed(feedRaw: string | null): FeedEntry[] {
     const head = COMMENT_HEAD.exec(line);
     if (head) {
       flush();
-      cur = { author: head[1]!, time: head[2]!, body: [] };
+      cur = { author: head[1]!, time: head[2]!, meta: parseMeta(head[3]), body: [] };
       continue;
     }
     if (/^###/.test(line)) {
@@ -175,13 +206,74 @@ function serializeFrontmatterOnly(issue: Issue): string {
 /** Append a comment; returns the new file text. Pure: pass `now` explicitly. */
 export function appendComment(
   issue: Issue,
-  input: { author: string; body: string },
+  input: { author: string; body: string; id?: string; replyTo?: string },
   now: Date,
 ): string {
   const e = issue.raw.eol;
   const body = escapeCommentBody(trimBlankEdges(input.body)).replace(/\n/g, e);
-  const head = `### @${input.author} · ${formatFeedTime(now)}`;
+  const head = `### @${input.author} · ${formatFeedTime(now)}${metaSuffix({ id: input.id, reply: input.replyTo, edited: false })}`;
   return appendToFeed(issue, body === "" ? head : head + e + body, false);
+}
+
+/** Fresh comment id (`c` + 6 base36 chars) that does not collide with existing ids. */
+export function newCommentId(issue: Issue, now: Date): string {
+  const used = new Set(issue.feed.flatMap((f) => (f.type === "comment" ? [f.id] : [])));
+  let t = now.getTime();
+  for (;;) {
+    const id = "c" + (t % 2 ** 31).toString(36).padStart(6, "0").slice(-6);
+    if (!used.has(id)) return id;
+    t++;
+  }
+}
+
+/** Raw line range of the nth comment: head line through the end of its body (trailing blank lines excluded). */
+function locateComment(feedRaw: string, index: number): { lines: string[]; start: number; end: number } | null {
+  const lines = feedRaw.split(/(?<=\n)/);
+  const strip = (l: string): string => l.replace(/\r?\n$/, "");
+  let n = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (!COMMENT_HEAD.test(strip(lines[i]!))) continue;
+    if (++n !== index) continue;
+    let end = i + 1;
+    while (end < lines.length && !/^###/.test(strip(lines[end]!)) && !EVENT_LINE.test(strip(lines[end]!))) end++;
+    while (end > i + 1 && strip(lines[end - 1]!).trim() === "") end--;
+    return { lines, start: i, end };
+  }
+  return null;
+}
+
+/** Rewrites one comment's heading meta and optionally its body; everything else stays byte-identical. */
+function rewriteComment(issue: Issue, id: string, change: (c: Comment) => { meta: Meta; body?: string }): string {
+  const comments = issue.feed.filter((f): f is Comment => f.type === "comment");
+  const idx = comments.findIndex((c) => c.id === id);
+  const c = comments[idx];
+  const loc = c && issue.raw.feedRaw !== null ? locateComment(issue.raw.feedRaw, idx) : null;
+  if (!c || !loc) throw new Error(`No comment with id ${id}.`);
+  const e = issue.raw.eol;
+  const { meta, body } = change(c);
+  const term = (l: string): string => /\r?\n$/.exec(l)?.[0] ?? "";
+  const head = `### @${c.author} · ${c.time}${metaSuffix(meta)}`;
+  let text: string;
+  if (body === undefined) {
+    text = head + term(loc.lines[loc.start]!) + loc.lines.slice(loc.start + 1, loc.end).join("");
+  } else {
+    const b = escapeCommentBody(trimBlankEdges(body)).replace(/\n/g, e);
+    text = (b === "" ? head : head + e + b) + term(loc.lines[loc.end - 1]!);
+  }
+  const feed = loc.lines.slice(0, loc.start).join("") + text + loc.lines.slice(loc.end).join("");
+  return assemble(serializeFrontmatterOnly(issue), e, renderBody(issue).description + feed);
+}
+
+const metaOf = (c: Comment): Meta => ({ id: LEGACY_ID.test(c.id) ? undefined : c.id, reply: c.replyTo, edited: c.edited === true });
+
+/** Replace a comment's body and mark it edited. Returns file text. */
+export function editCommentText(issue: Issue, id: string, body: string): string {
+  return rewriteComment(issue, id, (c) => ({ meta: { ...metaOf(c), edited: true }, body }));
+}
+
+/** Writes an explicit id into a (legacy) comment's heading. Returns file text. */
+export function materializeCommentId(issue: Issue, id: string, newId: string): string {
+  return rewriteComment(issue, id, (c) => ({ meta: { ...metaOf(c), id: newId } }));
 }
 
 /** Append an event bullet; returns the new file text. */

@@ -23,5 +23,6 @@ Tickets are Markdown files in a vault folder (usually `Tickets/`), managed by th
 - Always pass `--as <agent-name>` (for example `claude`) on writes.
 - Prefer `kt` over hand edits. If you must edit a file, keep unknown frontmatter keys and the body intact, and set `updatedBy`.
 - Comments use `### @author · YYYY-MM-DD HH:mm` headings; `kt comment` escapes body lines that would break the feed.
+- Comment headings may carry `<!-- kt id:… reply:… edited -->`; reply with `kt comment <ID> --reply-to <comment-id> "<text>"` (ids from `kt show <ID> --json`). Legacy comments have implicit ids `L0`, `L1`, … by order.
 - Do not delete tickets, rename files or edit `AGENTS.md`.
 - Exit codes: 1 usage, 2 not found, 3 validation. Fix the command rather than retrying blindly.

@@ -425,6 +425,13 @@
 .kt-activity .kt-comment { margin: var(--size-4-4) 0; padding: var(--size-4-3) var(--size-4-4); background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); }
 .kt-activity .kt-comment-head { margin-bottom: var(--size-4-2); }
 .kt-activity .kt-comment-body { line-height: 1.6; }
+.kt-comment-edited { color: var(--text-faint); font-size: var(--font-ui-smaller); }
+.kt-comment-tools { margin-left: auto; opacity: 0; transition: opacity 0.1s; }
+.kt-comment:hover .kt-comment-tools, .kt-comment:focus-within .kt-comment-tools { opacity: 1; }
+.kt-comment-reply-btn { margin-top: var(--size-4-2); color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.kt-comment-composer { margin-top: var(--size-4-2); }
+.kt-thread-replies { margin-left: var(--size-4-6); padding-left: var(--size-4-3); border-left: 2px solid var(--background-modifier-border); }
+.kt-activity .kt-thread-replies .kt-comment { margin: var(--size-4-2) 0; }
 .kt-subissues .kt-subissue { padding: 6px var(--size-4-2); }
 .kt-comment-box { display: flex; align-items: flex-start; gap: var(--size-4-3); margin: var(--size-4-6) 0 var(--size-4-8); }
 .kt-comment-box .kt-comment-avatar { width: 24px; height: 24px; font-size: 11px; flex-shrink: 0; margin-top: var(--size-4-1); }

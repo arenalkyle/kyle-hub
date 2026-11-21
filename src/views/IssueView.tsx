@@ -8,7 +8,7 @@ import { parsePrUrl } from "../core/pr";
 import { useIssue, useIssues, useSettings, useStoreReady } from "../store/hooks";
 import { copyText, deleteIssueConfirmed, issueLinkUri } from "./issueActions";
 import { PluginContext, usePlugin } from "./PluginContext";
-import { ActivityFeed } from "./issue/ActivityFeed";
+import { ActivityFeed, type CommentActions } from "./issue/ActivityFeed";
 import { CommentBox } from "./issue/CommentBox";
 import { Description } from "./issue/Description";
 import { TitleEditor } from "./issue/TitleEditor";
@@ -39,6 +39,17 @@ function IssueApp({ path, leaf }: IssueAppProps) {
   const parentId = issue?.parent ? fromLink(issue.parent) : undefined;
   const parent = useIssue(parentId ?? "");
   const allIssues = useIssues();
+  const commentActions = useMemo<CommentActions>(() => {
+    const fail = (what: string) => (e: unknown): never => {
+      console.error(`kyle-tickets: ${what} failed`, e);
+      new Notice(`Could not ${what}.`);
+      throw e;
+    };
+    return {
+      onReply: (parentId, body) => plugin.store.addReply(id, parentId, body).then(() => undefined, fail("post the reply")),
+      onEdit: (commentId, body) => plugin.store.editComment(id, commentId, body).then(() => undefined, fail("save the comment")),
+    };
+  }, [plugin, id]);
   const children = useMemo(() => allIssues.filter((i) => i.parent !== undefined && fromLink(i.parent) === id), [allIssues, id]);
   const rootRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -174,7 +185,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
               onStatus={(c, status) => void plugin.store.updateIssue(c.id, { status })}
               onAdd={() => plugin.openNewIssue({ parent: id })}
             />
-            <ActivityFeed feed={issue.feed} sourcePath={path} />
+            <ActivityFeed feed={issue.feed} sourcePath={path} actions={commentActions} />
             <CommentBox
               onPost={(body) =>
                 plugin.store.addComment(id, body).then(

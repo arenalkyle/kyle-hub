@@ -31,6 +31,11 @@ export interface Comment {
   author: string;
   time: string;
   body: string;
+  /** Stable id: explicit (`<!-- kt id:… -->` in the heading) or derived `L<n>` for legacy comments. */
+  id: string;
+  /** Id of the top-level comment this replies to (one level of threading). */
+  replyTo?: string;
+  edited?: boolean;
 }
 
 export interface ActivityEvent {
