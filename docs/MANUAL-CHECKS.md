@@ -91,3 +91,9 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Launch another and exit Claude immediately: a `@kyle-hub` mechanical comment appears, ticket stays In Progress, needs-attention badge shows on the Queue item and on List, Board and issue header; clicking the badge focuses the terminal.
 - [ ] Trigger a permission prompt mid-run: Queue badge appears and clears when the session returns to working.
 - [ ] Mark a ticket Done after merging its branch: "Remove worktree for ID?" appears; Remove deletes worktree and merged branch, Keep does nothing. (After a squash-merge the worktree is removed but the branch is kept.)
+
+## 6.1 Retro detectors — LOCK-53
+
+- [ ] After a few days of real runs (`kh logs ingest` first), `kh retro detect` shows clusters that look real (a repeated command sequence, a denied permission).
+- [ ] Run `kh retro detect` twice: same output, and `%LOCALAPPDATA%\kyle-hub\<profile>\retro.json` is not created or changed.
+- [ ] Note: outliers appear only after 6.2 supplies ticket types; retro config is read from `term.retro` in data.json (no settings UI).
