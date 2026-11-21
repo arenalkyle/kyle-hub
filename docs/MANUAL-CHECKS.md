@@ -82,3 +82,12 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Launch 4 tickets: the 4th shows a refusal notice (max 3 concurrent). Turn the tickets module off: Queue shows "Tickets module disabled" (implemented, not unit-tested).
 - [ ] Throwaway vault, CDP on port 9222, `KH_SMOKE_CLAUDE=echo`: `npm run smoke:launch` passes (not run unattended).
 - [ ] Note: repo chosen in the picker isn't written back to the ticket; `worktrees:false` runs are tracked only until restart.
+
+## 5.2 Session end, mechanical summary, attention badges, cleanup — LOCK-52
+
+- [ ] Run "Install hooks" in kyle-hub so `SessionEnd` is registered (it's new), then reload the plugin.
+- [ ] Throwaway vault, Obsidian with `--remote-debugging-port=9222`: `npm run smoke:session-end` prints PASS (not run unattended).
+- [ ] Launch a small real ticket; let the agent finish and `kt comment`: ticket goes to In Review with outcome and cost set. (`kt comment` inside a run authors as `agent:<runId>`.)
+- [ ] Launch another and exit Claude immediately: a `@kyle-hub` mechanical comment appears, ticket stays In Progress, needs-attention badge shows on the Queue item and on List, Board and issue header; clicking the badge focuses the terminal.
+- [ ] Trigger a permission prompt mid-run: Queue badge appears and clears when the session returns to working.
+- [ ] Mark a ticket Done after merging its branch: "Remove worktree for ID?" appears; Remove deletes worktree and merged branch, Keep does nothing. (After a squash-merge the worktree is removed but the branch is kept.)
