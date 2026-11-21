@@ -43,6 +43,8 @@ export class CommandCenterView extends ItemView {
   override async onOpen(): Promise<void> {
     this.open = true;
     this.contentEl.addClass("kh-command-center");
+    this.contentEl.createEl("h3", { text: "Command center", cls: "kh-command-center-title" });
+    this.contentEl.createDiv({ text: "Loading…" });
     const bump = (): void => void this.refresh();
     for (const ev of BUS_EVENTS) this.offs.push(this.hub.events.on(ev, bump));
     this.timer = window.setInterval(bump, REFRESH_MS);
@@ -60,9 +62,17 @@ export class CommandCenterView extends ItemView {
   private async refresh(): Promise<void> {
     const seq = ++this.seq;
     const now = new Date();
-    const data = await loadCommandCenterData(this.reader());
-    if (!this.open || seq !== this.seq) return;
-    this.paint(buildCommandCenterModel(data, now));
+    try {
+      const data = await loadCommandCenterData(this.reader());
+      if (!this.open || seq !== this.seq) return;
+      this.paint(buildCommandCenterModel(data, now));
+    } catch (e) {
+      console.error("kyle-hub: command center refresh failed", e);
+      if (!this.open || seq !== this.seq) return;
+      this.contentEl.empty();
+      this.contentEl.createEl("h3", { text: "Command center", cls: "kh-command-center-title" });
+      this.contentEl.createDiv({ text: `Failed to load: ${e instanceof Error ? e.message : String(e)}` });
+    }
   }
 
   private paint(m: CommandCenterModel): void {
