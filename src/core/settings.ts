@@ -1,4 +1,4 @@
-export const MODULE_IDS = ["core", "tickets", "term", "brain", "commandCenter"] as const;
+export const MODULE_IDS = ["core", "tickets", "term", "brain", "commandCenter", "usage"] as const;
 export type ModuleId = (typeof MODULE_IDS)[number];
 
 type Json = Record<string, unknown>;

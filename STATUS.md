@@ -31,6 +31,8 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 
 - **Also in review**: Phase 9.1 (LOCK-59) built locally: `core/accounts` (registry in `core.accounts`, ticket > repo > default resolution, profile guard), launch sets `CLAUDE_CONFIG_DIR` + `KH_ACCOUNT` and run records carry `accountId`, ingest reads every account's `<configDir>/projects` and tags records, launch-flow account picker, settings UI (add/login/rename/default/remove, repo account), `kh account list|add|login|use|remove`. Not pushed. Real `/login` and a live launch need a manual run in Obsidian.
 
+- **Also in review**: Phase 9.2 (LOCK-60) built locally: pure `core/domain/usage` (5 h session block, rolling 7 d week, caps, enterprise $ vs budget, thresholds), `UsageTracker`, `usage` module (service, status-bar chip, settings, opt-in best-effort official reading, `usage:threshold` warning + ticket comments), dashboard usage tile, usage line in the launch account picker, `kh usage`, `LogService.usageEvents`. Not pushed. `npm run smoke:usage` and cap calibration against `/usage` need a manual run in Obsidian.
+
 | Phase | Sub-phases | Ticket | Model | State |
 |---|---|---|---|---|
 | 1 Foundation | 1.1 · 1.2 | LOCK-43 · LOCK-44 | S · S | 1.1 · 1.2 in review |
@@ -41,4 +43,4 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 | 6 Retro | 6.1 · 6.2 | LOCK-53 · LOCK-54 | H · S | 6.1 in review · 6.2 in review |
 | 7 Brain | 7.1 · 7.2 | LOCK-55 · LOCK-56 | H · H | 7.1 in review · 7.2 in review |
 | 8 Command center + profiles | 8.1 · 8.2 | LOCK-57 · LOCK-58 | H · S | 8.1 in review · 8.2 in review |
-| 9 Accounts + usage | 9.1 · 9.2 | LOCK-59 · LOCK-60 | S · S | 9.1 in review · 9.2 not started |
+| 9 Accounts + usage | 9.1 · 9.2 | LOCK-59 · LOCK-60 | S · S | 9.1 · 9.2 in review |

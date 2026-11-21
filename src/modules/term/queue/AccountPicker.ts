@@ -6,7 +6,7 @@ export class AccountPicker extends SuggestModal<Account> {
   private chosen = false;
   private readonly accounts: Account[];
 
-  constructor(app: App, accounts: Account[], preselected: string | undefined, private done: (id: string | undefined) => void) {
+  constructor(app: App, accounts: Account[], preselected: string | undefined, private done: (id: string | undefined) => void, private usage: Record<string, string> = {}) {
     super(app);
     this.accounts = [...accounts].sort((a, b) => Number(b.id === preselected) - Number(a.id === preselected));
     this.setPlaceholder("Claude account for this run");
@@ -18,7 +18,9 @@ export class AccountPicker extends SuggestModal<Account> {
   }
 
   renderSuggestion(a: Account, el: HTMLElement): void {
-    el.setText(`${a.label} · ${a.kind}${a.plan ? ` ${a.plan}` : ""}${a.profile ? ` · ${a.profile}` : ""}`);
+    el.createDiv({ text: `${a.label} · ${a.kind}${a.plan ? ` ${a.plan}` : ""}${a.profile ? ` · ${a.profile}` : ""}` });
+    const line = this.usage[a.id];
+    if (line) el.createDiv({ cls: "kh-usage-picker-line", text: line });
   }
 
   onChooseSuggestion(a: Account): void {

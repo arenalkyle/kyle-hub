@@ -108,6 +108,8 @@ export interface AttentionService {
   list(): AttentionInfo[];
   /** Reveals the session of the ticket's run. */
   focus(ticketId: string): Promise<void>;
+  /** Launched runs whose session is live (any state), for usage warnings. */
+  running(): { ticketId: string; runId: string; accountId?: string }[];
   /** Fires whenever the set changes; returns an unsubscribe function. */
   subscribe(cb: () => void): () => void;
 }
@@ -161,6 +163,18 @@ export interface Services {
   retro: RetroService;
   brain: BrainService;
   promote: PromoteService;
+  usage: UsageService;
+}
+
+import type { AccountUsage } from "./domain/usage";
+
+/** Published by the usage module (ADR-0012): per-account session/week usage. Estimates unless `source` is `official`. */
+export interface UsageService {
+  snapshot(): Promise<AccountUsage[]>;
+  /** One display line per account id, for the launch picker. */
+  lines(): Promise<Record<string, string>>;
+  /** Fires after every refresh; returns an unsubscribe function. */
+  subscribe(cb: () => void): () => void;
 }
 
 /** Work -> home promotion (ADR-0008): scrub, show the diff, write only on confirm. */

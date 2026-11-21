@@ -7,7 +7,7 @@ import { makeRedactor } from "../redact";
 import { parseTranscriptLine, type ParseState } from "./parse";
 import { countSince as countIndexSince, mergeIndex, queryRuns, readIndex, spendByDay as spendIndexByDay, summarizeRun, writeIndexAtomic } from "./runIndex";
 import { DEFAULT_RETENTION, sweepProfile, type RetentionPolicy, type SweepResult } from "./retention";
-import { PROFILES, type DerivedRecord, type HookEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry, type RunIndexEntry, type RunMeta, type RunQuery, type SpendDay } from "./types";
+import { PROFILES, type DerivedRecord, type HookEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry, type RunIndexEntry, type RunMeta, type RunQuery, type SpendDay, type UsageEvent } from "./types";
 
 const STATE_VERSION = 1;
 const HEAD_BYTES = 64 * 1024;
@@ -301,6 +301,21 @@ export class FileLogService implements LogService {
     for await (const line of rl) {
       if (line.trim().length > 0) yield JSON.parse(line) as DerivedRecord;
     }
+  }
+
+  async usageEvents(since: string, accountId?: string): Promise<UsageEvent[]> {
+    const out: UsageEvent[] = [];
+    const sinceMs = Date.parse(since);
+    for (const e of this.allIndex()) {
+      if (accountId !== undefined && e.accountId !== accountId) continue;
+      if (Number.isFinite(sinceMs) && Date.parse(e.end ?? e.start) < sinceMs) continue;
+      for await (const r of this.records(e.runId)) {
+        if (r.type !== "usage" || (Number.isFinite(sinceMs) && Date.parse(r.t) < sinceMs)) continue;
+        const n = (k: string): number => (typeof r[k] === "number" ? (r[k] as number) : 0);
+        out.push({ t: r.t, tokens: n("inputTokens") + n("outputTokens") + n("cacheWrite"), costUsd: n("costUsd"), ...(e.accountId ? { accountId: e.accountId } : {}) });
+      }
+    }
+    return out.sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0));
   }
 
   async countSince(ts: string): Promise<number> {

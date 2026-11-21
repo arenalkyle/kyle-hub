@@ -1,4 +1,5 @@
-import type { AttentionInfo, AttentionService, BrainService, LogService, RetroService, RetroStatus, SessionInfo, SessionService, TicketService } from "../../core";
+import type { AttentionInfo, AttentionService, BrainService, LogService, RetroService, RetroStatus, SessionInfo, SessionService, TicketService, UsageService } from "../../core";
+import { formatCountdown, type AccountUsage } from "../../core/domain/usage";
 import type { BrainHealth } from "../../core/brain/service";
 import type { Issue, StatusDef } from "../../core/domain/types";
 import type { RunIndexEntry, SpendDay } from "../../core/logs/types";
@@ -12,6 +13,7 @@ export interface CommandCenterReader {
   retro?: Pick<RetroService, "status">;
   brain?: Pick<BrainService, "health">;
   logs?: Pick<LogService, "runs" | "spendByDay">;
+  usage?: Pick<UsageService, "snapshot">;
 }
 
 /** One data source: `disabled` when its module is off, `error` when a read threw. */
@@ -24,6 +26,7 @@ export interface CommandCenterData {
   retro: Part<RetroStatus>;
   brain: Part<BrainHealth>;
   logs: Part<{ runs: RunIndexEntry[]; spend: SpendDay[] }>;
+  usage: Part<AccountUsage[]>;
 }
 
 export const SPEND_DAYS = 30;
@@ -46,6 +49,7 @@ export async function loadCommandCenterData(r: CommandCenterReader): Promise<Com
     attention: await part(r.attention, (a) => a.list()),
     retro: await part(r.retro, (x) => x.status()),
     brain: await part(r.brain, (b) => b.health()),
+    usage: await part(r.usage, (u) => u.snapshot()),
     logs: await part(r.logs, async (l) => ({ runs: await l.runs({ limit: RECENT_RUNS }), spend: await l.spendByDay(SPEND_DAYS) })),
   };
 }
@@ -121,8 +125,21 @@ export interface ProposalRow {
   status: string;
 }
 
+/** One account's bars (subscription) or dollars (enterprise) on the usage tile. */
+export interface UsageRow {
+  accountId: string;
+  label: string;
+  /** "estimate" unless an official reading was fetched. */
+  source: AccountUsage["source"];
+  /** Subscription accounts: two bars. Enterprise accounts have none. */
+  bars?: { id: "session" | "week"; label: string; percent: number; reset: string }[];
+  /** Enterprise accounts: dollars, never a percent of a plan cap. */
+  dollars?: { today: string; month: string; budget?: string; budgetPercent?: number };
+}
+
 export interface CommandCenterModel {
   tiles: Tile[];
+  usage: Part<UsageRow[]>;
   attention: Part<AttentionRow[]>;
   recentRuns: Part<RunRow[]>;
   proposals: Part<ProposalRow[]>;
@@ -195,5 +212,28 @@ export function buildCommandCenterModel(d: CommandCenterData, now: Date): Comman
         }
       : d.logs;
 
-  return { tiles, attention, recentRuns, proposals, sparkline };
+  const usage: Part<UsageRow[]> =
+    d.usage.state === "ok"
+      ? { state: "ok", value: d.usage.value.map((u) => usageRow(u, now.getTime())) }
+      : d.usage;
+
+  return { tiles, usage, attention, recentRuns, proposals, sparkline };
+}
+
+function usageRow(u: AccountUsage, now: number): UsageRow {
+  const row: UsageRow = { accountId: u.accountId, label: u.label, source: u.source };
+  if (u.enterprise) {
+    const e = u.enterprise;
+    row.dollars = { today: `$${e.todayUsd.toFixed(2)}`, month: `$${e.monthUsd.toFixed(2)}` };
+    if (e.budget.monthUsd) {
+      row.dollars.budget = `$${e.budget.monthUsd.toFixed(2)}`;
+      if (e.monthBudgetPercent !== undefined) row.dollars.budgetPercent = e.monthBudgetPercent;
+    }
+  } else if (u.subscription) {
+    row.bars = [
+      { id: "session", label: "Session", percent: u.subscription.sessionPercent, reset: u.session.active ? formatCountdown(u.session.resetsAt, now) : "" },
+      { id: "week", label: "Week", percent: u.subscription.weekPercent, reset: formatCountdown(u.week.resetsAt, now) },
+    ];
+  }
+  return row;
 }

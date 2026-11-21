@@ -616,3 +616,15 @@
 .kh-brain-promote-line { white-space: pre-wrap; }
 .kh-brain-promote-line.is-add { color: var(--text-success, var(--text-accent)); }
 .kh-brain-promote-line.is-del { color: var(--text-error); }
+
+/* usage tracker */
+.kh-usage-chip { font-size: var(--font-ui-smaller); }
+.kh-usage-chip-hidden { display: none; }
+.kh-usage-picker-line { font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.kh-usage-tile { margin: 8px 0; }
+.kh-usage-row { margin-bottom: 8px; }
+.kh-usage-label { font-weight: var(--font-semibold); }
+.kh-usage-bar-label, .kh-usage-dollars { font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.kh-usage-track { height: 6px; border-radius: 3px; background: var(--background-modifier-border); overflow: hidden; }
+.kh-usage-fill { height: 100%; background: var(--interactive-accent); }
+.kh-usage-fill-warn { background: var(--text-error); }

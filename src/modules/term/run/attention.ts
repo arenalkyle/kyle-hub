@@ -47,8 +47,9 @@ export class AttentionTracker {
   }
 
   /** The service other modules read; `focus` reveals the session. */
-  service(focus: (sessionId: string) => Promise<void>): AttentionService {
+  service(focus: (sessionId: string) => Promise<void>, running: () => { ticketId: string; runId: string; accountId?: string }[] = () => []): AttentionService {
     return {
+      running,
       get: (id) => this.forTicket(id),
       list: () => this.list(),
       focus: async (id) => {

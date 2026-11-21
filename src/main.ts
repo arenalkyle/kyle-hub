@@ -21,14 +21,16 @@ import { termModule, termSettings } from "./modules/term";
 import { ticketsModule, ticketsSettings } from "./modules/tickets";
 import { brainModule, brainSettings } from "./modules/brain";
 import { commandCenterModule } from "./modules/command-center";
+import { usageModule, usageSettings } from "./modules/usage";
 
-const MODULES: HubModule[] = [ticketsModule, termModule, brainModule, commandCenterModule];
+const MODULES: HubModule[] = [ticketsModule, termModule, brainModule, commandCenterModule, usageModule];
 const MODULE_LABELS: Record<ModuleId, string> = {
   core: "Core (always on)",
   tickets: "Tickets",
   term: "Terminals",
   brain: "Brain",
   commandCenter: "Command center",
+  usage: "Usage tracker",
 };
 
 export default class KyleHubPlugin extends Plugin {
@@ -43,6 +45,7 @@ export default class KyleHubPlugin extends Plugin {
     parts.settings.register(ticketsSettings);
     parts.settings.register(termSettings);
     parts.settings.register(brainSettings);
+    parts.settings.register(usageSettings);
     parts.settings.register({ id: "commandCenter", defaults: {}, enabledByDefault: false });
     parts.settings.load(await this.loadData());
     this.hub = { app: this.app, ...parts, save: () => this.saveData(parts.settings.all) };

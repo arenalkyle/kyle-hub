@@ -1,6 +1,6 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { Hub } from "../../core";
-import { buildCommandCenterModel, loadCommandCenterData, SPARKLINE_HEIGHT, SPARKLINE_WIDTH, type CommandCenterModel, type CommandCenterReader, type Part, type Tile } from "./model";
+import { buildCommandCenterModel, loadCommandCenterData, SPARKLINE_HEIGHT, SPARKLINE_WIDTH, type CommandCenterModel, type CommandCenterReader, type Part, type Tile, type UsageRow } from "./model";
 
 export const COMMAND_CENTER_VIEW_TYPE = "kh-command-center-view";
 const REFRESH_MS = 60_000;
@@ -17,6 +17,7 @@ const BUS_EVENTS = [
   "run:ingested",
   "retro:completed",
   "brain:health-changed",
+  "usage:threshold",
 ] as const;
 
 /** Read-only dashboard. Reads services through `reader()` (resolved per refresh, so a module switched off shows as disabled). */
@@ -72,6 +73,8 @@ export class CommandCenterView extends ItemView {
     const tiles = el.createDiv({ cls: "kh-command-center-tiles" });
     for (const t of m.tiles) this.paintTile(tiles, t);
 
+    this.paintUsage(el, m.usage);
+
     this.paintSection(el, "Needs attention", m.attention, (list, rows) => {
       if (rows.length === 0) list.createEl("li", { text: "None" });
       for (const r of rows) {
@@ -107,6 +110,30 @@ export class CommandCenterView extends ItemView {
         path.setAttribute("stroke-width", "2");
         svg.appendChild(path);
         spark.appendChild(svg);
+      }
+    }
+  }
+
+  private paintUsage(el: HTMLElement, p: Part<UsageRow[]>): void {
+    const box = el.createDiv({ cls: "kh-command-center-usage kh-usage-tile" });
+    box.createEl("h4", { text: "Usage" });
+    if (p.state !== "ok") return void box.createDiv({ text: degradedText(p) });
+    if (p.value.length === 0) return void box.createDiv({ text: "No accounts" });
+    for (const r of p.value) {
+      const row = box.createDiv({ cls: "kh-usage-row", attr: { "data-account": r.accountId } });
+      row.createDiv({ cls: "kh-usage-label", text: `${r.label} (${r.source})` });
+      if (r.dollars) {
+        const d = r.dollars;
+        row.createDiv({ cls: "kh-usage-dollars", text: `${d.today} today · ${d.month} this month${d.budget ? ` of ${d.budget}` : ""}` });
+        continue;
+      }
+      for (const b of r.bars ?? []) {
+        const line = row.createDiv({ cls: `kh-usage-bar kh-usage-bar-${b.id}` });
+        line.createSpan({ cls: "kh-usage-bar-label", text: `${b.label} ${b.percent}%${b.reset ? ` · resets ${b.reset}` : ""}` });
+        const track = line.createDiv({ cls: "kh-usage-track" });
+        const fill = track.createDiv({ cls: "kh-usage-fill" });
+        fill.style.width = `${Math.min(100, b.percent)}%`;
+        if (b.percent >= 80) fill.addClass("kh-usage-fill-warn");
       }
     }
   }

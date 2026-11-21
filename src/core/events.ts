@@ -1,3 +1,4 @@
+import type { UsageWindowName } from "./domain/usage";
 import type { AttentionReason } from "./services";
 
 /** Typed event map; payloads are filled in as the emitting modules land. */
@@ -17,6 +18,8 @@ export interface HubEvents {
   "run:ingested": { runId: string };
   "retro:completed": { retroId: string };
   /** Score changed for one repo (`key` = repo-map key) or the vault (`key` = `vault`). */
+  /** An account crossed the warning level in a window (once per window instance). */
+  "usage:threshold": { accountId: string; window: UsageWindowName; percent: number; windowStart: string };
   "brain:health-changed": { scope: "repo" | "vault"; key: string; score: number; previous?: number };
 }
 

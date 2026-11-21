@@ -16,7 +16,7 @@ One Obsidian plugin (tickets, terminals, logs, retros, brain) built from modules
 - `npm run lint`: ESLint (enforces the module rules)
 - `npm run check-size`: fails if `main.js` > 3 MB
 - `npm run deploy`: build, then copy `main.js`, `manifest.json`, `styles.css`, `helper/`, `hooks/` and node-pty into `<vault>/.obsidian/plugins/kyle-hub/`
-- `kh` CLI (`bin/kh.js`, `npm link` for PATH): `kh logs ingest|runs|show|sweep`, `kh maintain` (ingest, sweep, `tickets expire`), `kh schedule install|uninstall|status` (`install` prints the schtasks command and registers only with `--yes`), `kh doctor`, `kh promote <file> --to <homeVault> [--dry-run]` (scrub a work lesson into the home vault). Log data lives in `%LOCALAPPDATA%\kyle-hub\<profile>\`; `kh tickets` finds the tickets folder via `--dir`, `KT_DIR`, or upward search for `.kyle-tickets.json`. Tests and smoke runs must override `LOCALAPPDATA` and `USERPROFILE`.
+- `kh` CLI (`bin/kh.js`, `npm link` for PATH): `kh logs ingest|runs|show|sweep`, `kh maintain` (ingest, sweep, `tickets expire`), `kh schedule install|uninstall|status` (`install` prints the schtasks command and registers only with `--yes`), `kh doctor`, `kh usage [--account id] [--json]` (session and week usage estimates per account), `kh promote <file> --to <homeVault> [--dry-run]` (scrub a work lesson into the home vault). Log data lives in `%LOCALAPPDATA%\kyle-hub\<profile>\`; `kh tickets` finds the tickets folder via `--dir`, `KT_DIR`, or upward search for `.kyle-tickets.json`. Tests and smoke runs must override `LOCALAPPDATA` and `USERPROFILE`.
 
 ## Layout
 

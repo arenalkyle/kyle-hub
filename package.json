@@ -20,7 +20,8 @@
     "smoke:launch": "node scripts/cdp-launch-smoke.mjs",
     "smoke:session-end": "node scripts/cdp-session-end-smoke.mjs",
     "smoke:retro": "node scripts/cdp-retro-smoke.mjs",
-    "smoke:promote": "node scripts/cdp-promote-smoke.mjs"
+    "smoke:promote": "node scripts/cdp-promote-smoke.mjs",
+    "smoke:usage": "node scripts/cdp-usage-smoke.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

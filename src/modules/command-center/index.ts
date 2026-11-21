@@ -12,6 +12,7 @@ const readerFrom = (s: ServiceRegistry, profile: () => ReturnType<typeof vaultPr
   attention: s.get("attention"),
   retro: s.get("retro"),
   brain: s.get("brain"),
+  usage: s.get("usage"),
   logs: ((l) => (l ? scopeLogs(l, profile()) : undefined))(s.get("logs")),
 });
 

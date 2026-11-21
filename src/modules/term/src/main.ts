@@ -390,7 +390,10 @@ export default class TermHost {
 
   /** What other modules read to show needs-attention badges. */
   attentionService(): AttentionService {
-    return this.tracker.service((id) => this.focusSession(id));
+    return this.tracker.service(
+      (id) => this.focusSession(id),
+      () => this.registry.list().map((r) => ({ ticketId: r.ticketId, runId: r.runId, ...(r.accountId ? { accountId: r.accountId } : {}) })),
+    );
   }
 
   /** End-of-run handling and the worktree cleanup offer (LOCK-52). */
@@ -457,7 +460,10 @@ export default class TermHost {
       vaultProfile: () => vaultProfileOf(this.hub.settings.module("core")),
       brain: () => this.hub.services.get("brain"),
       accounts: () => accountsOf(this.hub.settings.module("core")),
-      pickAccount: (list, pre) => new Promise((resolve) => new AccountPicker(this.app, list, pre, resolve).open()),
+      pickAccount: async (list, pre) => {
+        const lines = await this.hub.services.get("usage")?.lines().catch(() => ({}));
+        return new Promise((resolve) => new AccountPicker(this.app, list, pre, resolve, lines ?? {}).open());
+      },
       pickRepo: (keys) => new Promise((resolve) => new RepoPicker(this.app, keys, resolve).open()),
       onRun: (r) => this.registry.register(r),
       join: path.join,

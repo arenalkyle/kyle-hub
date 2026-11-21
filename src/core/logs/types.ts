@@ -87,6 +87,16 @@ export interface SpendDay {
   costUsd: number;
 }
 
+/** One assistant message's usage (derived `usage` record) for the usage tracker. */
+export interface UsageEvent {
+  /** ISO timestamp. */
+  t: string;
+  /** Input + output + cache-write tokens (cache reads are excluded: they barely count against plan limits). */
+  tokens: number;
+  costUsd: number;
+  accountId?: string;
+}
+
 export interface LogService {
   ingest(opts?: IngestOptions): Promise<IngestResult>;
   appendHookEvent(event: HookEvent): void;
@@ -97,6 +107,8 @@ export interface LogService {
   records(runId: string): AsyncIterable<DerivedRecord>;
   countSince(ts: string): Promise<number>;
   spendByDay(days: number, profile?: Profile): Promise<SpendDay[]>;
+  /** Usage events of runs on `accountId` (any account when omitted) at or after `since` (ISO); reads derived records only. */
+  usageEvents(since: string, accountId?: string): Promise<UsageEvent[]>;
 }
 
 /** Derived record: one JSON object per line in runs/<runId>.jsonl. */
