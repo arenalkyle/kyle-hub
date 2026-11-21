@@ -1,1 +1,5 @@
 /* kyle-tickets styles. All classes are prefixed with `kt-`. */
+
+.kt-error { color: var(--text-error); font-size: var(--font-ui-smaller); }
+.kt-invalid { border-color: var(--text-error) !important; }
+.kt-main-heading { margin: var(--size-4-4); }
