@@ -1,0 +1,75 @@
+{
+  "pages": [
+    {
+      "issues": {
+        "nodes": [
+          {
+            "identifier": "LOCK-1",
+            "title": "Parent ticket",
+            "description": "Parent **body**.",
+            "priority": 2,
+            "createdAt": "2026-11-01T09:00:00.000Z",
+            "updatedAt": "2026-11-02T09:00:00.000Z",
+            "state": { "type": "started", "name": "In Progress" },
+            "labels": { "nodes": [{ "name": "ready-for-agent" }, { "name": "Feature" }] },
+            "parent": null,
+            "comments": {
+              "nodes": [
+                { "body": "First note", "createdAt": "2026-11-01T10:00:00.000Z", "user": { "name": "Kyle Arenal" } }
+              ]
+            }
+          },
+          {
+            "identifier": "LOCK-2",
+            "title": "Child ticket",
+            "description": null,
+            "priority": 0,
+            "createdAt": "2026-11-01T11:00:00.000Z",
+            "updatedAt": "2026-11-03T09:00:00.000Z",
+            "state": { "type": "completed", "name": "Done" },
+            "labels": { "nodes": [] },
+            "parent": { "identifier": "LOCK-1" },
+            "comments": {
+              "nodes": [
+                { "body": "Second note", "createdAt": "2026-11-01T12:00:00.000Z", "user": null },
+                { "body": "Third note", "createdAt": "2026-11-01T13:00:00.000Z", "user": { "name": "Kyle Arenal" } }
+              ]
+            }
+          }
+        ],
+        "pageInfo": { "hasNextPage": true, "endCursor": "1" }
+      }
+    },
+    {
+      "issues": {
+        "nodes": [
+          {
+            "identifier": "LOCK-3",
+            "title": "Triage ticket",
+            "description": "Needs a look.",
+            "priority": 3,
+            "createdAt": "2026-11-05T09:00:00.000Z",
+            "updatedAt": "2026-11-05T09:00:00.000Z",
+            "state": { "type": "triage", "name": "Triage" },
+            "labels": { "nodes": [{ "name": "Bug" }] },
+            "parent": null,
+            "comments": { "nodes": [] }
+          },
+          {
+            "identifier": "LOCK-4",
+            "title": "Todo ticket",
+            "description": "",
+            "priority": 1,
+            "createdAt": "2026-11-06T09:00:00.000Z",
+            "updatedAt": "2026-11-06T09:00:00.000Z",
+            "state": { "type": "unstarted", "name": "Todo" },
+            "labels": { "nodes": [] },
+            "parent": null,
+            "comments": { "nodes": [] }
+          }
+        ],
+        "pageInfo": { "hasNextPage": false, "endCursor": null }
+      }
+    }
+  ]
+}
