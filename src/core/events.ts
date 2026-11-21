@@ -16,7 +16,8 @@ export interface HubEvents {
   "run:finished": { runId: string; ticketId: string; outcome: string; summary: "agent" | "mechanical" };
   "run:ingested": { runId: string };
   "retro:completed": { retroId: string };
-  "brain:health-changed": { healthy: boolean };
+  /** Score changed for one repo (`key` = repo-map key) or the vault (`key` = `vault`). */
+  "brain:health-changed": { scope: "repo" | "vault"; key: string; score: number; previous?: number };
 }
 
 type Handler<K extends keyof HubEvents> = (payload: HubEvents[K]) => void;

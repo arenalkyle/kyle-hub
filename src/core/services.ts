@@ -39,6 +39,8 @@ export interface TicketService {
   statuses(): StatusDef[];
   /** The repo-map key of a ticket: its own `repo`, else its project's. */
   repoOf(id: string): string | undefined;
+  /** Markdown body of the ticket's project (undefined when it has none). */
+  projectDescription(id: string): string | undefined;
   /** Display name of the acting user (no `@`). */
   userName(): string;
   /** Called after every index change; returns an unsubscribe function. */

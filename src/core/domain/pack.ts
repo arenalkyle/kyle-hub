@@ -1,4 +1,5 @@
 import { parseAcceptance } from "./acceptance";
+import type { SelectedDoc } from "./packDocs";
 
 /** ~8k tokens at 4 chars per token. */
 export const PACK_BUDGET_CHARS = 32_000;
@@ -15,6 +16,8 @@ export interface PackInput {
   blockers?: { id: string; title: string; lastComment?: string }[];
   /** Run id of an earlier launch of this ticket. */
   previousRun?: string;
+  /** Brain-selected docs (budgeted by the brain module). Undefined = brain off: no docs section. */
+  docs?: SelectedDoc[];
   /** Characters; the description is cut first, then the parent summary, blockers. */
   budget?: number;
 }
@@ -43,6 +46,13 @@ export function stripAcceptance(description: string): string {
 
 const MARK = "\n[truncated]";
 
+function renderDocs(docs: SelectedDoc[]): string {
+  if (docs.length === 0) return "## Docs included\n\n(none selected)";
+  const list = docs.map((d) => `- \`${d.path}\`: ${d.reason}`).join("\n");
+  const bodies = docs.map((d) => `### ${d.path}\n\n${d.text.trim()}`).join("\n\n");
+  return `## Docs included\n\n${list}\n\n${bodies}`;
+}
+
 function fit(text: string, max: number): string {
   if (text.length <= max) return text;
   if (max <= MARK.length) return "";
@@ -60,6 +70,7 @@ export function buildPack(input: PackInput): string {
     ? ["## Acceptance criteria", "", ...criteria.map((c) => `- [${c.checked ? "x" : " "}] ${c.text}`)].join("\n")
     : "";
   const footer = packFooter(ticket.id);
+  const docs = input.docs === undefined ? "" : renderDocs(input.docs);
 
   // Truncatable sections, cut in this order: description, parent, blockers, previous run.
   const desc = stripAcceptance(ticket.description).trim();
@@ -75,7 +86,7 @@ export function buildPack(input: PackInput): string {
   };
   const render = (s: { title: string; body: string } | null): string => (s && s.body ? `${s.title}\n\n${s.body}` : s ? s.title : "");
   const assemble = (): string =>
-    [head, render(sections.desc), acceptance, render(sections.parent), render(sections.blockers), render(sections.prev), footer].filter(Boolean).join("\n\n") + "\n";
+    [head, render(sections.desc), acceptance, docs, render(sections.parent), render(sections.blockers), render(sections.prev), footer].filter(Boolean).join("\n\n") + "\n";
 
   for (const key of ["desc", "parent", "blockers", "prev"] as const) {
     const s = sections[key];

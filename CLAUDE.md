@@ -1,6 +1,6 @@
 # kyle-hub: agent guide
 
-One Obsidian plugin (tickets, terminals, logs, retros, brain) built from modules that depend only on `core`. Read `docs/PLAN.md`, `docs/PHASES.md`, `docs/adr/` and `GLOSSARY.md` before changing architecture. Old per-repo guides are in `docs/legacy/`. Keep `STATUS.md` current-state only.
+One Obsidian plugin (tickets, terminals, logs, retros, brain) built from modules that depend only on `core`. Read `docs/PLAN.md`, `docs/PHASES.md`, `docs/adr/` and `GLOSSARY.md` before changing architecture. Old per-repo guides are in `docs/legacy/`. Keep `STATUS.md` current-state only. Agent style conventions live in the vault `Brain/conventions/agent.md` (human: `human.md`); they are referenced here, never injected into context packs.
 
 ## Setup
 

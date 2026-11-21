@@ -153,7 +153,7 @@ export function loadIssues(ctx: Ctx): Issue[] {
   return out;
 }
 
-function loadProjects(ctx: Ctx): Project[] {
+export function loadProjects(ctx: Ctx): Project[] {
   const out: Project[] = [];
   for (const n of mdFiles(ctx.projectsDir)) {
     try {

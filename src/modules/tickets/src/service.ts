@@ -75,6 +75,10 @@ export function createTicketService(store: IssueStore, flood: () => FloodSetting
       if (!t) return undefined;
       return effectiveRepo(t, t.project ? store.getProject(fromLink(t.project)) : undefined);
     },
+    projectDescription: (id) => {
+      const t = store.getIssue(id);
+      return t?.project ? store.getProject(fromLink(t.project))?.description : undefined;
+    },
     userName: () => user().replace(/^@/, ""),
     subscribe: (cb) => store.on("change", cb),
   };

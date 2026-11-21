@@ -450,6 +450,7 @@ export default class TermHost {
         };
       },
       packDir: (profile) => path.join(dataDir(profile), "packs"),
+      brain: () => this.hub.services.get("brain"),
       pickRepo: (keys) => new Promise((resolve) => new RepoPicker(this.app, keys, resolve).open()),
       onRun: (r) => this.registry.register(r),
       join: path.join,

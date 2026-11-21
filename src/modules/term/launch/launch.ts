@@ -1,4 +1,4 @@
-import type { SessionInfo, SpawnSessionOptions, TicketService } from "../../../core";
+import type { BrainService, SessionInfo, SpawnSessionOptions, TicketService } from "../../../core";
 import { buildPack } from "../../../core/domain/pack";
 import type { Issue } from "../../../core/domain/types";
 import type { Model, RepoConfig } from "../../../core/domain/fields";
@@ -30,7 +30,9 @@ export interface LaunchDeps {
     get(id: string): SessionInfo | undefined;
     list(): SessionInfo[];
   };
-  tickets: Pick<TicketService, "get" | "repoOf" | "statuses" | "update" | "logEvent" | "userName">;
+  tickets: Pick<TicketService, "get" | "repoOf" | "statuses" | "update" | "logEvent" | "userName" | "projectDescription">;
+  /** Brain service getter; undefined = brain module off (the pack gets no docs section). */
+  brain?: () => Pick<BrainService, "selectDocs"> | undefined;
   clock: () => Date;
   repos: () => Record<string, RepoConfig>;
   settings: () => LaunchSettings;
@@ -157,11 +159,14 @@ export class Launcher {
       const last = [...t.feed].reverse().find((f) => f.type === "comment");
       return [{ id: t.id, title: t.title, lastComment: last?.type === "comment" ? last.body : undefined }];
     });
+    const projectDesc = d.tickets.projectDescription(id);
+    const docs = d.brain?.()?.selectDocs({ repo: key, title: ticket.title, description: ticket.description }, projectDesc === undefined ? undefined : { description: projectDesc }).docs;
     const pack = buildPack({
       runId,
       ticket: { id, title: ticket.title, description: ticket.description },
       repo: key,
       branch,
+      docs,
       parent: parent ? { id: parent.id, title: parent.title, description: parent.description } : undefined,
       blockers,
       previousRun: ticket.runs?.[ticket.runs.length - 1],

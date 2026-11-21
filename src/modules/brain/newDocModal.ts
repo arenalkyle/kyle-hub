@@ -10,7 +10,7 @@ export interface NewDocDeps {
   now: () => Date;
 }
 
-async function ensureVaultDir(app: App, dir: string): Promise<void> {
+export async function ensureVaultDir(app: App, dir: string): Promise<void> {
   let cur = "";
   for (const part of dir.split("/")) {
     cur = cur ? `${cur}/${part}` : part;
