@@ -27,3 +27,12 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Restart Obsidian: sessions restore with scrollback and Resume works. Vault path insertion by dragging a note and via Send note.
 - [ ] Start Obsidian with `--remote-debugging-port=9222`, run `npm run smoke`: prints "smoke: PASS" (CDP smoke criterion could not be run unattended).
 - [ ] Term module toggle needs a reload (as noted in settings); old kyle-term workspace leaves don't restore (view type `kh-term-view`).
+
+## 2.2 kh CLI + Linear import + cutover — LOCK-46
+
+- [ ] Reload/enable kyle-hub from the deployed build; the tickets view still loads.
+- [ ] From inside the vault: `kt list` and `kh tickets list` both work (global `kt` now points at kyle-hub `bin/kt.js`).
+- [ ] `$env:LINEAR_API_KEY="<key>"; kh import linear --team LockedAway --dry-run` writes nothing and prints a plan.
+- [ ] Same without `--dry-run`: ~58 tickets with `linearId`, sub-issues nested, comments present. Run again: 0 created. (Linear "In Review" state lands on "In Progress" — status maps by state type.)
+- [ ] Missing `LINEAR_API_KEY` → exit code 2.
+- [ ] **Cutover:** disable the old kyle-tickets and kyle-term plugins in the vault, confirm kyle-hub covers everything, then archive the old repos.
