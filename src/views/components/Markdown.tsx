@@ -1,6 +1,7 @@
 import { Component, MarkdownRenderer } from "obsidian";
 import { memo, useEffect, useRef } from "react";
 import { usePlugin } from "../PluginContext";
+import { linkIssueIds } from "../idLinks";
 
 export interface MarkdownProps {
   md: string;
@@ -10,7 +11,9 @@ export interface MarkdownProps {
 
 /** Renders Markdown with Obsidian's renderer; the render Component lives and dies with the effect. */
 export const Markdown = memo(function Markdown({ md, sourcePath, className }: MarkdownProps) {
-  const { app } = usePlugin();
+  const plugin = usePlugin();
+  const { app } = plugin;
+  const prefix = plugin.data.settings.prefix;
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -22,6 +25,7 @@ export const Markdown = memo(function Markdown({ md, sourcePath, className }: Ma
     void MarkdownRenderer.render(app, md, holder, sourcePath, component).then(() => {
       if (cancelled) return;
       el.replaceChildren(...Array.from(holder.childNodes));
+      linkIssueIds(el, prefix, (id) => plugin.store.pathOf(id) !== undefined);
     });
     const onClick = (e: MouseEvent) => {
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a.internal-link");
@@ -38,6 +42,6 @@ export const Markdown = memo(function Markdown({ md, sourcePath, className }: Ma
       component.unload();
       el.replaceChildren();
     };
-  }, [app, md, sourcePath]);
+  }, [app, plugin, md, sourcePath, prefix]);
   return <div ref={ref} className={`kt-md markdown-rendered ${className ?? ""}`} />;
 });

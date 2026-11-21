@@ -16,6 +16,9 @@ import { IssueView, VIEW_TYPE_ISSUE } from "./views/IssueView";
 import { IssueInterceptor } from "./views/intercept";
 import { NewProjectModal } from "./views/NewProjectModal";
 import { ProjectView, VIEW_TYPE_PROJECT } from "./views/ProjectView";
+import { linkIssueIds } from "./views/idLinks";
+import { checkGh } from "./github/gh";
+import { setGhLogin } from "./github/login";
 
 export default class KyleTicketsPlugin extends Plugin {
   data: PluginData = mergeData(null);
@@ -34,6 +37,9 @@ export default class KyleTicketsPlugin extends Plugin {
     this.registerView(VIEW_TYPE_ISSUE, (leaf) => new IssueView(leaf, this));
     this.registerView(VIEW_TYPE_PROJECT, (leaf) => new ProjectView(leaf, this));
     this.interceptor.install();
+    this.registerMarkdownPostProcessor((el) =>
+      linkIssueIds(el, this.data.settings.prefix, (id) => this.store.pathOf(id) !== undefined),
+    );
     this.addCommand({
       id: "toggle-issue-markdown",
       name: "Toggle issue / Markdown view",
@@ -64,6 +70,8 @@ export default class KyleTicketsPlugin extends Plugin {
         void this.autoLinker.tick();
       });
       if (!this.data.setupDone) this.openSetup();
+      // One `gh auth status` call at startup; avatars read the cached login.
+      void checkGh().then((s) => setGhLogin(s.ok ? s.user : undefined), () => setGhLogin(undefined));
     });
     // Background PR refresh: a 1-minute tick; staleness is judged against the `prRefreshMinutes` setting.
     this.registerInterval(
