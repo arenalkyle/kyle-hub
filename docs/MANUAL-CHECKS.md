@@ -49,3 +49,14 @@ Things that need a person using Obsidian. Agents ran the automated checks (`npm 
 5. Stay on the session while it finishes: no sound.
 6. Sidebar mute button, the mute setting and "Toggle mute" stay in sync, and survive an Obsidian restart.
 7. Set a vault sound to a missing path: Chime plays and a notice appears once.
+
+## Phase 5 — Appearance (LOCK-6)
+
+1. Cycle each preset (Dracula, One Dark, Solarized Dark/Light); with Follow Obsidian, switch Obsidian light/dark and the terminal follows.
+2. Custom → Start from Dracula, change two colours; they persist.
+3. Font size 18 and an installed font family: applies live and the terminal re-fits.
+4. Ctrl+= in one session: only that one grows (Ctrl+- / Ctrl+0 work; zoom resets on restart).
+5. Set a vault background image, then an absolute Windows path with spaces; move all four sliders (image opacity, blur, dim, terminal opacity): smooth, no flicker, text readable, sidebar stays solid.
+6. Terminal opacity < 100% switches to the DOM renderer (image shows through, text crisp); back at 100% WebGL returns.
+7. A missing image path shows a notice and no image.
+8. Restart Obsidian: everything is kept except per-session zoom.
