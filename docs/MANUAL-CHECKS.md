@@ -71,3 +71,14 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 7. Column "+" opens New issue preset to that column's value.
 8. Smoothness: with 300+ issues (create via console loop: `for (let i=0;i<300;i++) await app.plugins.plugins['kyle-tickets'].store.createIssue({title:'Load '+i})`), dragging stays smooth. Delete them afterwards.
 9. Light and dark themes: drag overlay raised, drop targets highlighted.
+
+## 5.1 Filter bar — LOCK-19
+
+1. Click **Filter** → Status → tick Todo and In Progress → chip "Status is any of Todo, In Progress" appears; List and group counts update live.
+2. Add Label → bug → only issues matching both conditions appear, in List and Board.
+3. Click the label chip's operator → "is not any of" → results invert for that condition.
+4. Click a chip's values to change them; ✕ removes the chip; **Clear** removes all. Picking a field that already has a chip edits that chip.
+5. "No project", "No assignee", "No milestone", "No label" and "No priority" are selectable and work.
+6. Due date → Overdue → only past-due, not-completed issues. Also try Due today, this week (Mon–Sun), this month, No due date.
+7. Switch to another sidebar view and back → each view keeps its own filters. Restart Obsidian → filters persist.
+8. Narrow the pane below ~560px → chip bar hides and a count badge appears on the Filter button.
