@@ -29,9 +29,13 @@ export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewI
       <h2 className="kt-header-title">{title}</h2>
       <span className="kt-header-count">{count}</span>
       <div className="kt-header-spacer" />
-      <div className="kt-toggle" title="Board comes later">
-        <button type="button" className="is-active">List</button>
-        <button type="button" disabled>Board</button>
+      <div className="kt-toggle">
+        <button type="button" className={display.layout === "list" ? "is-active" : ""} onClick={() => onDisplayChange({ ...display, layout: "list" })}>
+          List
+        </button>
+        <button type="button" className={display.layout === "board" ? "is-active" : ""} onClick={() => onDisplayChange({ ...display, layout: "board" })}>
+          Board
+        </button>
       </div>
       <button type="button" className="kt-header-btn" disabled title="Filters come later">
         <Icon name="list-filter" size={14} /> Filter

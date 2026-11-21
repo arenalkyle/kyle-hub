@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   COMPLETED_LABELS, GROUP_BY_LABELS, GROUP_BY_OPTIONS, ORDER_BY_LABELS, ORDER_BY_OPTIONS, PROP_KEYS, PROP_LABELS,
-  type CompletedMode, type DisplayState,
+  type CompletedMode, type DisplayState, type Layout,
 } from "../../core/display";
 import { Icon } from "../components/icons";
 import { Picker } from "../components/Picker";
@@ -107,6 +107,12 @@ export function DisplayPopover({ anchor, display, onChange, onReset, onClose }: 
         if (e.key === "Escape") onClose();
       }}
     >
+      <Dropdown<Layout>
+        label="Layout"
+        value={display.layout}
+        options={[{ value: "list", label: "List" }, { value: "board", label: "Board" }]}
+        onChange={(layout) => set({ layout })}
+      />
       <Dropdown
         label="Grouping"
         value={display.groupBy}
