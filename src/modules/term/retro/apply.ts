@@ -28,7 +28,7 @@ export async function isGitRoot(root: string): Promise<boolean> {
   const r = await git(["rev-parse", "--show-toplevel"], root);
   if (r.code !== 0) return false;
   try {
-    return norm(fs.realpathSync(r.out)) === norm(fs.realpathSync(root));
+    return norm(fs.realpathSync.native(r.out)) === norm(fs.realpathSync.native(root));
   } catch {
     return false;
   }

@@ -192,7 +192,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
   }, [sp?.anchor]);
   const onContextMenu = (e: React.MouseEvent) => {
     const el = (e.target as HTMLElement).closest<HTMLElement>("[data-kh-tickets-id]");
-    const issue = el ? issues.find((i) => i.id === el.dataset.ktId) : undefined;
+    const issue = el ? issues.find((i) => i.id === el.dataset.khTicketsId) : undefined;
     if (!issue) return;
     e.preventDefault();
     setSelectedId(issue.id);

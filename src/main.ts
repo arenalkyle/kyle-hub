@@ -206,6 +206,7 @@ class HubSettingTab extends PluginSettingTab {
       new Notice(`kyle-hub: run /login in the new tab (${a.label}).`);
     };
     el.createEl("h2", { text: "Claude accounts" });
+    el = el.createDiv({ cls: "kh-accounts" });
     el.createEl("p", { cls: "setting-item-description", text: "Each account has its own CLAUDE_CONFIG_DIR (login and transcripts stay separate). kyle-hub only sets the env var and opens a login tab; it never reads or stores tokens." });
     for (const a of acc.list) {
       new Setting(el)

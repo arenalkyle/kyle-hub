@@ -628,3 +628,10 @@
 .kh-usage-track { height: 6px; border-radius: 3px; background: var(--background-modifier-border); overflow: hidden; }
 .kh-usage-fill { height: 100%; background: var(--interactive-accent); }
 .kh-usage-fill-warn { background: var(--text-error); }
+
+/* Settings: Claude accounts rows wrap instead of overflowing */
+.kh-accounts .setting-item { flex-wrap: wrap; gap: 8px; }
+.kh-accounts .setting-item-info { min-width: 0; flex: 1 1 240px; }
+.kh-accounts .setting-item-description { overflow-wrap: anywhere; }
+.kh-accounts .setting-item-control { flex-wrap: wrap; justify-content: flex-start; max-width: 100%; }
+.kh-accounts .setting-item-control input[type="text"] { width: 130px; }
