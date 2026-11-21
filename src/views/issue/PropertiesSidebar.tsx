@@ -1,12 +1,11 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import type { IssuePatch } from "../../core/issueFile";
 import { fromLink } from "../../core/links";
 import { prLabel, prLabelOfUrl } from "../../core/pr";
-import { relativeTime } from "../../core/time";
 import { useProjects, usePrs } from "../../store/hooks";
 import { findProjectByLink } from "../../core/projects";
 import type { Issue, Settings } from "../../core/types";
-import { DueChip, LabelChip, PrStateIcon, shortDate } from "../components/chips";
+import { DueChip, LabelChip, PrStateIcon } from "../components/chips";
 import { Icon, PriorityIcon, ProjectGlyph, StatusIcon } from "../components/icons";
 import { Avatar } from "../components/Avatar";
 import { AssigneePicker } from "../components/pickers/AssigneePicker";
@@ -52,21 +51,6 @@ function Row({ kind, label, onOpen, children }: { kind: PropKind; label: string;
 
 const Empty = ({ text }: { text: string }) => <span className="kt-prop-empty">{text}</span>;
 
-function TimeRow({ label, value }: { label: string; value?: string }) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <div className="kt-prop">
-      <span className="kt-prop-static" title={value ?? ""}>
-        {label} {value ? (relativeTime(value, now) ?? shortDate(value)) : "-"}
-      </span>
-    </div>
-  );
-}
-
 const STATE_LABEL = { open: "Open", draft: "Draft", merged: "Merged", closed: "Closed" } as const;
 
 function PullRequests({ urls, onLink, onUnlink }: { urls: readonly string[]; onLink: (url: string) => Promise<void>; onUnlink: (url: string) => void }) {
@@ -88,6 +72,14 @@ function PullRequests({ urls, onLink, onUnlink }: { urls: readonly string[]; onL
   };
   return (
     <>
+      <div className="kt-prop-group-title kt-prop-group-head">
+        <span>Pull requests</span>
+        {!adding && (
+          <button type="button" className="kt-group-add clickable-icon" aria-label="Link pull request" title="Link pull request" onClick={() => setAdding(true)}>
+            <Icon name="plus" size={14} />
+          </button>
+        )}
+      </div>
       {prs.length === 0 && !adding && <div className="kt-prop-empty kt-prop-pad">None</div>}
       <ul className="kt-prs">
         {prs.map((p) => (
@@ -123,12 +115,7 @@ function PullRequests({ urls, onLink, onUnlink }: { urls: readonly string[]; onL
           />
           {error && <div className="kt-pr-error">{error}</div>}
         </form>
-      ) : (
-        <button type="button" className="kt-prop-value kt-pr-link-btn" onClick={() => setAdding(true)}>
-          <Icon name="plus" size={14} />
-          <span>Link PR</span>
-        </button>
-      )}
+      ) : null}
     </>
   );
 }
@@ -140,7 +127,6 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
   const anchor = open?.anchor ?? null;
   return (
     <aside className="kt-issue-side">
-      <div className="kt-prop-group-title">Pull requests</div>
       <PullRequests urls={issue.pullRequests} onLink={onLinkPr} onUnlink={onUnlinkPr} />
 
 
@@ -225,9 +211,6 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
 
       <RelatedSection issue={issue} settings={settings} onOpenIssue={onOpenIssue} onAdd={onAddRelated} onRemove={onRemoveRelated} />
 
-      <div className="kt-prop-group-title">Details</div>
-      <TimeRow label="Created" value={issue.created} />
-      <TimeRow label="Updated" value={issue.updated} />
 
 
       {open?.kind === "status" && <StatusPicker anchor={anchor} value={issue.status} onChange={(status) => onUpdate({ status })} onClose={onClose} />}

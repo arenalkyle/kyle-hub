@@ -299,7 +299,6 @@
 .kt-prop-chips { display: flex; flex-wrap: wrap; gap: var(--size-4-1); }
 .kt-prop-empty { color: var(--text-faint); }
 .kt-prop-pad { padding: 2px 0; font-size: var(--font-ui-small); }
-.kt-prop-static { padding: 2px 0; color: var(--text-muted); }
 .kt-prop-labels { align-items: flex-start; }
 .kt-prop-plus { display: inline-flex; align-items: center; color: var(--text-faint); }
 .kt-prop-value:hover .kt-prop-plus { color: var(--text-normal); }
@@ -317,7 +316,9 @@
 .kt-pr-add { padding: 2px 0; }
 .kt-pr-add input { width: 100%; }
 .kt-pr-error { color: var(--text-error); font-size: var(--font-ui-smaller); padding-top: 2px; }
-.kt-pr-link-btn { color: var(--text-muted); }
+.kt-prop-group-head { display: flex; align-items: center; justify-content: space-between; }
+.kt-issue-side button.kt-group-add, .kt-issue-side button.kt-group-add:hover { background: transparent; border: 0; box-shadow: none; padding: 0 2px; height: auto; color: var(--text-faint); }
+.kt-issue-side button.kt-group-add:hover { color: var(--text-normal); }
 .kt-pr-icon { display: inline-flex; color: var(--kt-pr-color, var(--text-muted)); }
 .kt-pr-open { --kt-pr-color: #1a7f37; }
 .kt-pr-draft { --kt-pr-color: #6e7781; }
