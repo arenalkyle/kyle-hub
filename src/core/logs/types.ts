@@ -40,9 +40,47 @@ export interface IngestResult {
   skipped: number;
 }
 
+/** One line of `<profile>/index.jsonl`: a summary of one run, rewritten by ingest. */
+export interface RunIndexEntry {
+  runId: string;
+  sessionId: string;
+  ticketId?: string;
+  repo?: string;
+  profile: Profile;
+  model?: string;
+  start: string;
+  end?: string;
+  durationMs: number;
+  costUsd: number;
+  toolCalls: number;
+  errors: number;
+  denials: number;
+  outcome?: string;
+  summaryCommented?: boolean;
+}
+
+export interface RunQuery {
+  /** ISO timestamp or date; keeps runs starting at or after it. */
+  since?: string;
+  ticketId?: string;
+  repo?: string;
+  limit?: number;
+}
+
+export interface SpendDay {
+  /** Local calendar day, `YYYY-MM-DD`. */
+  day: string;
+  costUsd: number;
+}
+
 export interface LogService {
   ingest(opts?: IngestOptions): Promise<IngestResult>;
   appendHookEvent(event: HookEvent): void;
+  runs(q?: RunQuery): Promise<RunIndexEntry[]>;
+  run(runId: string): Promise<RunIndexEntry | undefined>;
+  records(runId: string): AsyncIterable<DerivedRecord>;
+  countSince(ts: string): Promise<number>;
+  spendByDay(days: number): Promise<SpendDay[]>;
 }
 
 /** Derived record: one JSON object per line in runs/<runId>.jsonl. */

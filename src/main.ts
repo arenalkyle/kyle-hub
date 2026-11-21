@@ -1,4 +1,6 @@
+import { homedir } from "node:os";
 import { Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { runDoctorChecks } from "./core/ops/environment";
 import {
   createHubParts,
   createModuleContext,
@@ -120,6 +122,17 @@ class HubSettingTab extends PluginSettingTab {
       containerEl.createEl("h2", { text: MODULE_LABELS[id] });
       section.render(containerEl.createDiv());
     }
+    containerEl.createEl("h2", { text: "Log health" });
+    const doctorOut = containerEl.createDiv();
+    new Setting(containerEl)
+      .setName("Doctor")
+      .setDesc("Checks cleanupPeriodDays, the kyle-hook registration, the kyle-hub-maintain task and the log folders.")
+      .addButton((b) =>
+        b.setButtonText("Run doctor").onClick(() => {
+          doctorOut.empty();
+          for (const c of runDoctorChecks(process.env, homedir())) doctorOut.createEl("p", { text: `[${c.status}] ${c.id}: ${c.message}` });
+        }),
+      );
   }
 }
 

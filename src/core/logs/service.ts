@@ -1,10 +1,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import readline from "node:readline";
 import { dataDir } from "../paths";
 import { makeRedactor } from "../redact";
 import { parseTranscriptLine, type ParseState } from "./parse";
-import { PROFILES, type DerivedRecord, type HookEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry } from "./types";
+import { countSince as countIndexSince, mergeIndex, queryRuns, readIndex, spendByDay as spendIndexByDay, summarizeRun, writeIndexAtomic } from "./runIndex";
+import { DEFAULT_RETENTION, sweepProfile, type RetentionPolicy, type SweepResult } from "./retention";
+import { PROFILES, type DerivedRecord, type HookEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry, type RunIndexEntry, type RunQuery, type SpendDay } from "./types";
 
 const STATE_VERSION = 1;
 const HEAD_BYTES = 64 * 1024;
@@ -43,6 +46,7 @@ export interface LogServiceOptions {
   denylist?: readonly string[];
   prices?: PriceTable;
   now?: () => Date;
+  retention?: Partial<RetentionPolicy>;
 }
 
 type Obj = Record<string, unknown>;
@@ -218,13 +222,69 @@ export class FileLogService implements LogService {
         if (f.profile !== profile) continue;
         changed = (await this.ingestFile(f.file, f.cwd, profile, state, batch, result)) || changed;
       }
-      await this.flush(dir, batch, result);
+      const touched = await this.flush(dir, batch, result);
+      if (touched.length > 0) this.updateIndex(dir, touched);
       if (changed) {
         state.lastIngest = this.now().toISOString();
         await saveState(dir, state);
       }
     }
     return result;
+  }
+
+  /** Rebuilds the index entries of the touched runs from their files and rewrites index.jsonl atomically. */
+  private updateIndex(dir: string, runIds: readonly string[]): void {
+    const updates: RunIndexEntry[] = [];
+    for (const runId of runIds) {
+      const text = fs.readFileSync(path.join(dir, "runs", `${runId}.jsonl`), "utf8");
+      const recs = text.split("\n").filter((l) => l.trim().length > 0).map((l) => JSON.parse(l) as DerivedRecord);
+      const entry = summarizeRun(runId, recs);
+      if (entry) updates.push(entry);
+    }
+    if (updates.length > 0) writeIndexAtomic(dir, mergeIndex(readIndex(dir), updates));
+  }
+
+  private allIndex(): RunIndexEntry[] {
+    return PROFILES.flatMap((p) => readIndex(this.dirFor(p)));
+  }
+
+  /** Index entries across profiles, newest first. */
+  async runs(q: RunQuery = {}): Promise<RunIndexEntry[]> {
+    return queryRuns(this.allIndex(), q);
+  }
+
+  async run(runId: string): Promise<RunIndexEntry | undefined> {
+    return this.allIndex().find((e) => e.runId === runId);
+  }
+
+  /** Streams one run's redacted derived records from `runs/<runId>.jsonl`. */
+  async *records(runId: string): AsyncIterable<DerivedRecord> {
+    const file = PROFILES.map((p) => path.join(this.dirFor(p), "runs", `${runId}.jsonl`)).find((f) => fs.existsSync(f));
+    if (!file) return;
+    const rl = readline.createInterface({ input: fs.createReadStream(file, { encoding: "utf8" }), crlfDelay: Infinity });
+    for await (const line of rl) {
+      if (line.trim().length > 0) yield JSON.parse(line) as DerivedRecord;
+    }
+  }
+
+  async countSince(ts: string): Promise<number> {
+    return countIndexSince(this.allIndex(), ts);
+  }
+
+  async spendByDay(days: number): Promise<SpendDay[]> {
+    return spendIndexByDay(this.allIndex(), days, this.now());
+  }
+
+  /** Removes (or with `dryRun`, only lists) data past retention in every profile. */
+  async sweep(opts: { dryRun?: boolean } = {}): Promise<SweepResult[]> {
+    const policy: RetentionPolicy = { ...DEFAULT_RETENTION, ...this.opts.retention };
+    const out: SweepResult[] = [];
+    for (const profile of PROFILES) {
+      const dir = this.dirFor(profile);
+      const state = await loadState(dir);
+      out.push(sweepProfile(dir, this.now(), policy, opts.dryRun === true, state.hooks));
+    }
+    return out;
   }
 
   /** Writes a raw hook event to the profile's hook spool; never throws (hooks must not fail Claude Code). */
@@ -343,13 +403,13 @@ export class FileLogService implements LogService {
   }
 
   /** Redacts and appends each run's records; a run file gets its header on creation only. */
-  private async flush(dir: string, batch: Batch, result: IngestResult): Promise<number> {
-    if (batch.records.size === 0 && batch.headers.size === 0) return 0;
+  private async flush(dir: string, batch: Batch, result: IngestResult): Promise<string[]> {
+    if (batch.records.size === 0 && batch.headers.size === 0) return [];
     const runsDir = path.join(dir, "runs");
     await fs.promises.mkdir(runsDir, { recursive: true });
     await fs.promises.mkdir(path.join(dir, "packs"), { recursive: true });
     const redactors = new Map<string, (s: string) => string>();
-    let written = 0;
+    const touched: string[] = [];
     for (const [runId, recs] of batch.records) {
       const cwd = batch.cwdByRun.get(runId);
       const key = cwd ?? "";
@@ -366,14 +426,9 @@ export class FileLogService implements LogService {
       if (isNew && header) lines.push(JSON.stringify(redactDeep(header, fn)));
       for (const r of recs) lines.push(JSON.stringify(redactDeep(r, fn)));
       await fs.promises.appendFile(file, `${lines.join("\n")}\n`);
-      written++;
+      touched.push(runId);
     }
-    result.runsUpdated += written;
-    return written;
+    result.runsUpdated += touched.length;
+    return touched;
   }
-}
-
-/** Stub writer for runs/index.jsonl. Phase 4.2 owns the entry format and the call sites. */
-export function appendIndexStub(_dir: string, _entry: unknown): Promise<void> {
-  return Promise.resolve();
 }
