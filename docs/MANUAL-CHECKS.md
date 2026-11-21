@@ -8,3 +8,7 @@ Checks that need a person using Obsidian, one section per ticket. Vault: the one
 2. Obsidian → Settings → Community plugins → enable **kyle-tickets**. No error notice; the dev console (Ctrl+Shift+I) shows `kyle-tickets loaded`.
 3. Disable it again. No errors in the console.
 4. Optional: `npm run dev`, save any file under `src/`, and confirm it rebuilds and prints `deployed -> …`.
+
+## 1.2 Core model — LOCK-12
+
+No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to confirm the ticket file format (frontmatter, `## Activity`, `### @author · YYYY-MM-DD HH:mm` comments, `- YYYY-MM-DD HH:mm · @author text` events) is what you expect agents to write.
