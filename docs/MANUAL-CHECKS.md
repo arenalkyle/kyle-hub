@@ -72,3 +72,15 @@ Things that need a person using Obsidian. Agents ran the automated checks (`npm 
 7. Toggle the relative/absolute `@path` setting; a note outside the session folder is always absolute.
 8. With no running session, Send note: a Claude session starts, waits until ready, then the reference is pasted.
 9. Terminal has focus after send and drop.
+
+## Phase 7 — Persistence (LOCK-8)
+
+1. Open three sessions: one Claude with a short conversation, one plain shell, one renamed and colour-tagged.
+2. Quit and reopen Obsidian; open kyle-term.
+3. All three are listed as "stopped" with the right titles, colours and order; greyed history is visible with the "— session ended, restored from <time> —" divider; typing is ignored.
+4. Click Resume on the Claude one: `claude --resume <id>` runs and the conversation continues below the history. Hook lights still work.
+5. Click Restart on the shell one: fresh prompt in the same folder. (After a Resume, Restart runs the plain Claude command, not the resume.)
+6. Remove one, restart Obsidian again: it stays gone (and its `sessions/<id>.txt` file is deleted).
+7. Turn off "Restore scrollback": saved files under the plugin's `sessions/` folder are deleted; metadata and Resume still work.
+8. Delete/rename a session's folder, then Resume/Restart: starts in the vault root with a notice.
+9. Kill Obsidian from Task Manager mid-session, reopen: at most a few seconds of state lost.
