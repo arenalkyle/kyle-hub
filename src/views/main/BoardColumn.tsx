@@ -16,8 +16,10 @@ export interface BoardCell {
   issues: Issue[];
 }
 
-export const cellId = (keys: DropKeys): string => `cell:${keys.group}|${keys.sub ?? ""}`;
-export const itemId = (issueId: string, cell: string): string => `${issueId}@${cell}`;
+/** Values are encoded so separators inside group names ("In Progress", "a|b", "x@y") can't alter the id's structure. */
+export const cellId = (keys: DropKeys): string =>
+  `cell:${encodeURIComponent(keys.group)}|${encodeURIComponent(keys.sub ?? "")}`;
+export const itemId = (issueId: string, cell: string): string => `${encodeURIComponent(issueId)}@${cell}`;
 
 const noMove: SortingStrategy = () => null;
 
@@ -82,17 +84,34 @@ export const BoardCellView = memo(function BoardCellView({
 export interface ColumnHeaderProps {
   group: Group;
   onAdd: () => void;
+  /** Hide this column (right-click or the "..." button). */
+  onHide?: () => void;
 }
 
-export function ColumnHeader({ group, onAdd }: ColumnHeaderProps) {
+export function ColumnHeader({ group, onAdd, onHide }: ColumnHeaderProps) {
   return (
-    <div className="kt-col-header">
+    <div
+      className="kt-col-header"
+      onContextMenu={
+        onHide
+          ? (e) => {
+              e.preventDefault();
+              onHide();
+            }
+          : undefined
+      }
+    >
       {group.status ? <StatusIcon category={group.status.category} color={group.status.color} /> : null}
       <span className="kt-group-name">{group.label}</span>
       <span className="kt-group-count">{group.issues.length}</span>
       <button type="button" className="kt-group-add" title={`New issue in ${group.label}`} onClick={onAdd}>
         <Icon name="plus" size={14} />
       </button>
+      {onHide && (
+        <button type="button" className="kt-group-add kt-col-hide" title="Hide column" onClick={onHide}>
+          <Icon name="eye-off" size={14} />
+        </button>
+      )}
     </div>
   );
 }

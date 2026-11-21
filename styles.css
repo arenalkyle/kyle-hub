@@ -434,3 +434,6 @@
 .kt-avatar-img img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .kt-avatar-claude { background: transparent; }
 .kt-avatar-claude svg { display: block; }
+/* LOCK-31 */
+.kt-col-header .kt-col-hide { margin-left: 0; opacity: 0; }
+.kt-col-header:hover .kt-col-hide, .kt-col-hide:focus-visible { opacity: 1; }

@@ -1,6 +1,7 @@
 import { Notice } from "obsidian";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { fromLink } from "../../core/links";
+import { hiddenFor, toggleHidden, visibleGroups } from "../../core/hidden";
 import { applyPatch, type IssuePatch } from "../../core/issueFile";
 import { buildView, OTHER_GROUP_KEY } from "../../core/query";
 import { useIssues, useProjects, useSettings } from "../../store/hooks";
@@ -92,7 +93,8 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
     if (!boardStatus || display.showEmptyGroups) return b;
     return { ...b, groups: b.groups.filter((g) => g.key !== OTHER_GROUP_KEY || g.issues.length > 0) };
   }, [issues, scope, projects, settings, display, filters]);
-  const visible = built.groups;
+  const allGroups = built.groups;
+  const visible = useMemo(() => visibleGroups(allGroups, hiddenFor(display.hiddenGroups, display.groupBy)), [allGroups, display.hiddenGroups, display.groupBy]);
   const collapsedList = plugin.data.main.collapsedGroups[viewKey];
   const collapsed = useMemo(() => new Set(collapsedList ?? []), [collapsedList]);
 
@@ -103,6 +105,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
     setCollapseTick((n) => n + 1);
     void plugin.savePluginData();
   };
+  const hideGroup = (key: string) => setDisplay({ ...display, hiddenGroups: toggleHidden(display.hiddenGroups, display.groupBy, key, true) });
   const newIssue = () => plugin.openNewIssue({ project });
 
   // Keyboard navigation order: the rows (List) or cards (Board) currently shown, top to bottom.
@@ -242,6 +245,7 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
         filters={filters}
         onFiltersChange={setFilters}
         filterSignal={filterSignal}
+        groups={allGroups}
       />
       <FilterBar filters={filters} onChange={setFilters} />
       {notice}
@@ -253,9 +257,9 @@ export function IssueCollection({ scope, viewKey, title, project, embedded, side
           </button>
         </div>
       ) : display.layout === "board" ? (
-        <BoardView groups={built.groups} display={display} subCounts={built.subCounts} issues={issues} project={project} selectedId={current} collapsed={collapsed} onToggleGroup={toggleGroup} onMove={onMove} />
+        <BoardView groups={visible} display={display} subCounts={built.subCounts} issues={issues} project={project} selectedId={current} collapsed={collapsed} onToggleGroup={toggleGroup} onHideGroup={hideGroup} onMove={onMove} />
       ) : (
-        <ListView groups={built.groups} display={display} subCounts={built.subCounts} issues={issues} viewId={viewKey} project={project} selectedId={current} collapsed={collapsed} onToggleGroup={toggleGroup} />
+        <ListView groups={visible} display={display} subCounts={built.subCounts} issues={issues} viewId={viewKey} project={project} selectedId={current} collapsed={collapsed} onToggleGroup={toggleGroup} />
       )}
       {sp && spIssue && sp.kind === "status" && (
         <StatusPicker anchor={sp.anchor} value={spIssue.status} onChange={(status) => spUpdate({ status })} onClose={closeSp} />

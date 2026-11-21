@@ -1,3 +1,5 @@
+import { sanitizeHidden, type HiddenGroups } from "./hidden";
+
 export type GroupBy = "none" | "status" | "priority" | "project" | "assignee" | "label" | "milestone";
 export type OrderBy = "manual" | "priority" | "updated" | "created" | "due";
 export type CompletedMode = "all" | "week" | "none";
@@ -35,6 +37,8 @@ export interface DisplayState {
   completed: CompletedMode;
   showEmptyGroups: boolean;
   properties: Record<PropKey, boolean>;
+  /** Hidden group keys per grouping field. */
+  hiddenGroups: HiddenGroups;
 }
 
 export function defaultDisplay(): DisplayState {
@@ -46,6 +50,7 @@ export function defaultDisplay(): DisplayState {
     showSubIssues: true,
     completed: "all",
     showEmptyGroups: false,
+    hiddenGroups: {},
     properties: {
       id: true, status: true, priority: true, project: true, due: true, milestone: false,
       labels: true, created: true, pullRequests: true, assignee: true,
@@ -76,5 +81,6 @@ export function mergeDisplay(raw: unknown): DisplayState {
     completed: pick(r.completed, ["all", "week", "none"] as const, d.completed),
     showEmptyGroups: typeof r.showEmptyGroups === "boolean" ? r.showEmptyGroups : d.showEmptyGroups,
     properties,
+    hiddenGroups: sanitizeHidden(r.hiddenGroups),
   };
 }
