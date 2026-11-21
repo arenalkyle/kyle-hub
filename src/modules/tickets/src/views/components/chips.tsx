@@ -3,7 +3,7 @@ import { fromLink } from "../../../../../core/domain/links";
 import { bestState, prLabel, prLabelOfUrl, type PrState } from "../../../../../core/domain/pr";
 import { effectiveType, type TicketType } from "../../../../../core/domain/fields";
 import { formatDate } from "../../../../../core/domain/time";
-import { useProjects, usePrs } from "../../store/hooks";
+import { useAttention, useFocusRun, useProjects, usePrs } from "../../store/hooks";
 import { Avatar } from "./Avatar";
 import { Dot, Icon, ProjectGlyph } from "./icons";
 
@@ -116,5 +116,26 @@ export function TypeChip({ type }: { type?: TicketType }) {
     <span className={`kh-tickets-chip kh-tickets-type kh-tickets-type-${t}`} title={`Type: ${t}`} data-kh-tickets-type={t}>
       <span className="kh-tickets-chip-text">{t}</span>
     </span>
+  );
+}
+
+/** Needs-attention badge for a ticket whose launched run needs a human; click focuses the session. */
+export function AttentionChip({ id }: { id: string }) {
+  const reason = useAttention(id);
+  const focus = useFocusRun(id);
+  if (!reason) return null;
+  return (
+    <button
+      type="button"
+      className="kh-tickets-chip kh-tickets-attention"
+      title={`Needs attention: ${reason}. Click to focus the session`}
+      data-kh-tickets-attention={reason}
+      onClick={(e) => {
+        e.stopPropagation();
+        focus();
+      }}
+    >
+      <span className="kh-tickets-chip-text">{reason}</span>
+    </button>
   );
 }

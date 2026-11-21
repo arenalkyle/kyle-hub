@@ -1,7 +1,7 @@
 import { memo } from "react";
 import type { PropKey } from "../../../../../core/domain/display";
 import type { Issue, Settings } from "../../../../../core/domain/types";
-import { DueChip, LabelChip, MilestoneChip, ProjectChip, PullRequestChip, SubIssuesChip, TypeChip } from "../components/chips";
+import { DueChip, LabelChip, MilestoneChip, ProjectChip, PullRequestChip, SubIssuesChip, TypeChip, AttentionChip } from "../components/chips";
 import { PriorityIcon, StatusIcon } from "../components/icons";
 import { Avatar } from "../components/Avatar";
 
@@ -37,6 +37,7 @@ export const IssueCard = memo(function IssueCard({ issue, settings, properties: 
             <PriorityIcon priority={issue.priority} />
           </span>
         )}
+        <AttentionChip id={issue.id} />
         {p.type && <TypeChip type={issue.type} />}
         {p.labels && issue.tags.map((t) => <LabelChip key={t} label={t} color={settings.labelColors[t]} />)}
         {p.project && issue.project && <ProjectChip project={issue.project} />}

@@ -27,6 +27,7 @@ export class QueueView extends ItemView {
     const bump = () => this.schedule();
     this.offs.push(events.on("ticket:created", bump), events.on("ticket:status-changed", bump), events.on("ticket:label-changed", bump));
     this.offs.push(events.on("session:started", bump), events.on("session:ended", bump));
+    this.offs.push(events.on("session:needs-attention", bump), events.on("session:attention-cleared", bump));
     this.render();
   }
 
@@ -82,6 +83,15 @@ export class QueueView extends ItemView {
     const top = row.createDiv({ cls: "kh-term-queue-top" });
     top.createSpan({ cls: "kh-term-queue-id", text: t.id });
     top.createSpan({ cls: "kh-term-queue-chip", text: effectiveType(t) });
+    const attn = this.hub.services.get("attention")?.get(t.id);
+    if (attn) {
+      row.addClass("is-attention");
+      const badge = top.createEl("button", { cls: "kh-term-attention", text: attn.reason, attr: { title: "Needs attention: click to focus the session", "data-kh-attention": attn.reason } });
+      badge.onclick = (e) => {
+        e.stopPropagation();
+        void this.focus(attn.sessionId);
+      };
+    }
     row.createDiv({ cls: "kh-term-queue-name", text: t.title });
     const meta = row.createDiv({ cls: "kh-term-queue-meta" });
     const repo = tickets?.repoOf(t.id);

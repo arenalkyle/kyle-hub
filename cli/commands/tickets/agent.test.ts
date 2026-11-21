@@ -51,6 +51,18 @@ describe("agent gates", () => {
   });
 });
 
+describe("comment authorship", () => {
+  it("authors as agent:<KH_RUN> inside a run so session end can find the summary; --as and humans unaffected", () => {
+    kt(["new", "Seed"], {});
+    expect(kt(["comment", "TIX-1", "all done"], { KH_RUN: "r-20261121-100000-TIX-1", KT_AUTHOR: "kyle" })).toBe(0);
+    expect(read("TIX-1")).toMatch(/@agent:r-20261121-100000-TIX-1/);
+    expect(kt(["comment", "TIX-1", "by hand", "--as", "bob"], { KH_RUN: "r1" })).toBe(0);
+    expect(read("TIX-1")).toMatch(/@bob/);
+    expect(kt(["comment", "TIX-1", "human"], { KT_AUTHOR: "kyle" })).toBe(0);
+    expect(read("TIX-1")).toMatch(/@kyle/);
+  });
+});
+
 describe("dedupe and caps", () => {
   it("adds a seen-again comment instead of a second file", () => {
     kt(["new", "Refactor the Thing 1", "--type", "proposal"], { KH_AGENT: "1", KH_RUN: "r1" });

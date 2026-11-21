@@ -43,3 +43,17 @@ export function usePrs(urls: readonly string[]): PrEntry[] {
     return { url, canonical, info: canonical ? prs.get(canonical) : undefined };
   }), [prs, key, version]);
 }
+
+/** Why the ticket's launched run needs a human (permission prompt, stalled, no summary), or undefined. Transient; from the term module. */
+export function useAttention(id: string): string | undefined {
+  const { hub } = usePlugin();
+  const svc = hub.services.get("attention");
+  const subscribe = useCallback((cb: () => void) => (svc ? svc.subscribe(cb) : () => undefined), [svc]);
+  return useSyncExternalStore(subscribe, () => svc?.get(id)?.reason);
+}
+
+/** Reveals the session of the ticket's run, when one needs attention. */
+export function useFocusRun(id: string): () => void {
+  const { hub } = usePlugin();
+  return useCallback(() => void hub.services.get("attention")?.focus(id), [hub, id]);
+}

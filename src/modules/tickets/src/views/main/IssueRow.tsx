@@ -2,7 +2,7 @@ import { memo, type MouseEvent, type ReactNode } from "react";
 import type { PropKey } from "../../../../../core/domain/display";
 import type { Issue, Settings } from "../../../../../core/domain/types";
 import {
-  AssigneeChip, CreatedChip, DueChip, LabelChip, MilestoneChip, ProjectChip, PullRequestChip, SubIssuesChip, TypeChip,
+  AssigneeChip, CreatedChip, DueChip, LabelChip, MilestoneChip, ProjectChip, PullRequestChip, SubIssuesChip, TypeChip, AttentionChip,
 } from "../components/chips";
 import { PriorityIcon, StatusIcon } from "../components/icons";
 
@@ -50,6 +50,7 @@ export const IssueRow = memo(function IssueRow({
       <span className="kh-tickets-row-title">{issue.title}</span>
       <span className="kh-tickets-row-chips">
         {extra}
+        <AttentionChip id={issue.id} />
         {p.type && <TypeChip type={issue.type} />}
         {subCount ? <SubIssuesChip count={subCount} /> : null}
         {p.labels && issue.tags.map((t) => <LabelChip key={t} label={t} color={settings.labelColors[t]} />)}

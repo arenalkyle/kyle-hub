@@ -546,7 +546,8 @@ function cmdComment(args: string[], io: Io): void {
   const [idArg, ...rest] = positionals;
   const ctx = loadCtx(discoverFolder(str(v.dir), io));
   const { issue, file } = findIssue(ctx, idArg);
-  const who = authorOf(ctx, io, v.as);
+  // A comment from a launched run authors as `agent:<KH_RUN>` so session end can tell it is the agent's summary.
+  const who = str(v.as) === undefined && io.env.KH_RUN ? agentSource(io.env) : authorOf(ctx, io, v.as);
   const replyTo = str(v["reply-to"]);
   const body = rest.length === 0 || (rest.length === 1 && rest[0] === "-") ? io.stdin() : rest.join(" ");
   if (body.trim() === "") throw invalid("Comment body is empty.");

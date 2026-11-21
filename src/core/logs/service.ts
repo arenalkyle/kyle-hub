@@ -7,7 +7,7 @@ import { makeRedactor } from "../redact";
 import { parseTranscriptLine, type ParseState } from "./parse";
 import { countSince as countIndexSince, mergeIndex, queryRuns, readIndex, spendByDay as spendIndexByDay, summarizeRun, writeIndexAtomic } from "./runIndex";
 import { DEFAULT_RETENTION, sweepProfile, type RetentionPolicy, type SweepResult } from "./retention";
-import { PROFILES, type DerivedRecord, type HookEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry, type RunIndexEntry, type RunQuery, type SpendDay } from "./types";
+import { PROFILES, type DerivedRecord, type HookEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry, type RunIndexEntry, type RunMeta, type RunQuery, type SpendDay } from "./types";
 
 const STATE_VERSION = 1;
 const HEAD_BYTES = 64 * 1024;
@@ -220,6 +220,7 @@ export class FileLogService implements LogService {
       let changed = await this.mergeHooks(dir, state, batch, profile, result);
       for (const f of files) {
         if (f.profile !== profile) continue;
+        if (ingestOpts.sessionId && path.basename(f.file, ".jsonl") !== ingestOpts.sessionId) continue;
         changed = (await this.ingestFile(f.file, f.cwd, profile, state, batch, result)) || changed;
       }
       const touched = await this.flush(dir, batch, result);
@@ -230,6 +231,19 @@ export class FileLogService implements LogService {
       }
     }
     return result;
+  }
+
+  async annotateRun(runId: string, meta: RunMeta): Promise<void> {
+    for (const profile of PROFILES) {
+      const dir = this.dirFor(profile);
+      const file = path.join(dir, "runs", `${runId}.jsonl`);
+      if (!fs.existsSync(file)) continue;
+      const rec: DerivedRecord = { type: "run_meta", t: this.now().toISOString(), runId, ...meta };
+      fs.appendFileSync(file, `${JSON.stringify(rec)}
+`);
+      this.updateIndex(dir, [runId]);
+      return;
+    }
   }
 
   /** Rebuilds the index entries of the touched runs from their files and rewrites index.jsonl atomically. */

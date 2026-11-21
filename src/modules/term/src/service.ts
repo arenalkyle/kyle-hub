@@ -84,12 +84,12 @@ export function createSessionService(host: ServiceHost, addStateListener: (cb: (
 }
 
 /** Emits `session:*` bus events from a session manager's lifecycle and state changes. Returns a disposer. */
-export function wireSessionEvents(m: SessionManager, bus: EventBus): () => void {
+export function wireSessionEvents(m: SessionManager, bus: EventBus, isRun: (sessionId: string) => boolean = () => false): () => void {
   const payload = (s: Session) => (s.agent.claudeSessionId ? { sessionId: s.id, claudeSessionId: s.agent.claudeSessionId } : { sessionId: s.id });
   const offs = [
     m.onLifecycle((kind, s) => bus.emit(kind === "started" ? "session:started" : "session:ended", payload(s))),
     m.onStateChange((s, _prev, next) => {
-      if (next === "needs-input") bus.emit("session:needs-attention", payload(s));
+      if (next === "needs-input" && !isRun(s.id)) bus.emit("session:needs-attention", payload(s));
     }),
   ];
   return () => offs.forEach((off) => off());

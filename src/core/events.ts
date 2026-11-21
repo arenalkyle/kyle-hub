@@ -1,3 +1,5 @@
+import type { AttentionReason } from "./services";
+
 /** Typed event map; payloads are filled in as the emitting modules land. */
 export interface HubEvents {
   "ticket:created": { id: string };
@@ -6,7 +8,12 @@ export interface HubEvents {
   /** `claudeSessionId` is present once a hook has reported it (usually not yet at start). */
   "session:started": { sessionId: string; claudeSessionId?: string };
   "session:ended": { sessionId: string; claudeSessionId?: string };
-  "session:needs-attention": { sessionId: string; claudeSessionId?: string };
+  /** `ticketId`/`runId`/`reason` are present for launched runs. */
+  "session:needs-attention": { sessionId: string; claudeSessionId?: string; ticketId?: string; runId?: string; reason?: AttentionReason };
+  /** The attention state of a launched run ended (state changed, session closed). */
+  "session:attention-cleared": { sessionId: string; ticketId?: string; runId?: string };
+  /** A launched run's session ended and its outcome was recorded. */
+  "run:finished": { runId: string; ticketId: string; outcome: string; summary: "agent" | "mechanical" };
   "run:ingested": { runId: string };
   "retro:completed": { retroId: string };
   "brain:health-changed": { healthy: boolean };

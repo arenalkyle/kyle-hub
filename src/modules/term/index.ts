@@ -18,7 +18,11 @@ export const termModule: HubModule = {
     }
     host = new TermHost(hub, ctx);
     hub.services.register("sessions", await host.start());
-    unregister = () => hub.services.unregister("sessions");
+    hub.services.register("attention", host.attentionService());
+    unregister = () => {
+      hub.services.unregister("sessions");
+      hub.services.unregister("attention");
+    };
   },
   unload() {
     unregister?.();

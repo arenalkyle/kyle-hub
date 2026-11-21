@@ -52,6 +52,24 @@ describe("LogService ingest", () => {
     expect(text).toContain('"costUsd":0.0008775');
   });
 
+  it("sessionId limits transcript ingest to that session", async () => {
+    fs.copyFileSync(FIXTURE, path.join(projects, "other-session.jsonl"));
+    expect((await service("only").ingest({ sessionId: "nope" })).runsUpdated).toBe(0);
+    expect((await service("only").ingest({ sessionId: "other-session" })).runsUpdated).toBe(1);
+  });
+
+  it("annotateRun records outcome and summaryCommented in the index and survives re-ingest", async () => {
+    fs.copyFileSync(FIXTURE, transcript());
+    const svc = service();
+    await svc.ingest();
+    await svc.annotateRun(`s-${SID}`, { outcome: "partial", summaryCommented: false });
+    await svc.annotateRun("s-missing", { outcome: "x" });
+    expect(await svc.run(`s-${SID}`)).toMatchObject({ outcome: "partial", summaryCommented: false });
+    fs.appendFileSync(transcript(), "");
+    await svc.ingest();
+    expect(await svc.run(`s-${SID}`)).toMatchObject({ outcome: "partial" });
+  });
+
   it("is idempotent when nothing new arrived", async () => {
     fs.copyFileSync(FIXTURE, transcript());
     const svc = service();

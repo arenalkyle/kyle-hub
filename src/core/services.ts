@@ -88,6 +88,28 @@ export interface SessionService {
 import type { LogService } from "./logs/types";
 export type { LogService } from "./logs/types";
 
+export type AttentionReason = "needs-input" | "stalled" | "no agent summary";
+
+/** A launched run that needs a human; transient view state, never written to ticket files. */
+export interface AttentionInfo {
+  sessionId: string;
+  ticketId: string;
+  runId: string;
+  reason: AttentionReason;
+  /** Epoch ms when it was raised. */
+  since: number;
+}
+
+/** Published by the term module: which tickets have a run needing attention. */
+export interface AttentionService {
+  get(ticketId: string): AttentionInfo | undefined;
+  list(): AttentionInfo[];
+  /** Reveals the session of the ticket's run. */
+  focus(ticketId: string): Promise<void>;
+  /** Fires whenever the set changes; returns an unsubscribe function. */
+  subscribe(cb: () => void): () => void;
+}
+
 /** Stub service interface; the brain module fills it in (7.x). */
 export interface BrainService {}
 
@@ -96,6 +118,7 @@ export interface Services {
   tickets: TicketService;
   sessions: SessionService;
   logs: LogService;
+  attention: AttentionService;
   brain: BrainService;
 }
 

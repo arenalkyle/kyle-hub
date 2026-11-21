@@ -31,6 +31,13 @@ export interface HookEvent {
 export interface IngestOptions {
   /** Restrict to one profile; omitted = all profiles. */
   profile?: Profile;
+  /** Restrict transcript ingest to one Claude session (the transcript file's basename). */
+  sessionId?: string;
+}
+
+export interface RunMeta {
+  outcome?: string;
+  summaryCommented?: boolean;
 }
 
 export interface IngestResult {
@@ -76,6 +83,8 @@ export interface SpendDay {
 export interface LogService {
   ingest(opts?: IngestOptions): Promise<IngestResult>;
   appendHookEvent(event: HookEvent): void;
+  /** Records `outcome` / `summaryCommented` on a run and refreshes its index entry; no-op when the run is unknown. */
+  annotateRun(runId: string, meta: RunMeta): Promise<void>;
   runs(q?: RunQuery): Promise<RunIndexEntry[]>;
   run(runId: string): Promise<RunIndexEntry | undefined>;
   records(runId: string): AsyncIterable<DerivedRecord>;

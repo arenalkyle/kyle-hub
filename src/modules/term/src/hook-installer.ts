@@ -13,6 +13,7 @@ export const HOOK_EVENTS = [
   "Stop",
   "SubagentStart",
   "SubagentStop",
+  "SessionEnd",
 ] as const;
 const MATCHER_EVENTS = new Set<string>(["PreToolUse", "PostToolUse"]);
 

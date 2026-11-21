@@ -16,3 +16,11 @@ export const realFs: FsPort = {
   mkdirp: (p) => void fs.mkdirSync(p, { recursive: true }),
   writeFile: (p, text) => fs.writeFileSync(p, text, "utf8"),
 };
+
+/** Read-only `gh pr view`: true when the PR is merged; false on any failure (no gh, no network, bad URL). */
+export const realPrMerged = (url: string): Promise<boolean> =>
+  new Promise((resolve) => {
+    execFile("gh", ["pr", "view", url, "--json", "state", "--jq", ".state"], { windowsHide: true, timeout: 15_000 }, (err, stdout) =>
+      resolve(!err && stdout.toString().trim() === "MERGED"),
+    );
+  });

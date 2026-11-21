@@ -2,6 +2,7 @@ import type { SessionInfo, SpawnSessionOptions, TicketService } from "../../../c
 import { buildPack } from "../../../core/domain/pack";
 import type { Issue } from "../../../core/domain/types";
 import type { Model, RepoConfig } from "../../../core/domain/fields";
+import type { RunInfo } from "../run/runs";
 
 export interface GitPort {
   /** Runs `git <args>` in `cwd`; rejects on a non-zero exit. */
@@ -37,6 +38,8 @@ export interface LaunchDeps {
   packDir: (profile: RepoConfig["profile"]) => string;
   /** Called when the ticket has no (known) repo; resolve to a repo-map key or undefined to cancel. */
   pickRepo: (keys: string[]) => Promise<string | undefined>;
+  /** Called once the session has spawned, with what the end-of-run handler needs. */
+  onRun?: (run: RunInfo) => void;
   join: (...parts: string[]) => string;
   dirname: (p: string) => string;
 }
@@ -164,6 +167,15 @@ export class Launcher {
       previousRun: ticket.runs?.[ticket.runs.length - 1],
     });
     const model = ticket.model ?? cfg.defaultModel;
+    const startedAt = d.clock();
+    let base: string | undefined;
+    if (d.onRun) {
+      try {
+        base = (await d.git.run(["rev-parse", "HEAD"], cwd)).trim() || undefined;
+      } catch {
+        /* no commits yet: the end handler falls back to the default branch */
+      }
+    }
     let session: SessionInfo;
     try {
       d.fs.mkdirp(d.dirname(packPath));
@@ -179,6 +191,7 @@ export class Launcher {
       return fail("spawn", `Could not start the session: ${(e as Error).message}`);
     }
     this.started.set(id, session.id);
+    d.onRun?.({ ticketId: id, runId, sessionId: session.id, startedAt: startedAt.getTime(), worktree: cwd, base, branch, repoPath: repo.path });
 
     const user = d.tickets.userName();
     await d.tickets.update(id, { status: started.name, runs: [...(ticket.runs ?? []), runId] }, { author: user });

@@ -1,5 +1,5 @@
 import { FileSystemAdapter, Menu, Notice, Platform, TFile, TFolder, type TAbstractFile } from "obsidian";
-import type { Hub, ModuleContext, SessionService, SessionState, TicketService } from "../../../core";
+import type { AttentionService, Hub, ModuleContext, SessionService, SessionState, TicketService } from "../../../core";
 import { FolderSuggest } from "./folder-suggest";
 import { buildRefs, parseDropText } from "./vault-paths";
 import path from "node:path";
@@ -28,7 +28,14 @@ import { orphanFiles, scrollbackFile } from "./persist";
 import { dataDir } from "../../../core/paths";
 import type { RepoConfig } from "../../../core/domain/fields";
 import { Launcher, type LaunchSettings } from "../launch/launch";
-import { realFs, realGit } from "../launch/git";
+import { realFs, realGit, realPrMerged } from "../launch/git";
+import { AttentionTracker, StallDetector } from "../run/attention";
+import { RunRegistry } from "../run/runs";
+import { RunWatcher } from "../run/watcher";
+import { finishRun } from "../run/sessionEnd";
+import { offerWorktreeCleanup } from "../run/cleanup";
+import { categoryOf } from "../../../core/domain/fields";
+import { offerNotice } from "../run/offerNotice";
 import { QueueView, QUEUE_VIEW_TYPE } from "../queue/QueueView";
 import { RepoPicker } from "../queue/RepoPicker";
 
@@ -73,6 +80,7 @@ export default class TermHost {
     this.styleEl = document.head.createEl("style", { text: xtermCss });
     const server = new HookServer((m) => {
       this.sessions?.handleHook(m.session, m.event, m.payload);
+      this.watcher?.onHook(m.session, m.event, m.payload, m.env);
       forwardHookToLogs(this.hub.services, m);
     });
     try {
@@ -159,6 +167,8 @@ export default class TermHost {
     this.ctx.addSettingsSection(new TermSettingsSection(this));
     this.cleanOrphans(this.savedSessions.map((p) => p.id));
     this.ctx.registerInterval(window.setInterval(() => this.saveScrollback(), SCROLLBACK_SAVE_MS));
+    this.initRuns();
+    this.ctx.registerInterval(window.setInterval(() => this.watcher?.tick(), 5000));
     return createSessionService(this, (cb) => {
       this.stateListeners.add(cb);
       return () => this.stateListeners.delete(cb);
@@ -166,6 +176,9 @@ export default class TermHost {
   }
 
   stop(): void {
+    this.watcher = null;
+    this.offBus.forEach((o) => o());
+    this.offBus = [];
     this.unwire?.();
     this.unwire = null;
     this.stateListeners.clear();
@@ -326,6 +339,68 @@ export default class TermHost {
   }
 
   private launcherInst: Launcher | null = null;
+  private readonly registry = new RunRegistry();
+  private readonly tracker = new AttentionTracker((e, p) => this.hub.events.emit(e, p));
+  private readonly stall = new StallDetector(() => Date.now(), () => this.settings.idleSeconds * 1000);
+  private watcher: RunWatcher | null = null;
+  private offBus: (() => void)[] = [];
+
+  /** Ticket service resolved per call (the tickets module may be off or reloaded). */
+  private ticketsProxy(): TicketService {
+    return new Proxy({} as TicketService, {
+      get: (_t, k) => {
+        const t = this.hub.services.get("tickets");
+        if (!t) throw new Error("Tickets module disabled.");
+        return (t as unknown as Record<string | symbol, unknown>)[k];
+      },
+    });
+  }
+
+  /** What other modules read to show needs-attention badges. */
+  attentionService(): AttentionService {
+    return this.tracker.service((id) => this.focusSession(id));
+  }
+
+  /** End-of-run handling and the worktree cleanup offer (LOCK-52). */
+  private initRuns(): void {
+    this.watcher = new RunWatcher({
+      registry: this.registry,
+      tracker: this.tracker,
+      stall: this.stall,
+      finish: (run, end) =>
+        finishRun({ tickets: this.ticketsProxy(), logs: this.hub.services.get("logs"), git: realGit, clock: () => new Date() }, run, end),
+      emit: (e, p) => this.hub.events.emit(e, p),
+    });
+    this.offBus.push(
+      this.hub.events.on("ticket:status-changed", ({ id, to }) => {
+        this.watcher?.onTicketStatusChanged(id);
+        const tickets = this.hub.services.get("tickets");
+        if (tickets && categoryOf(to, tickets.statuses()) === "completed") void this.cleanupOffer(id);
+      }),
+    );
+  }
+
+  private async cleanupOffer(id: string): Promise<void> {
+    try {
+      const r = await offerWorktreeCleanup(
+        {
+          git: realGit,
+          fs: realFs,
+          tickets: this.ticketsProxy(),
+          repos: () => (this.hub.settings.module("core").repos as Record<string, RepoConfig> | undefined) ?? {},
+          prMerged: realPrMerged,
+          offer: (message) => offerNotice(message),
+          join: path.join,
+          dirname: path.dirname,
+        },
+        id,
+      );
+      if (r.kind === "removed") new Notice(`kyle-hub: removed worktree for ${id}${r.branchDeleted ? " and its branch" : ""}.`);
+      else if (r.kind === "failed") new Notice(`kyle-hub: ${r.message}`, 10000);
+    } catch (e) {
+      console.error("kyle-hub: worktree cleanup offer failed", e);
+    }
+  }
 
   /** The launch orchestrator; null while the sessions service is unavailable. Tickets are read per call (module may be off). */
   launcher(): Launcher | null {
@@ -335,13 +410,7 @@ export default class TermHost {
       git: realGit,
       fs: realFs,
       sessions,
-      tickets: new Proxy({} as TicketService, {
-        get: (_t, k) => {
-          const t = this.hub.services.get("tickets");
-          if (!t) throw new Error("Tickets module disabled.");
-          return (t as unknown as Record<string | symbol, unknown>)[k];
-        },
-      }),
+      tickets: this.ticketsProxy(),
       clock: () => new Date(),
       repos: () => (this.hub.settings.module("core").repos as Record<string, RepoConfig> | undefined) ?? {},
       settings: (): LaunchSettings => {
@@ -354,6 +423,7 @@ export default class TermHost {
       },
       packDir: (profile) => path.join(dataDir(profile), "packs"),
       pickRepo: (keys) => new Promise((resolve) => new RepoPicker(this.app, keys, resolve).open()),
+      onRun: (r) => this.registry.register(r),
       join: path.join,
       dirname: path.dirname,
     }));
@@ -419,10 +489,12 @@ export default class TermHost {
       onClosed: (id) => this.deleteScrollback(id),
     });
     this.sessions.onStateChange((s, prev, next) => {
+      this.watcher?.onState(s.id, next);
       if (next === "needs-input" || next === "finished") this.alert(next, s);
       for (const l of [...this.stateListeners]) l(s, prev);
     });
-    this.unwire = wireSessionEvents(this.sessions, this.hub.events);
+    this.unwire = wireSessionEvents(this.sessions, this.hub.events, (id) => this.registry.get(id) !== undefined);
+    this.offBus.push(this.sessions.onLifecycle((kind, s) => { if (kind === "ended") this.watcher?.onExit(s.id, s.exitCode); }));
     this.sessions.onSubAgentDone((s) => this.alert("sub-agent-done", s));
     this.sessions.onChange(() => this.updateStatusBar());
     const restored = this.savedSessions;

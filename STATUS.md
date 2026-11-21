@@ -19,6 +19,8 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 
 - **Also in review**: Phase 5.1 (LOCK-51) built locally: Queue view in the right sidebar, `Launcher` (repo resolve, worktree per ticket, context pack via `core/domain/pack`, spawn with `KH_*` env, status + run id), repo map and launch limits in the hub settings. Not pushed. `npm run smoke:launch` needs a manual run in a throwaway vault.
 
+- **Also in review**: Phase 5.2 (LOCK-52) built locally: `term/run/` (run registry, `finishRun` with agent-summary detection, mechanical summary, outcome and `costUsd` rollup, needs-attention tracker + stall detector, worktree cleanup offer), `attention` service and chips, `kt comment` authors as `agent:<KH_RUN>` in a run, `SessionEnd` hook, `LogService.annotateRun` and session-limited ingest. Not pushed. `npm run smoke:session-end` needs a manual run in a throwaway vault.
+
 | Phase | Sub-phases | Ticket | Model | State |
 |---|---|---|---|---|
 | 1 Foundation | 1.1 · 1.2 | LOCK-43 · LOCK-44 | S · S | 1.1 · 1.2 in review |
