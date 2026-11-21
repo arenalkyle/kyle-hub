@@ -1,5 +1,5 @@
 import { ItemView, Menu, Modal, Notice, setIcon, type WorkspaceLeaf } from "obsidian";
-import type KyleTermPlugin from "./main";
+import type TermHost from "./main";
 import type { Session, SessionManager } from "./session-manager";
 import { formatAge } from "./title";
 import { runningCount, SUBAGENT_FADE_MS, type AgentState } from "./agent-state";
@@ -12,7 +12,7 @@ const STATE_LABEL: Record<AgentState, string> = {
   exited: "Exited",
 };
 
-export const VIEW_TYPE = "kyle-term-view";
+export const VIEW_TYPE = "kh-term-view";
 
 const COLORS: Record<string, string> = {
   Red: "#e5534b",
@@ -24,7 +24,7 @@ const COLORS: Record<string, string> = {
 };
 
 class ConfirmModal extends Modal {
-  constructor(app: KyleTermPlugin["app"], private message: string, private onYes: () => void) {
+  constructor(app: TermHost["app"], private message: string, private onYes: () => void) {
     super(app);
   }
   override onOpen(): void {
@@ -37,7 +37,7 @@ class ConfirmModal extends Modal {
   override onClose(): void { this.contentEl.empty(); }
 }
 
-export class KyleTermView extends ItemView {
+export class TermView extends ItemView {
   private mgr: SessionManager | null = null;
   private unsub: (() => void) | null = null;
   private unsubMute: (() => void) | null = null;
@@ -51,33 +51,33 @@ export class KyleTermView extends ItemView {
   private dragId: string | null = null;
   private subsClosed = new Set<string>();
 
-  constructor(leaf: WorkspaceLeaf, private plugin: KyleTermPlugin) {
+  constructor(leaf: WorkspaceLeaf, private plugin: TermHost) {
     super(leaf);
   }
 
   getViewType(): string { return VIEW_TYPE; }
-  getDisplayText(): string { return "kyle-term"; }
+  getDisplayText(): string { return "Terminal"; }
   override getIcon(): string { return "terminal"; }
 
   override async onOpen(): Promise<void> {
     const root = this.contentEl;
     root.empty();
-    root.addClass("kyle-term-root");
+    root.addClass("kh-term-root");
 
     const mgr = this.plugin.getSessions();
     if (typeof mgr === "string") {
-      root.createDiv({ cls: "kyle-term-message", text: mgr });
+      root.createDiv({ cls: "kh-term-message", text: mgr });
       return;
     }
     this.mgr = mgr;
     const settings = this.plugin.settings;
 
-    this.sidebar = root.createDiv({ cls: "kterm-sidebar" });
-    const resizer = root.createDiv({ cls: "kterm-resizer" });
-    const wrap = root.createDiv({ cls: "kterm-term-wrap" });
-    wrap.createDiv({ cls: "kterm-bg-img" });
-    wrap.createDiv({ cls: "kterm-bg-dim" });
-    this.area = wrap.createDiv({ cls: "kterm-term-area" });
+    this.sidebar = root.createDiv({ cls: "kh-term-sidebar" });
+    const resizer = root.createDiv({ cls: "kh-term-resizer" });
+    const wrap = root.createDiv({ cls: "kh-term-term-wrap" });
+    wrap.createDiv({ cls: "kh-term-bg-img" });
+    wrap.createDiv({ cls: "kh-term-bg-dim" });
+    this.area = wrap.createDiv({ cls: "kh-term-term-area" });
     this.wrap = wrap;
     // Accept drops from the explorer (and plain text) onto the terminal.
     this.area.addEventListener("dragover", (e) => { if (!this.dragId) e.preventDefault(); });
@@ -92,13 +92,13 @@ export class KyleTermView extends ItemView {
     }, true);
     this.applyBackground(this.plugin.bgVars(true));
 
-    const header = this.sidebar.createDiv({ cls: "kterm-header" });
-    const newClaude = header.createEl("button", { text: "New Session", cls: "kterm-btn-new mod-cta" });
+    const header = this.sidebar.createDiv({ cls: "kh-term-header" });
+    const newClaude = header.createEl("button", { text: "New Session", cls: "kh-term-btn-new mod-cta" });
     newClaude.onclick = () => void this.plugin.newClaude();
     newClaude.oncontextmenu = (e) => { e.preventDefault(); this.plugin.showNewSessionMenu(e); };
-    const plus = header.createEl("button", { text: "+", cls: "kterm-btn-plus", attr: { "aria-label": "New terminal" } });
+    const plus = header.createEl("button", { text: "+", cls: "kh-term-btn-plus", attr: { "aria-label": "New terminal" } });
     plus.onclick = () => void this.plugin.newShell();
-    const mute = header.createEl("button", { cls: "kterm-btn-mute" });
+    const mute = header.createEl("button", { cls: "kh-term-btn-mute" });
     mute.onclick = () => this.plugin.setMuted(!settings.sounds.muted);
     const syncMute = () => {
       const m = settings.sounds.muted;
@@ -108,13 +108,13 @@ export class KyleTermView extends ItemView {
     };
     syncMute();
     this.unsubMute = this.plugin.onMuteChange(syncMute);
-    const collapse = header.createEl("button", { cls: "kterm-btn-collapse", attr: { "aria-label": "Collapse sidebar" } });
+    const collapse = header.createEl("button", { cls: "kh-term-btn-collapse", attr: { "aria-label": "Collapse sidebar" } });
     collapse.onclick = () => {
       settings.sidebarCollapsed = !settings.sidebarCollapsed;
       void this.plugin.saveSettings();
       this.applySidebar();
     };
-    this.list = this.sidebar.createDiv({ cls: "kterm-list" });
+    this.list = this.sidebar.createDiv({ cls: "kh-term-list" });
 
     resizer.addEventListener("pointerdown", (e) => {
       if (settings.sidebarCollapsed) return;
@@ -165,9 +165,9 @@ export class KyleTermView extends ItemView {
 
   private applySidebar(): void {
     const s = this.plugin.settings;
-    this.sidebar.toggleClass("kterm-collapsed", s.sidebarCollapsed);
+    this.sidebar.toggleClass("kh-term-collapsed", s.sidebarCollapsed);
     this.sidebar.style.width = s.sidebarCollapsed ? "" : `${s.sidebarWidth}px`;
-    const btn = this.sidebar.querySelector<HTMLElement>(".kterm-btn-collapse");
+    const btn = this.sidebar.querySelector<HTMLElement>(".kh-term-btn-collapse");
     if (btn) setIcon(btn, s.sidebarCollapsed ? "chevrons-right" : "chevrons-left");
     const id = this.mgr?.active?.id;
     if (id) window.setTimeout(() => this.mgr?.term(id)?.fit(), 0);
@@ -185,7 +185,7 @@ export class KyleTermView extends ItemView {
         t?.attach(this.area);
         window.setTimeout(() => { t?.fit(); t?.focus(); }, 0);
       } else {
-        this.area.createDiv({ cls: "kyle-term-message kterm-empty", text: "No sessions. Use New Session or + to start one." });
+        this.area.createDiv({ cls: "kh-term-message kh-term-empty", text: "No sessions. Use New Session or + to start one." });
       }
     }
   }
@@ -197,52 +197,52 @@ export class KyleTermView extends ItemView {
     this.list.empty();
     const now = Date.now();
     for (const s of mgr.list()) {
-      const row = this.list.createDiv({ cls: "kterm-row" });
+      const row = this.list.createDiv({ cls: "kh-term-row" });
       if (mgr.active?.id === s.id) row.addClass("is-active");
       if (s.status !== "running") row.addClass("is-exited");
       row.draggable = true;
-      const stripe = row.createDiv({ cls: "kterm-stripe" });
+      const stripe = row.createDiv({ cls: "kh-term-stripe" });
       if (s.color) stripe.style.background = s.color;
-      const main = row.createDiv({ cls: "kterm-main" });
+      const main = row.createDiv({ cls: "kh-term-main" });
 
-      const top = main.createDiv({ cls: "kterm-top" });
+      const top = main.createDiv({ cls: "kh-term-top" });
       const state = s.status === "running" ? s.agent.state : "exited";
       const stateLabel = s.status === "stopped" ? "Stopped" : STATE_LABEL[state];
-      top.createDiv({ cls: `kterm-light kterm-light-${state}`, attr: { "aria-label": stateLabel, title: stateLabel } });
-      const title = top.createDiv({ cls: "kterm-title", text: mgr.title(s) });
-      if (s.manualTitle) setIcon(top.createDiv({ cls: "kterm-pin", attr: { "aria-label": "Named manually" } }), "pin");
+      top.createDiv({ cls: `kh-term-light kh-term-light-${state}`, attr: { "aria-label": stateLabel, title: stateLabel } });
+      const title = top.createDiv({ cls: "kh-term-title", text: mgr.title(s) });
+      if (s.manualTitle) setIcon(top.createDiv({ cls: "kh-term-pin", attr: { "aria-label": "Named manually" } }), "pin");
       const subs = s.agent.subAgents.filter((a) => a.status === "running" || now - (a.endedAt ?? now) < SUBAGENT_FADE_MS);
       const running = runningCount(s.agent);
       if (subs.length > 0) {
-        const badge = top.createSpan({ cls: "kterm-count", text: `⚙ ${running}`, attr: { "aria-label": "Sub-agents (click to collapse)" } });
+        const badge = top.createSpan({ cls: "kh-term-count", text: `⚙ ${running}`, attr: { "aria-label": "Sub-agents (click to collapse)" } });
         badge.onclick = (e) => {
           e.stopPropagation();
           if (!this.subsClosed.delete(s.id)) this.subsClosed.add(s.id);
           this.renderList();
         };
       }
-      top.createDiv({ cls: "kterm-age", text: formatAge(now - s.lastOutputAt) });
+      top.createDiv({ cls: "kh-term-age", text: formatAge(now - s.lastOutputAt) });
       if (s.status === "running" && s.agent.activity && (state === "working" || state === "needs-input")) {
-        main.createDiv({ cls: "kterm-activity", text: s.agent.activity });
+        main.createDiv({ cls: "kh-term-activity", text: s.agent.activity });
       }
       if (subs.length > 0 && !this.subsClosed.has(s.id)) {
-        const ul = main.createDiv({ cls: "kterm-subs" });
+        const ul = main.createDiv({ cls: "kh-term-subs" });
         for (const a of subs) {
-          const line = ul.createDiv({ cls: `kterm-sub is-${a.status}` });
+          const line = ul.createDiv({ cls: `kh-term-sub is-${a.status}` });
           if (a.status === "done") line.style.animationDelay = `${SUBAGENT_FADE_MS * 0.7 - (now - (a.endedAt ?? now))}ms`;
-          line.createSpan({ cls: "kterm-sub-mark", text: a.status === "done" ? "✓" : "" });
-          line.createSpan({ cls: "kterm-sub-text", text: [a.type, a.description].filter(Boolean).join(": ") || "sub-agent" });
+          line.createSpan({ cls: "kh-term-sub-mark", text: a.status === "done" ? "✓" : "" });
+          line.createSpan({ cls: "kh-term-sub-text", text: [a.type, a.description].filter(Boolean).join(": ") || "sub-agent" });
         }
       }
 
       if (s.status !== "running") {
-        const ex = main.createDiv({ cls: "kterm-exit" });
-        ex.createSpan({ text: s.status === "stopped" ? "stopped" : `exit ${s.exitCode ?? "?"}`, cls: "kterm-exit-code" });
+        const ex = main.createDiv({ cls: "kh-term-exit" });
+        ex.createSpan({ text: s.status === "stopped" ? "stopped" : `exit ${s.exitCode ?? "?"}`, cls: "kh-term-exit-code" });
         if (mgr.canResume(s)) {
           const resume = ex.createEl("button", { text: "Resume", cls: "mod-cta" });
           resume.onclick = (e) => { e.stopPropagation(); mgr.resume(s.id); };
         } else if (s.status === "stopped" && s.kind === "claude") {
-          const why = "Can't resume: no Claude session id was captured. Run \"kyle-term: Install hooks\", then start a new session.";
+          const why = "Can't resume: no Claude session id was captured. Run \"kyle-hub: Install hooks\", then start a new session.";
           const resume = ex.createEl("button", { text: "Resume", cls: "is-disabled", attr: { "aria-label": why } });
           resume.onclick = (e) => { e.stopPropagation(); new Notice(why, 8000); };
         }
@@ -262,14 +262,14 @@ export class KyleTermView extends ItemView {
       });
       row.addEventListener("dragend", () => {
         this.dragId = null;
-        this.list.querySelectorAll(".kterm-drop").forEach((n) => n.removeClass("kterm-drop"));
+        this.list.querySelectorAll(".kh-term-drop").forEach((n) => n.removeClass("kh-term-drop"));
       });
       row.addEventListener("dragover", (e) => {
         if (!this.dragId) return;
         e.preventDefault();
-        row.addClass("kterm-drop");
+        row.addClass("kh-term-drop");
       });
-      row.addEventListener("dragleave", () => row.removeClass("kterm-drop"));
+      row.addEventListener("dragleave", () => row.removeClass("kh-term-drop"));
       row.addEventListener("drop", (e) => {
         e.preventDefault();
         const id = this.dragId;
@@ -284,7 +284,7 @@ export class KyleTermView extends ItemView {
     const mgr = this.mgr;
     if (!mgr || this.renamingId !== null) return;
     this.renamingId = s.id;
-    const input = createEl("input", { type: "text", cls: "kterm-rename", value: s.manualTitle ?? mgr.title(s) });
+    const input = createEl("input", { type: "text", cls: "kh-term-rename", value: s.manualTitle ?? mgr.title(s) });
     titleEl.replaceWith(input);
     input.focus();
     input.select();

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// kyle-term hook: forwards a Claude Code hook event to the plugin's local server.
+// kyle-hub terminal hook: forwards a Claude Code hook event to the plugin's local server.
 // Must never block or fail Claude Code (ADR-0002): no stdout, always exit 0, short timeouts.
 "use strict";
 const session = process.env.KYLE_TERM_SESSION;
@@ -22,7 +22,10 @@ function send(payload) {
     const port = Number(process.env.KYLE_TERM_PORT);
     if (!port) return done();
     const event = process.argv[2] || (payload && payload.hook_event_name) || "";
-    const body = JSON.stringify({ session, event, payload: shrink(payload || {}, 0) });
+    // KH_* env vars (e.g. KH_TICKET, KH_RUN set by the launcher) ride along; harmless when absent.
+    const env = {};
+    for (const k of Object.keys(process.env)) if (k.startsWith("KH_")) env[k] = String(process.env[k]).slice(0, 500);
+    const body = JSON.stringify({ session, event, payload: shrink(payload || {}, 0), ...(Object.keys(env).length ? { env } : {}) });
     const req = require("node:http").request(
       {
         host: "127.0.0.1", port, path: "/event", method: "POST", timeout: 500,

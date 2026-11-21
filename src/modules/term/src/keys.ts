@@ -10,13 +10,11 @@ export type KeyAction = "copy" | "paste" | "zoom-in" | "zoom-out" | "zoom-reset"
 
 /**
  * Decide a terminal shortcut. `hasSelection` gates copy so Ctrl+C still interrupts.
- * macOS uses Cmd (meta) for copy/paste/zoom; Ctrl+C is never copy there.
- * Elsewhere Ctrl is the modifier (Ctrl+C copies only with a selection).
+ * Ctrl is the modifier (Ctrl+C copies only with a selection).
  */
-export function decideKey(e: KeyLike, platform: string, hasSelection: boolean): KeyAction {
+export function decideKey(e: KeyLike, hasSelection: boolean): KeyAction {
   const k = e.key.toLowerCase();
-  const mac = platform === "darwin";
-  const mod = mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey;
+  const mod = e.ctrlKey && !e.metaKey;
   if (mod && !e.altKey) {
     if (!e.shiftKey && k === "c" && hasSelection) return "copy";
     if (k === "v") return "paste";

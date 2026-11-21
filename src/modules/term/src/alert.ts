@@ -36,7 +36,7 @@ export interface AlertInput {
   sessionId: string;
   now: number;
   sounds: SoundSettings;
-  /** True when Obsidian has focus, the kyle-term tab is active and this session is visible. */
+  /** True when Obsidian has focus, the terminal tab is active and this session is visible. */
   viewing: boolean;
   /** Last time a sound played, per `${event}:${sessionId}` and per event. */
   lastPlayed: { bySession: Record<string, number>; byEvent: Partial<Record<AlertEvent, number>> };

@@ -13,7 +13,8 @@
     "deploy": "npm run build && node scripts/deploy.mjs",
     "test": "vitest run",
     "lint": "eslint .",
-    "check-size": "node scripts/check-size.mjs"
+    "check-size": "node scripts/check-size.mjs",
+    "smoke": "node scripts/cdp-smoke.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

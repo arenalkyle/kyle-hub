@@ -3,9 +3,10 @@ export interface HubEvents {
   "ticket:created": { id: string };
   "ticket:status-changed": { id: string; from: string; to: string };
   "ticket:label-changed": { id: string; added: string[]; removed: string[] };
-  "session:started": { sessionId: string };
-  "session:ended": { sessionId: string };
-  "session:needs-attention": { sessionId: string };
+  /** `claudeSessionId` is present once a hook has reported it (usually not yet at start). */
+  "session:started": { sessionId: string; claudeSessionId?: string };
+  "session:ended": { sessionId: string; claudeSessionId?: string };
+  "session:needs-attention": { sessionId: string; claudeSessionId?: string };
   "run:ingested": { runId: string };
   "retro:completed": { retroId: string };
   "brain:health-changed": { healthy: boolean };

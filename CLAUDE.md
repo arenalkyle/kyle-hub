@@ -31,5 +31,5 @@ One Obsidian plugin (tickets, terminals, logs, retros, brain) built from modules
 - Native code lives only in the helper process (`src/modules/term/helper/`); never bundle or `require` node-pty from the plugin (term ADR-0001). `patch-xterm` must keep working.
 - `hooks/kyle-hook.js` must never block or fail Claude Code.
 - Ticket file parsing stays round-trip safe: preserve unknown frontmatter keys and body content. Only `IssueStore` writes ticket files from the plugin; the CLI writes via `core/domain`.
-- Style with Obsidian CSS variables; CSS prefixes move to `kh-<module>-` in 1.2/2.1.
+- Style with Obsidian CSS variables; CSS prefixes are `kh-<module>-` (`kh-tickets-`, `kh-term-`).
 - Work one sub-phase (one Linear ticket) at a time; build, test and lint must pass before handing off. Commit locally with conventional messages; push only on approval.

@@ -1,35 +1,42 @@
-import { FileSystemAdapter, Menu, Notice, Platform, Plugin, TFile, TFolder, type TAbstractFile } from "obsidian";
+import { FileSystemAdapter, Menu, Notice, Platform, TFile, TFolder, type TAbstractFile } from "obsidian";
+import type { Hub, ModuleContext, SessionService, SessionState } from "../../../core";
 import { FolderSuggest } from "./folder-suggest";
 import { buildRefs, parseDropText } from "./vault-paths";
 import path from "node:path";
 import os from "node:os";
-import { applyToFile } from "./hook-installer";
+import { loadSettingsFile, planHookInstall, planHookUninstall, writeSettingsFile } from "./hook-installer";
+import { HookDiffModal } from "./hook-diff-modal";
+import { createSessionService, wireSessionEvents } from "./service";
 import { HookServer } from "./hook-server";
 import xtermCss from "@xterm/xterm/css/xterm.css";
 import { PtyManager } from "./pty-manager";
 import { resolveNode } from "./node-path";
-import { realPathDeps, resolvePath } from "./path-env";
-import { DEFAULT_SETTINGS, KyleTermSettingTab, mergeSounds, type KyleTermSettings } from "./settings";
+import { TermSettingsSection } from "./settings";
+import { normalizeTerm, type TermData } from "./schema";
 import { decideAlert, nextAttention, sessionKey, type AlertEvent } from "./alert";
 import { SoundPlayer } from "./sound";
-import { KyleTermView, VIEW_TYPE } from "./view";
+import { TermView, VIEW_TYPE } from "./view";
 import { SessionManager, type Session } from "./session-manager";
 import { detectProfiles, pickProfileId, type ShellProfile } from "./shells";
 import { XtermSession, type TermLook } from "./xterm-session";
 import {
-  blurPx, buildXtermTheme, DEFAULT_FONT_FAMILY, mergeAppearance, resolveFontFamily, obsidianPalette, resolvePalette, shouldUseWebgl, toHex, type Palette,
+  blurPx, buildXtermTheme, DEFAULT_FONT_FAMILY, resolveFontFamily, obsidianPalette, resolvePalette, shouldUseWebgl, toHex, type Palette,
 } from "./appearance";
 import fs from "node:fs";
-import { orphanFiles, parsePersisted, PERSIST_VERSION, scrollbackFile, type PersistedSession } from "./persist";
+import { orphanFiles, scrollbackFile } from "./persist";
 
 const PERSIST_DEBOUNCE_MS = 2000;
 const SCROLLBACK_SAVE_MS = 30_000;
 
-export default class KyleTermPlugin extends Plugin {
-  override settings: KyleTermSettings = { ...DEFAULT_SETTINGS };
+/** Folder name of the deployed plugin (`.obsidian/plugins/<id>`); the hook script and helper live there. */
+const PLUGIN_ID = "kyle-hub";
+
+/** The terminal module's runtime: everything kyle-term's plugin class did, on top of the hub's context. */
+export default class TermHost {
+  readonly app: Hub["app"];
+  /** The live `modules.term` object (shared with the hub's data.json). */
+  settings: TermData;
   profiles: ShellProfile[] = [];
-  /** Login-shell PATH on macOS (cached for the session); null elsewhere, where process.env is used as-is. */
-  resolvedPath: string | null = null;
   nodeInfo = "";
   private pty: PtyManager | null = null;
   private sessions: SessionManager | null = null;
@@ -39,15 +46,23 @@ export default class KyleTermPlugin extends Plugin {
   private player: SoundPlayer | null = null;
   private statusEl: HTMLElement | null = null;
   private xterms = new Set<XtermSession>();
-  private savedSessions: PersistedSession[] = [];
+  private savedSessions: TermData["sessions"] = [];
+  private unwire: (() => void) | null = null;
+  private stateListeners = new Set<(s: Session, prev: SessionState) => void>();
   private persistTimer?: ReturnType<typeof setTimeout>;
   private muteListeners = new Set<() => void>();
   private lastPlayed: { bySession: Record<string, number>; byEvent: Partial<Record<AlertEvent, number>> } = { bySession: {}, byEvent: {} };
 
-  override async onload(): Promise<void> {
-    await this.loadSettings();
+  constructor(private hub: Hub, private ctx: ModuleContext) {
+    this.app = hub.app;
+    this.settings = ctx.settings.get<TermData>();
+    normalizeTerm(this.settings);
+  }
+
+  /** Registers everything with the module context; `stop()` undoes what the context does not. */
+  async start(): Promise<SessionService> {
+    this.savedSessions = this.settings.sessions;
     this.profiles = detectProfiles();
-    if (process.platform === "darwin") this.resolvedPath = await resolvePath(realPathDeps());
     this.styleEl = document.head.createEl("style", { text: xtermCss });
     const server = new HookServer((m) => this.sessions?.handleHook(m.session, m.event, m.payload));
     try {
@@ -55,50 +70,50 @@ export default class KyleTermPlugin extends Plugin {
       this.hookServer = server;
       this.hookEnv = { KYLE_TERM_PORT: String(server.port), KYLE_TERM_TOKEN: server.token };
     } catch (e) {
-      console.error("[kyle-term] hook server failed to start", e);
+      console.error("[kyle-hub] terminal hook server failed to start", e);
     }
-    this.registerEvent(this.app.workspace.on("css-change", () => this.applyAppearance()));
+    this.ctx.registerEvent(this.app.workspace.on("css-change", () => this.applyAppearance()));
     // Re-measure cells once web fonts finish loading, or glyph spacing can be off.
     void document.fonts?.ready.then(() => this.applyAppearance());
-    this.registerView(VIEW_TYPE, (leaf) => new KyleTermView(leaf, this));
-    this.addRibbonIcon("terminal", "Open kyle-term", () => void this.activateView());
-    this.addCommand({ id: "open", name: "Open terminal", callback: () => void this.activateView() });
-    this.addCommand({
-      id: "new-terminal",
+    this.ctx.registerView(VIEW_TYPE, (leaf) => new TermView(leaf, this));
+    this.ctx.addRibbonIcon("terminal", "Open terminal", () => void this.activateView());
+    this.ctx.addCommand({ id: "term-open", name: "Open terminal", callback: () => void this.activateView() });
+    this.ctx.addCommand({
+      id: "term-new-terminal",
       name: "New terminal",
       hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "T" }],
       callback: () => void this.newShell(true),
     });
-    this.addCommand({ id: "new-claude-session", name: "New Claude session", callback: () => void this.newClaude(true) });
-    this.addCommand({
-      id: "next-session",
+    this.ctx.addCommand({ id: "term-new-claude-session", name: "New Claude session", callback: () => void this.newClaude(true) });
+    this.ctx.addCommand({
+      id: "term-next-session",
       name: "Next session",
       hotkeys: [{ modifiers: ["Ctrl"], key: "Tab" }],
       callback: () => this.sessions?.next(),
     });
-    this.addCommand({
-      id: "previous-session",
+    this.ctx.addCommand({
+      id: "term-previous-session",
       name: "Previous session",
       hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "Tab" }],
       callback: () => this.sessions?.prev(),
     });
-    this.addCommand({ id: "install-hooks", name: "Install hooks", callback: () => this.hooks("install") });
-    this.addCommand({ id: "uninstall-hooks", name: "Uninstall hooks", callback: () => this.hooks("uninstall") });
-    this.addCommand({
-      id: "jump-next-attention",
+    this.ctx.addCommand({ id: "term-install-hooks", name: "Install hooks", callback: () => this.hooks("install") });
+    this.ctx.addCommand({ id: "term-uninstall-hooks", name: "Uninstall hooks", callback: () => this.hooks("uninstall") });
+    this.ctx.addCommand({
+      id: "term-jump-next-attention",
       name: "Jump to next session needing attention",
       hotkeys: [{ modifiers: ["Alt"], key: "a" }],
       callback: () => void this.jumpToAttention(),
     });
-    this.addCommand({ id: "toggle-mute", name: "Toggle mute", callback: () => this.setMuted(!this.settings.sounds.muted) });
-    this.addCommand({
-      id: "send-selection",
-      name: "Send selection to kyle-term",
+    this.ctx.addCommand({ id: "term-toggle-mute", name: "Toggle mute", callback: () => this.setMuted(!this.settings.sounds.muted) });
+    this.ctx.addCommand({
+      id: "term-send-selection",
+      name: "Send selection to terminal",
       editorCallback: (editor) => void this.sendSelection(editor.getSelection()),
     });
-    this.addCommand({
-      id: "send-note",
-      name: "Send note to kyle-term",
+    this.ctx.addCommand({
+      id: "term-send-note",
+      name: "Send note to terminal",
       checkCallback: (checking) => {
         const f = this.app.workspace.getActiveFile();
         if (!f) return false;
@@ -106,35 +121,42 @@ export default class KyleTermPlugin extends Plugin {
         return true;
       },
     });
-    this.registerEvent(
+    this.ctx.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         menu.addItem((i) => i.setTitle("Open terminal here").setIcon("terminal").onClick(() => void this.newShell(true, this.folderOf(file))));
         menu.addItem((i) => i.setTitle("New Claude session here").setIcon("bot").onClick(() => void this.newClaude(true, { cwd: this.folderOf(file) })));
         if (file instanceof TFile) {
-          menu.addItem((i) => i.setTitle("Send note to kyle-term").setIcon("send").onClick(() => void this.sendNote(file)));
+          menu.addItem((i) => i.setTitle("Send note to terminal").setIcon("send").onClick(() => void this.sendNote(file)));
         }
       }),
     );
-    this.registerEvent(
+    this.ctx.registerEvent(
       this.app.workspace.on("editor-menu", (menu, editor, view) => {
         if (editor.getSelection()) {
-          menu.addItem((i) => i.setTitle("Send selection to kyle-term").setIcon("send").onClick(() => void this.sendSelection(editor.getSelection())));
+          menu.addItem((i) => i.setTitle("Send selection to terminal").setIcon("send").onClick(() => void this.sendSelection(editor.getSelection())));
         }
         const f = view.file;
-        if (f) menu.addItem((i) => i.setTitle("Send note to kyle-term").setIcon("send").onClick(() => void this.sendNote(f)));
+        if (f) menu.addItem((i) => i.setTitle("Send note to terminal").setIcon("send").onClick(() => void this.sendNote(f)));
       }),
     );
     this.player = new SoundPlayer(this.app);
-    this.statusEl = this.addStatusBarItem();
-    this.statusEl.addClass("mod-clickable", "kterm-status");
+    this.statusEl = this.ctx.addStatusBarItem();
+    this.statusEl.addClass("mod-clickable", "kh-term-status");
     this.statusEl.style.display = "none";
     this.statusEl.onclick = () => void this.jumpToAttention();
-    this.addSettingTab(new KyleTermSettingTab(this.app, this));
+    this.ctx.addSettingsSection(new TermSettingsSection(this));
     this.cleanOrphans(this.savedSessions.map((p) => p.id));
-    this.registerInterval(window.setInterval(() => this.saveScrollback(), SCROLLBACK_SAVE_MS));
+    this.ctx.registerInterval(window.setInterval(() => this.saveScrollback(), SCROLLBACK_SAVE_MS));
+    return createSessionService(this, (cb) => {
+      this.stateListeners.add(cb);
+      return () => this.stateListeners.delete(cb);
+    });
   }
 
-  override onunload(): void {
+  stop(): void {
+    this.unwire?.();
+    this.unwire = null;
+    this.stateListeners.clear();
     if (this.persistTimer) clearTimeout(this.persistTimer);
     this.persistTimer = undefined;
     this.flushSync();
@@ -210,9 +232,9 @@ export default class KyleTermPlugin extends Plugin {
         return this.app.vault.adapter.getResourcePath(p);
       }
       if (!fs.existsSync(raw)) throw new Error("not found");
-      return Platform.resourcePathPrefix + encodeURI(process.platform === "win32" ? raw.split("\\").join("/") : raw).replace(/#/g, "%23");
+      return Platform.resourcePathPrefix + encodeURI(raw.split("\\").join("/")).replace(/#/g, "%23");
     } catch {
-      if (notify) new Notice(`kyle-term: background image not found or unreadable: ${raw.replace(/^vault:/, "")}`);
+      if (notify) new Notice(`kyle-hub: background image not found or unreadable: ${raw.replace(/^vault:/, "")}`);
       return null;
     }
   }
@@ -222,11 +244,11 @@ export default class KyleTermPlugin extends Plugin {
     const a = this.settings.appearance;
     const url = this.bgUrl(notify);
     return {
-      "--kterm-bg": toHex(this.currentPalette().background),
-      "--kterm-img": url ? `url("${url}")` : "none",
-      "--kterm-img-opacity": String(a.imageOpacity / 100),
-      "--kterm-img-blur": `${blurPx(a.imageBlur)}px`,
-      "--kterm-img-dim": String(a.imageDim / 100),
+      "--kh-term-bg": toHex(this.currentPalette().background),
+      "--kh-term-img": url ? `url("${url}")` : "none",
+      "--kh-term-img-opacity": String(a.imageOpacity / 100),
+      "--kh-term-img-blur": `${blurPx(a.imageBlur)}px`,
+      "--kh-term-img-dim": String(a.imageDim / 100),
     };
   }
 
@@ -235,7 +257,7 @@ export default class KyleTermPlugin extends Plugin {
     for (const t of this.xterms) t.applyLook();
     const vars = this.bgVars(notify);
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
-      (leaf.view as KyleTermView).applyBackground?.(vars);
+      (leaf.view as TermView).applyBackground?.(vars);
     }
   }
 
@@ -249,10 +271,10 @@ export default class KyleTermPlugin extends Plugin {
     this.player?.play(sound, volume);
   }
 
-  /** Obsidian focused, kyle-term tab active, and this session is the visible one. */
+  /** Obsidian focused, terminal tab active, and this session is the visible one. */
   private isViewing(s: Session): boolean {
     if (!document.hasFocus()) return false;
-    const view = this.app.workspace.getActiveViewOfType(KyleTermView);
+    const view = this.app.workspace.getActiveViewOfType(TermView);
     return !!view && this.sessions?.active?.id === s.id;
   }
 
@@ -286,7 +308,7 @@ export default class KyleTermPlugin extends Plugin {
     const m = this.sessions;
     if (!m) return;
     const id = nextAttention(m.list().map((s) => ({ id: s.id, state: s.agent.state })), m.active?.id ?? null);
-    if (!id) return void new Notice("kyle-term: no session needs attention");
+    if (!id) return void new Notice("kyle-hub: no session needs attention");
     await this.activateView();
     m.setActive(id);
   }
@@ -315,12 +337,11 @@ export default class KyleTermPlugin extends Plugin {
   /** Returns the session manager, or an error message string if Node can't be found. */
   getSessions(): SessionManager | string {
     if (this.sessions) return this.sessions;
-    const node = resolveNode(this.settings.nodePath, this.resolvedPath ?? undefined);
+    const node = resolveNode(this.settings.nodePath);
     if (!node.ok) return node.message ?? "Node.js not found.";
-    const dir = this.manifest.dir ?? "";
-    const helper = path.join(this.vaultRoot(), dir, "helper", "pty-host.js");
-    const pty = new PtyManager(node.path, helper, this.resolvedPath ? { PATH: this.resolvedPath } : undefined);
-    pty.onError = (msg) => console.error("[kyle-term]", msg);
+    const helper = path.join(this.pluginDir(), "helper", "pty-host.js");
+    const pty = new PtyManager(node.path, helper);
+    pty.onError = (msg) => console.error("[kyle-hub]", msg);
     this.pty = pty;
     this.sessions = new SessionManager({
       pty,
@@ -330,7 +351,7 @@ export default class KyleTermPlugin extends Plugin {
         return t;
       },
       profiles: () => this.profiles,
-      env: () => ({ ...this.hookEnv, ...(this.resolvedPath ? { PATH: this.resolvedPath } : {}) }),
+      env: () => ({ ...this.hookEnv }),
       idleMs: () => this.settings.idleSeconds * 1000,
       resumeCommand: (id) => `${this.settings.claudeCommand || "claude"} --resume ${id}`,
       cwdExists: (p) => fs.existsSync(p),
@@ -338,9 +359,11 @@ export default class KyleTermPlugin extends Plugin {
       notify: (m) => new Notice(m, 8000),
       onClosed: (id) => this.deleteScrollback(id),
     });
-    this.sessions.onStateChange((s, _prev, next) => {
+    this.sessions.onStateChange((s, prev, next) => {
       if (next === "needs-input" || next === "finished") this.alert(next, s);
+      for (const l of [...this.stateListeners]) l(s, prev);
     });
+    this.unwire = wireSessionEvents(this.sessions, this.hub.events);
     this.sessions.onSubAgentDone((s) => this.alert("sub-agent-done", s));
     this.sessions.onChange(() => this.updateStatusBar());
     const restored = this.savedSessions;
@@ -350,10 +373,26 @@ export default class KyleTermPlugin extends Plugin {
     return this.sessions;
   }
 
+  /** Plans the change to `~/.claude/settings.json`, shows the diff in a modal, and writes only on accept. */
   private hooks(mode: "install" | "uninstall"): void {
-    const script = path.join(this.vaultRoot(), this.manifest.dir ?? "", "hooks", "kyle-hook.js");
-    const r = applyToFile(path.join(os.homedir(), ".claude", "settings.json"), mode, script);
-    new Notice(`kyle-term: ${r.message}`, r.ok ? 6000 : 12000);
+    const file = path.join(os.homedir(), ".claude", "settings.json");
+    const loaded = loadSettingsFile(file);
+    if (!loaded.ok) return void new Notice(`kyle-hub: ${loaded.message}`, 12000);
+    const plan = mode === "install" ? planHookInstall(loaded.current, this.hookScript()) : planHookUninstall(loaded.current);
+    if (!plan.changed) {
+      return void new Notice(`kyle-hub: ${mode === "install" ? "Hooks already installed." : "No kyle-hub or kyle-term hooks found."}`, 6000);
+    }
+    const before = loaded.raw === null ? "" : JSON.stringify(loaded.current, null, 2);
+    const after = JSON.stringify(plan.next, null, 2);
+    new HookDiffModal(this.app, { mode, file, before, after }, () => {
+      const r = writeSettingsFile(file, loaded.raw, plan.next, mode);
+      new Notice(`kyle-hub: ${r.message}`, r.ok ? 6000 : 12000);
+    }).open();
+  }
+
+  /** The deployed hook script (`.obsidian/plugins/kyle-hub/hooks/kyle-hook.js`). */
+  hookScript(): string {
+    return path.join(this.pluginDir(), "hooks", "kyle-hook.js");
   }
 
   /** Absolute folder for a vault entry; for a note, its parent folder. */
@@ -407,7 +446,7 @@ export default class KyleTermPlugin extends Plugin {
   private openSettings(): void {
     // Not in the public typings; guard it.
     const setting = (this.app as unknown as { setting?: { open(): void; openTabById(id: string): void } }).setting;
-    try { setting?.open(); setting?.openTabById(this.manifest.id); } catch { /* ignore */ }
+    try { setting?.open(); setting?.openTabById(PLUGIN_ID); } catch { /* ignore */ }
   }
 
   /** The running session to type into; starts a Claude session (and waits for it) if none. */
@@ -419,7 +458,7 @@ export default class KyleTermPlugin extends Plugin {
     if (s && s.status === "running") return s;
     s = await this.newClaude(true);
     if (!s) return undefined;
-    if (!(await m.whenReady(s.id))) new Notice("kyle-term: Claude was slow to start; sending anyway");
+    if (!(await m.whenReady(s.id))) new Notice("kyle-hub: Claude was slow to start; sending anyway");
     return m.get(s.id)?.status === "running" ? s : undefined;
   }
 
@@ -431,7 +470,7 @@ export default class KyleTermPlugin extends Plugin {
   }
 
   async sendSelection(text: string): Promise<void> {
-    if (!text) return void new Notice("kyle-term: nothing selected");
+    if (!text) return void new Notice("kyle-hub: nothing selected");
     await this.sendText(text);
   }
 
@@ -470,24 +509,18 @@ export default class KyleTermPlugin extends Plugin {
     return this.refsFor(found, cwd);
   }
 
-  async loadSettings(): Promise<void> {
-    const raw = (await this.loadData()) as (Partial<KyleTermSettings> & { sessions?: unknown; version?: unknown }) | null;
-    const { sessions: savedSessions, version: _v, ...saved } = raw ?? {};
-    void _v;
-    this.savedSessions = parsePersisted(savedSessions);
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved, { savedFolders: (saved?.savedFolders ?? []).map((f) => ({ ...f })), sounds: mergeSounds(saved?.sounds), appearance: mergeAppearance(saved?.appearance) });
-  }
-
+  /** Persists the hub's data.json (the `modules.term` object is this.settings). */
   async saveSettings(): Promise<void> {
-    await this.saveData(this.dataBlob());
+    this.syncSessions();
+    await this.hub.save();
   }
 
-  /** Settings plus session metadata, as stored in data.json. */
-  private dataBlob(): Record<string, unknown> {
-    return { ...this.settings, version: PERSIST_VERSION, sessions: this.sessions ? this.sessions.snapshot() : this.savedSessions };
+  /** Session metadata rides along in `modules.term.sessions`. */
+  private syncSessions(): void {
+    if (this.sessions) this.settings.sessions = this.sessions.snapshot();
   }
 
-  private pluginDir(): string { return path.join(this.vaultRoot(), this.manifest.dir ?? ""); }
+  private pluginDir(): string { return path.join(this.vaultRoot(), this.app.vault.configDir, "plugins", PLUGIN_ID); }
   private sessionsDir(): string { return path.join(this.pluginDir(), "sessions"); }
 
   private schedulePersist(): void {
@@ -512,7 +545,7 @@ export default class KyleTermPlugin extends Plugin {
       const keep = this.settings.restoreScrollback ? keepIds : [];
       for (const f of orphanFiles(fs.readdirSync(dir), keep)) fs.rmSync(path.join(dir, f), { force: true });
     } catch (e) {
-      console.error("[kyle-term] orphan cleanup failed", e);
+      console.error("[kyle-hub] terminal orphan cleanup failed", e);
     }
   }
 
@@ -528,7 +561,7 @@ export default class KyleTermPlugin extends Plugin {
         if (text !== undefined) fs.writeFileSync(path.join(dir, scrollbackFile(s.id)), text);
       }
     } catch (e) {
-      console.error("[kyle-term] saving scrollback failed", e);
+      console.error("[kyle-hub] saving terminal scrollback failed", e);
     }
   }
 
@@ -537,9 +570,10 @@ export default class KyleTermPlugin extends Plugin {
     if (!this.sessions) return;
     this.saveScrollback();
     try {
-      fs.writeFileSync(path.join(this.pluginDir(), "data.json"), JSON.stringify(this.dataBlob(), null, 2));
+      this.syncSessions();
+      fs.writeFileSync(path.join(this.pluginDir(), "data.json"), JSON.stringify(this.hub.settings.all, null, 2));
     } catch (e) {
-      console.error("[kyle-term] saving session data failed", e);
+      console.error("[kyle-hub] saving terminal session data failed", e);
     }
   }
 

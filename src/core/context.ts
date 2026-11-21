@@ -28,6 +28,8 @@ export interface ModuleContext {
   registerInterval(id: number): number;
   registerMarkdownPostProcessor(fn: MarkdownPostProcessor): void;
   addSettingsSection(section: SettingsSection): void;
+  /** A status bar item, removed on dispose. */
+  addStatusBarItem(): HTMLElement;
   /** Runs registered teardowns (reverse order); safe to call twice. */
   dispose(): void;
 }
@@ -97,6 +99,11 @@ export function createModuleContext(
         section.cleanup?.();
         if (sections.get(id) === section) sections.delete(id);
       });
+    },
+    addStatusBarItem() {
+      const el = plugin.addStatusBarItem();
+      onDispose(() => el.remove());
+      return el;
     },
     dispose() {
       const run = teardowns.reverse();

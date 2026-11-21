@@ -2,7 +2,13 @@ import http from "node:http";
 import crypto from "node:crypto";
 import type { AddressInfo } from "node:net";
 
-export interface HookMessage { session: string; event: string; payload: Record<string, unknown> }
+export interface HookMessage {
+  session: string;
+  event: string;
+  payload: Record<string, unknown>;
+  /** `KH_*` env vars forwarded by the hook script (absent when none were set). */
+  env?: Record<string, string>;
+}
 
 const MAX_BODY = 1_000_000;
 
@@ -42,7 +48,9 @@ export class HookServer {
       try {
         const m = JSON.parse(body) as Partial<HookMessage>;
         if (typeof m.session !== "string" || typeof m.event !== "string") return end(400);
-        this.onMessage({ session: m.session, event: m.event, payload: (m.payload ?? {}) as Record<string, unknown> });
+        const msg: HookMessage = { session: m.session, event: m.event, payload: (m.payload ?? {}) as Record<string, unknown> };
+        if (m.env && typeof m.env === "object") msg.env = m.env;
+        this.onMessage(msg);
         end(204);
       } catch {
         end(400);

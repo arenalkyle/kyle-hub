@@ -1,55 +1,15 @@
 import { resolveNode } from "./node-path";
-import { FuzzySuggestModal, PluginSettingTab, Setting, type App, type TFile } from "obsidian";
+import { FuzzySuggestModal, Setting, type App, type TFile } from "obsidian";
+import type { SettingsSection } from "../../../core";
 import fs from "node:fs";
-import type { PathMode } from "./vault-paths";
-import type KyleTermPlugin from "./main";
-import { DEFAULT_SOUNDS, TONES, type AlertEvent, type SoundSettings } from "./alert";
+import type TermHost from "./main";
+import { TONES, type AlertEvent } from "./alert";
+import { DEFAULT_SETTINGS } from "./schema";
 import { AUDIO_EXTS } from "./sound";
 import {
   ANSI_KEYS, DEFAULT_APPEARANCE, DEFAULT_FONT_FAMILY, MAX_FONT, MIN_FONT, PRESETS, THEME_CUSTOM, THEME_FOLLOW, clampFont, toHex,
   type AppearanceSettings,
 } from "./appearance";
-
-export interface SavedFolder {
-  name: string;
-  /** Absolute path (may be outside the vault). */
-  path: string;
-}
-
-export interface KyleTermSettings {
-  savedFolders: SavedFolder[];
-  pathMode: PathMode;
-  nodePath: string;
-  defaultProfile: string;
-  /** Empty = vault root. */
-  claudeStartFolder: string;
-  claudeCommand: string;
-  /** Seconds of quiet before a non-hook CLI session shows "finished". */
-  idleSeconds: number;
-  /** Save terminal output so it can be shown again after a restart. */
-  restoreScrollback: boolean;
-  scrollbackLines: number;
-  sidebarWidth: number;
-  sidebarCollapsed: boolean;
-  sounds: SoundSettings;
-  appearance: AppearanceSettings;
-}
-
-export const DEFAULT_SETTINGS: KyleTermSettings = {
-  savedFolders: [],
-  pathMode: "relative",
-  nodePath: "",
-  defaultProfile: "powershell",
-  claudeStartFolder: "",
-  claudeCommand: "claude",
-  idleSeconds: 10,
-  restoreScrollback: true,
-  scrollbackLines: 2000,
-  sidebarWidth: 240,
-  sidebarCollapsed: false,
-  sounds: DEFAULT_SOUNDS,
-  appearance: DEFAULT_APPEARANCE,
-};
 
 const EVENT_LABEL: Record<AlertEvent, string> = {
   "needs-input": "Needs input",
@@ -59,25 +19,21 @@ const EVENT_LABEL: Record<AlertEvent, string> = {
 const TONE_LABEL: Record<string, string> = { chime: "Chime", ping: "Ping", bell: "Bell", pulse: "Pulse" };
 
 /** Merge saved sound settings over defaults (deep, one level per event). */
-export function mergeSounds(saved: Partial<SoundSettings> | undefined): SoundSettings {
-  const d = DEFAULT_SOUNDS;
-  return {
-    muted: saved?.muted ?? d.muted,
-    master: saved?.master ?? d.master,
-    events: {
-      "needs-input": { ...d.events["needs-input"], ...saved?.events?.["needs-input"] },
-      finished: { ...d.events.finished, ...saved?.events?.finished },
-      "sub-agent-done": { ...d.events["sub-agent-done"], ...saved?.events?.["sub-agent-done"] },
-    },
-  };
-}
+/** The terminal block inside kyle-hub's settings tab. */
+export class TermSettingsSection implements SettingsSection {
+  private containerEl!: HTMLElement;
+  private app: App;
 
-export class KyleTermSettingTab extends PluginSettingTab {
-  constructor(app: App, private plugin: KyleTermPlugin) {
-    super(app, plugin);
+  constructor(private plugin: TermHost) {
+    this.app = plugin.app;
   }
 
-  override display(): void {
+  render(el: HTMLElement): void {
+    this.containerEl = el;
+    this.display();
+  }
+
+  display(): void {
     const el = this.containerEl;
     const s = this.plugin.settings;
     el.empty();
@@ -90,11 +46,11 @@ export class KyleTermSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         }),
       );
-    const det = resolveNode(s.nodePath, this.plugin.resolvedPath ?? undefined);
+    const det = resolveNode(s.nodePath);
     new Setting(el)
       .setName("Detected Node / PATH")
       .setDesc(`Node: ${det.ok ? det.path : "not found"}
-PATH: ${this.plugin.resolvedPath ?? process.env.PATH ?? ""}`)
+PATH: ${process.env.PATH ?? ""}`)
       .descEl.style.whiteSpace = "pre-wrap";
     new Setting(el)
       .setName("Default shell profile")
@@ -305,7 +261,7 @@ PATH: ${this.plugin.resolvedPath ?? process.env.PATH ?? ""}`)
         });
       });
       if (cfg.sound.startsWith("vault:")) {
-        const listId = `kterm-audio-${ev}`;
+        const listId = `kh-term-audio-${ev}`;
         setting.addText((t) => {
           t.setPlaceholder("path/to/sound.mp3").setValue(cfg.sound.slice(6)).onChange((v) => {
             cfg.sound = `vault:${v.trim()}`;

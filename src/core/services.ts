@@ -34,8 +34,47 @@ export interface TicketService {
   subscribe(cb: () => void): () => void;
 }
 
-/** Stub service interfaces; modules fill these in as they land (term 2.1, logs 4.x, brain 7.x). */
-export interface SessionService {}
+/** Agent state of a terminal session. `exited` covers both an ended process and a restored (stopped) row. */
+export type SessionState = "idle" | "working" | "needs-input" | "finished" | "exited";
+
+export interface SessionInfo {
+  id: string;
+  kind: "shell" | "claude";
+  title: string;
+  cwd: string;
+  state: SessionState;
+  /** Claude conversation id, once a hook reported it. */
+  claudeSessionId?: string;
+}
+
+export interface SpawnSessionOptions {
+  /** Defaults to the vault root. */
+  cwd?: string;
+  /** Typed into the shell once it is up (a Claude session when it starts with `claude`, else a plain shell). */
+  command?: string;
+  args?: string[];
+  /** Extra environment for the shell process. */
+  env?: Record<string, string>;
+  /** Pins the session's title in the sidebar. */
+  title?: string;
+}
+
+/** Published by the term module. */
+export interface SessionService {
+  list(): SessionInfo[];
+  get(id: string): SessionInfo | undefined;
+  spawn(opts: SpawnSessionOptions): SessionInfo;
+  /** Reveals the terminal view and selects the session. */
+  focus(id: string): Promise<void>;
+  /** The last `lines` lines of a session's terminal as plain text (no escape codes); empty when unknown. */
+  tail(id: string, lines?: number): string;
+  /** Kills the process if running and removes the session. */
+  close(id: string): void;
+  /** Fires on every state change; returns an unsubscribe function. */
+  onState(cb: (info: SessionInfo, prev: SessionState) => void): () => void;
+}
+
+/** Stub service interfaces; modules fill these in as they land (logs 4.x, brain 7.x). */
 export interface LogService {}
 export interface BrainService {}
 

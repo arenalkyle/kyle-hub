@@ -43,7 +43,7 @@ export class XtermSession implements TermLike {
     term.onResize(({ cols, rows }) => h.onResize(cols, rows));
     term.onTitleChange(h.onTitle);
     term.onBell(h.onBell);
-    this.el.className = "kyle-term-term";
+    this.el.className = "kh-term-term";
     this.el.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       this.pasteClipboard();
@@ -55,7 +55,7 @@ export class XtermSession implements TermLike {
       // Alt+A: jump to next session needing attention.
       if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && k === "a") return false;
       if (e.ctrlKey && !e.altKey && (k === "tab" || (e.shiftKey && k === "t"))) return false;
-      const action = decideKey(e, process.platform, term.hasSelection());
+      const action = decideKey(e, term.hasSelection());
       if (action === "zoom-in" || action === "zoom-out" || action === "zoom-reset") {
         e.preventDefault();
         const cur = this.zoom ?? this.look().fontSize;

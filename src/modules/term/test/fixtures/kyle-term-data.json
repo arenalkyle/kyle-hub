@@ -1,0 +1,20 @@
+{
+  "savedFolders": [{ "name": "Notes", "path": "D:\\Notes" }, { "name": "Code", "path": "D:\\Code\\app" }],
+  "pathMode": "absolute",
+  "nodePath": "C:\\Program Files\\nodejs\\node.exe",
+  "defaultProfile": "gitbash",
+  "claudeStartFolder": "D:\\Code",
+  "claudeCommand": "claude --model opus",
+  "idleSeconds": 20,
+  "restoreScrollback": false,
+  "scrollbackLines": 5000,
+  "sidebarWidth": 300,
+  "sidebarCollapsed": true,
+  "sounds": { "muted": true, "master": 40, "events": { "finished": { "enabled": false, "sound": "bell", "volume": 70, "cooldownSeconds": 5 } } },
+  "appearance": { "fontSize": 16, "terminalOpacity": 80, "bgImage": "vault:Images/bg.png" },
+  "version": 1,
+  "sessions": [
+    { "id": "a1b2-0", "kind": "claude", "profileId": "powershell", "cwd": "D:\\Code\\app", "command": "claude", "claudeSessionId": "5e0f-uuid", "firstPrompt": "fix the build", "lastOutputAt": 1700000000000, "savedAt": 1700000005000 },
+    { "id": "c3d4-1", "kind": "shell", "profileId": "cmd", "cwd": "D:\\Notes", "manualTitle": "scratch", "lastOutputAt": 1700000100000, "savedAt": 1700000105000 }
+  ]
+}

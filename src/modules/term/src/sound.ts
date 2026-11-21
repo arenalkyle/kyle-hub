@@ -66,7 +66,7 @@ export class SoundPlayer {
         osc.stop(at + att + b.decay + 0.05);
       }
     } catch (e) {
-      console.error("[kyle-term] tone failed", e);
+      console.error("[kyle-hub] tone failed", e);
     }
   }
 
@@ -77,7 +77,7 @@ export class SoundPlayer {
       fell = true;
       if (!this.warned.has(path)) {
         this.warned.add(path);
-        new Notice(`kyle-term: sound file not found or unplayable: ${path}. Using the default tone.`);
+        new Notice(`kyle-hub: sound file not found or unplayable: ${path}. Using the default tone.`);
       }
       this.playTone(DEFAULT_TONE, volume);
     };

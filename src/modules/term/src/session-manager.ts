@@ -76,7 +76,13 @@ export interface CreateOptions {
   profileId: string;
   cwd: string;
   command?: string;
+  /** Extra env for this session's shell only (kept across restarts, not persisted). */
+  env?: Record<string, string>;
+  /** Pins the title (same as renaming). */
+  title?: string;
 }
+
+export type LifecycleListener = (kind: "started" | "ended", s: Session) => void;
 
 interface Runtime {
   term: TermLike;
@@ -86,6 +92,7 @@ interface Runtime {
   cmdSentAt: number;
   /** Output arrived since scrollback was last saved. */
   dirty: boolean;
+  extraEnv?: Record<string, string>;
   /** Command typed for the current start only (a resume); s.command stays the original. */
   command?: string;
   inputSeen: boolean;
@@ -108,6 +115,7 @@ export class SessionManager {
   private listeners = new Set<() => void>();
   private stateListeners = new Set<StateListener>();
   private subDoneListeners = new Set<(s: Session) => void>();
+  private lifecycleListeners = new Set<LifecycleListener>();
   private soon?: ReturnType<typeof setTimeout>;
   private fade?: ReturnType<typeof setTimeout>;
   private activeId: string | null = null;
@@ -130,6 +138,15 @@ export class SessionManager {
   onStateChange(cb: StateListener): () => void {
     this.stateListeners.add(cb);
     return () => this.stateListeners.delete(cb);
+  }
+
+  /** Fires when a session's process starts (create, restart, resume) and when it ends (exit or close while running). */
+  onLifecycle(cb: LifecycleListener): () => void {
+    this.lifecycleListeners.add(cb);
+    return () => this.lifecycleListeners.delete(cb);
+  }
+  private lifecycle(kind: "started" | "ended", s: Session): void {
+    for (const l of this.lifecycleListeners) l(kind, s);
   }
 
   /** Fires when a sub-agent of a session goes from running to done. */
@@ -228,7 +245,8 @@ export class SessionManager {
       id, kind: opts.kind, profileId: opts.profileId, cwd: opts.cwd, command: opts.command,
       status: "running", lastOutputAt: this.now(), agent: initialAgent(),
     };
-    const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true, cmdSentAt: 0, inputSeen: false, dirty: false };
+    if (opts.title?.trim()) s.manualTitle = opts.title.trim();
+    const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true, cmdSentAt: 0, inputSeen: false, dirty: false, extraEnv: opts.env };
     rt.term = this.deps.makeTerm(this.handlers(s, rt));
     this.sessions.push(s);
     this.rt.set(id, rt);
@@ -266,7 +284,7 @@ export class SessionManager {
     if (this.deps.cwdExists && !this.deps.cwdExists(s.cwd)) {
       const root = this.deps.fallbackCwd?.();
       if (root) {
-        this.deps.notify?.(`kyle-term: folder not found (${s.cwd}); starting in the vault root`);
+        this.deps.notify?.(`kyle-hub: folder not found (${s.cwd}); starting in the vault root`);
         s.cwd = root;
       }
     }
@@ -278,7 +296,7 @@ export class SessionManager {
     rt.ptyId = this.deps.pty.spawnSession(
       {
         shell: p.shell, args: p.args, cwd: s.cwd, cols: rt.term.cols, rows: rt.term.rows,
-        env: { ...this.deps.env?.(), KYLE_TERM_SESSION: s.id },
+        env: { ...this.deps.env?.(), ...rt.extraEnv, KYLE_TERM_SESSION: s.id },
       },
       {
         onData: (d) => {
@@ -297,10 +315,12 @@ export class SessionManager {
           this.dispatch(s, { type: "exit" });
           rt.term.write(`\r\n[process exited with code ${code}]\r\n`);
           this.emit();
+          this.lifecycle("ended", s);
         },
       },
     );
     if (!rt.cmdSent) rt.fallbackTimer = setTimeout(() => this.sendCommand(s, rt), FALLBACK_MS);
+    this.lifecycle("started", s);
   }
 
   /** Claude sessions: type the command into the shell once its startup output goes quiet. */
@@ -447,7 +467,9 @@ export class SessionManager {
     if (i < 0 || !rt) return;
     rt.gen++;
     this.clearTimers(rt);
-    if (this.sessions[i]!.status === "running" && rt.ptyId) this.deps.pty.kill(rt.ptyId);
+    const wasRunning = this.sessions[i]!.status === "running";
+    if (wasRunning && rt.ptyId) this.deps.pty.kill(rt.ptyId);
+    if (wasRunning) this.lifecycle("ended", this.sessions[i]!);
     rt.term.dispose();
     this.rt.delete(id);
     this.sessions.splice(i, 1);
@@ -481,5 +503,6 @@ export class SessionManager {
     this.listeners.clear();
     this.stateListeners.clear();
     this.subDoneListeners.clear();
+    this.lifecycleListeners.clear();
   }
 }

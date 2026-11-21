@@ -2,9 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { applyToFile, HOOK_EVENTS, installHooks, uninstallHooks } from "../src/hook-installer";
+import { applyToFile, HOOK_EVENTS, hookCommand, installHooks, loadSettingsFile, planHookInstall, planHookUninstall, uninstallHooks } from "../src/hook-installer";
 
-const script = "C:\\Vault\\.obsidian\\plugins\\kyle-term\\hooks\\kyle-hook.js";
+const script = "C:\\Vault\\.obsidian\\plugins\\kyle-hub\\hooks\\kyle-hook.js";
+const oldScript = "C:\\Vault\\.obsidian\\plugins\\kyle-term\\hooks\\kyle-hook.js";
 const other = { hooks: { Stop: [{ hooks: [{ type: "command", command: "echo done" }] }], PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "guard.sh" }] }] }, model: "x", env: { A: "1" } };
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 const count = (s: Record<string, unknown>): number => JSON.stringify(s).split("kyle-hook.js").length - 1;
@@ -28,7 +29,7 @@ describe("installHooks / uninstallHooks", () => {
   it("is idempotent and replaces entries from another vault", () => {
     const once = installHooks(clone(other), script);
     expect(installHooks(clone(once), script)).toEqual(once);
-    const moved = installHooks(clone(once), "D:\\v2\\kyle-hook.js");
+    const moved = installHooks(clone(once), "D:\\v2\\.obsidian\\plugins\\kyle-hub\\hooks\\kyle-hook.js");
     expect(count(moved)).toBe(HOOK_EVENTS.length);
     expect(JSON.stringify(moved)).not.toContain("C:\\\\Vault");
   });
@@ -79,5 +80,64 @@ describe("applyToFile (temp files only)", () => {
     const r = applyToFile(file, "install", script);
     expect(r.ok).toBe(false);
     expect(fs.readFileSync(file, "utf8")).toBe("{ nope");
+  });
+});
+
+describe("hook command", () => {
+  it("double-quotes the path", () => {
+    expect(hookCommand("C:\\a b\\kyle-hook.js", "Stop")).toBe('node "C:\\a b\\kyle-hook.js" Stop');
+  });
+});
+
+describe("planHookInstall / planHookUninstall (fixture settings)", () => {
+  const fixtureOld = () => installHooks(clone(other), oldScript);
+
+  it("fresh install adds all events and reports a change", () => {
+    const p = planHookInstall(clone(other), script);
+    expect(p.changed).toBe(true);
+    expect(count(p.next)).toBe(HOOK_EVENTS.length);
+    expect(JSON.stringify(p.next)).toContain("kyle-hub");
+  });
+  it("upgrade from kyle-term entries replaces them and keeps unrelated hooks", () => {
+    const old = fixtureOld();
+    expect(JSON.stringify(old)).toContain("kyle-term");
+    const p = planHookInstall(clone(old), script);
+    expect(p.changed).toBe(true);
+    expect(JSON.stringify(p.next)).not.toContain("kyle-term");
+    expect(count(p.next)).toBe(HOOK_EVENTS.length);
+    const hooks = (p.next as typeof other).hooks;
+    expect(hooks.Stop[0]).toEqual(other.hooks.Stop[0]);
+    expect(hooks.PreToolUse[0]).toEqual(other.hooks.PreToolUse[0]);
+  });
+  it("re-running is a no-op", () => {
+    const first = planHookInstall(clone(other), script).next;
+    const again = planHookInstall(clone(first), script);
+    expect(again.changed).toBe(false);
+    expect(again.next).toEqual(first);
+  });
+  it("uninstall removes ours (kyle-hub and kyle-term) and leaves unrelated hooks untouched", () => {
+    const mixed = installHooks(fixtureOld(), script);
+    const p = planHookUninstall(clone(mixed));
+    expect(p.changed).toBe(true);
+    expect(p.next).toEqual(other);
+    expect(planHookUninstall(clone(other)).changed).toBe(false);
+  });
+  it("does not treat a similarly named foreign hook as ours", () => {
+    const foreign = { hooks: { Stop: [{ hooks: [{ type: "command", command: "node other-tool/kyle-hook.js Stop" }] }] } };
+    expect(planHookUninstall(clone(foreign)).changed).toBe(false);
+  });
+});
+
+describe("loadSettingsFile", () => {
+  it("reads fixtures and rejects invalid JSON", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kh-hooks-"));
+    try {
+      const f = path.join(dir, "settings.json");
+      expect(loadSettingsFile(f)).toEqual({ ok: true, raw: null, current: {} });
+      fs.writeFileSync(f, JSON.stringify(other));
+      expect(loadSettingsFile(f)).toMatchObject({ ok: true, current: other });
+      fs.writeFileSync(f, "[1]");
+      expect(loadSettingsFile(f).ok).toBe(false);
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   });
 });

@@ -82,4 +82,17 @@ describe("hooks/kyle-hook.js", () => {
     expect(got[0]!.event).toBe("PreToolUse");
     expect((got[0]!.payload.tool_input as { command: string }).command.length).toBe(500);
   });
+  it("forwards KH_* env vars (and nothing else) alongside the payload", async () => {
+    const got: HookMessage[] = [];
+    server = new HookServer((m) => got.push(m));
+    const port = await server.start();
+    await new Promise<void>((resolve) => {
+      const child = require("node:child_process").spawn(process.execPath, [script, "Stop"], {
+        env: { PATH: process.env.PATH ?? "", SECRET: "no", KH_TICKET: "KH-7", KH_RUN: "r1", KYLE_TERM_SESSION: "sess", KYLE_TERM_PORT: String(port), KYLE_TERM_TOKEN: server!.token },
+      });
+      child.on("exit", () => resolve());
+      child.stdin.end("{}");
+    });
+    expect(got[0]!.env).toEqual({ KH_TICKET: "KH-7", KH_RUN: "r1" });
+  });
 });

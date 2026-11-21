@@ -1,0 +1,100 @@
+{
+  "enabled": true,
+  "savedFolders": [
+    {
+      "name": "Notes",
+      "path": "D:\\Notes"
+    },
+    {
+      "name": "Code",
+      "path": "D:\\Code\\app"
+    }
+  ],
+  "pathMode": "absolute",
+  "nodePath": "C:\\Program Files\\nodejs\\node.exe",
+  "defaultProfile": "gitbash",
+  "claudeStartFolder": "D:\\Code",
+  "claudeCommand": "claude --model opus",
+  "idleSeconds": 20,
+  "restoreScrollback": false,
+  "scrollbackLines": 5000,
+  "sidebarWidth": 300,
+  "sidebarCollapsed": true,
+  "sounds": {
+    "muted": true,
+    "master": 40,
+    "events": {
+      "needs-input": {
+        "sound": "chime",
+        "volume": 80
+      },
+      "finished": {
+        "sound": "bell",
+        "volume": 70,
+        "enabled": false,
+        "cooldownSeconds": 5
+      },
+      "sub-agent-done": {
+        "sound": "none",
+        "volume": 50
+      }
+    }
+  },
+  "appearance": {
+    "theme": "obsidian",
+    "custom": {
+      "background": "#282a36",
+      "foreground": "#f8f8f2",
+      "cursor": "#f8f8f2",
+      "selection": "#44475a",
+      "ansi": [
+        "#21222c",
+        "#ff5555",
+        "#50fa7b",
+        "#f1fa8c",
+        "#bd93f9",
+        "#ff79c6",
+        "#8be9fd",
+        "#f8f8f2",
+        "#6272a4",
+        "#ff6e6e",
+        "#69ff94",
+        "#ffffa5",
+        "#d6acff",
+        "#ff92df",
+        "#a4ffff",
+        "#ffffff"
+      ]
+    },
+    "fontFamily": "",
+    "fontSize": 16,
+    "bgImage": "vault:Images/bg.png",
+    "imageOpacity": 60,
+    "imageBlur": 0,
+    "imageDim": 30,
+    "terminalOpacity": 80
+  },
+  "version": 1,
+  "sessions": [
+    {
+      "id": "a1b2-0",
+      "kind": "claude",
+      "profileId": "powershell",
+      "cwd": "D:\\Code\\app",
+      "lastOutputAt": 1700000000000,
+      "savedAt": 1700000005000,
+      "command": "claude",
+      "firstPrompt": "fix the build",
+      "claudeSessionId": "5e0f-uuid"
+    },
+    {
+      "id": "c3d4-1",
+      "kind": "shell",
+      "profileId": "cmd",
+      "cwd": "D:\\Notes",
+      "lastOutputAt": 1700000100000,
+      "savedAt": 1700000105000,
+      "manualTitle": "scratch"
+    }
+  ]
+}
