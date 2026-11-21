@@ -141,6 +141,50 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
             await this.plugin.updateSettings({ prRefreshMinutes: Math.round(n) });
           }),
       );
+
+    this.autoLinkSection(containerEl);
+  }
+
+  private autoLinkSection(containerEl: HTMLElement): void {
+    new Setting(containerEl)
+      .setName("Watched repos")
+      .setDesc("owner/repo, one per line. PRs whose title or branch contains an issue ID are linked to that issue.")
+      .addTextArea((t) => {
+        t.setPlaceholder("owner/repo")
+          .setValue(this.plugin.data.settings.ghRepos.join("\n"))
+          .onChange(async (x) => {
+            const repos = x.split("\n").map((r) => r.trim()).filter(Boolean);
+            await this.plugin.updateSettings({ ghRepos: repos });
+          });
+        t.inputEl.rows = 3;
+      });
+
+    new Setting(containerEl)
+      .setName("Auto-link PRs")
+      .setDesc("Periodically link PRs in the watched repos (on the refresh interval).")
+      .addToggle((t) =>
+        t.setValue(this.plugin.data.settings.autoLinkPrs).onChange(async (v) => {
+          await this.plugin.updateSettings({ autoLinkPrs: v });
+          if (v) void this.plugin.autoLinker.tick();
+        }),
+      );
+
+    const last = (): string => {
+      const r = this.plugin.data.autoLink;
+      return r ? `${r.message} · ${relativeAgo(r.at)}` : "Not synced yet.";
+    };
+    const sync = new Setting(containerEl).setName("Sync now").setDesc(last());
+    sync.descEl.toggleClass("kt-gh-bad", this.plugin.data.autoLink?.ok === false);
+    sync.addButton((b) =>
+      b.setButtonText("Sync now").onClick(async () => {
+        b.setDisabled(true);
+        sync.setDesc("Syncing...");
+        const r = await this.plugin.autoLinker.sync();
+        sync.setDesc(r ? last() : "A sync is already running.");
+        sync.descEl.toggleClass("kt-gh-bad", r?.ok === false);
+        b.setDisabled(false);
+      }),
+    );
   }
 
   override hide(): void {
@@ -170,4 +214,12 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
       new Notice(`kyle-tickets: created structure in ${folder}`);
     }).open();
   }
+}
+
+function relativeAgo(at: number): string {
+  const m = Math.max(0, Math.round((Date.now() - at) / 60_000));
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} d ago`;
 }

@@ -33,6 +33,8 @@ export function defaultSettings(): Settings {
     defaultStatus: DEFAULT_STATUS_NAME,
     labelColors: {},
     ghRepos: [],
+    autoLinkPrs: false,
+    unlinkedPrs: {},
     prRefreshMinutes: 10,
     ghPath: "",
   };

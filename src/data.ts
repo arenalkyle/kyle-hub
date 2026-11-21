@@ -25,6 +25,8 @@ export interface PluginData {
   views: Record<string, unknown>;
   /** Pull request cache keyed by canonical PR url. */
   prCache: Record<string, PrCacheEntry>;
+  /** Result of the last PR auto-link sync. */
+  autoLink?: { at: number; ok: boolean; message: string };
 }
 
 export function defaultData(): PluginData {

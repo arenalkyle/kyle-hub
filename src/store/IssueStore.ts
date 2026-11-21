@@ -13,6 +13,7 @@ import {
 import { fromLink } from "../core/links";
 import { issueInMilestone, milestoneAfterProjectChange, reorderMilestones, validateMilestoneName } from "../core/milestones";
 import { parsePrUrl, prLabelOfUrl } from "../core/pr";
+import { clearUnlinked, markUnlinked } from "../core/prMatch";
 import { parseProject, serializeProject } from "../core/projectFile";
 import { issueInProject, rewriteProjectLink, validateProjectName } from "../core/projects";
 import type { Issue, Milestone, Project, ProjectStatus } from "../core/types";
@@ -226,13 +227,25 @@ export class IssueStore {
     const ref = parsePrUrl(url);
     if (!ref) throw new Error("Not a GitHub pull request URL (https://github.com/owner/repo/pull/123).");
     const key = (u: string): string => parsePrUrl(u)?.url ?? u;
-    return this.editPrs(id, (cur) => (cur.some((u) => key(u) === ref.url) ? null : [...cur, ref.url]), `linked PR ${prLabelOfUrl(ref.url)}`, author);
+    const issue = await this.editPrs(id, (cur) => (cur.some((u) => key(u) === ref.url) ? null : [...cur, ref.url]), `linked PR ${prLabelOfUrl(ref.url)}`, author);
+    // A manual (re-)link lifts an earlier unlink block; auto-link itself never does.
+    if (author !== "github") await this.setUnlinked(clearUnlinked(this.host.data.settings.unlinkedPrs, id, ref.url));
+    return issue;
+  }
+
+  private async setUnlinked(next: Record<string, string[]>): Promise<void> {
+    const s = this.host.data.settings;
+    if (next === s.unlinkedPrs) return;
+    this.host.data.settings = { ...s, unlinkedPrs: next };
+    await this.host.savePluginData();
   }
 
   /** Removes a PR url (matched by canonical form) and logs "unlinked PR owner/repo#N". */
   async unlinkPr(id: string, url: string, author?: string): Promise<Issue> {
     const key = (u: string): string => parsePrUrl(u)?.url ?? u;
     const target = key(url);
+    const had = this.getIssues().find((i) => i.id === id)?.pullRequests.some((u) => key(u) === target) ?? false;
+    if (had) await this.setUnlinked(markUnlinked(this.host.data.settings.unlinkedPrs, id, target));
     return this.editPrs(id, (cur) => (cur.some((u) => key(u) === target) ? cur.filter((u) => key(u) !== target) : null), `unlinked PR ${prLabelOfUrl(target)}`, author);
   }
 

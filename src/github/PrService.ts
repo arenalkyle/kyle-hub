@@ -82,6 +82,15 @@ export class PrService {
     await this.ensure(urls, true);
   }
 
+  /** Stores PR info obtained elsewhere (auto-link listing) in the cache, only for already-known or given urls. */
+  seed(infos: readonly PrInfo[]): void {
+    if (infos.length === 0) return;
+    const t = this.now();
+    for (const info of infos) this.cache()[info.url] = { info, fetchedAt: t };
+    this.scheduleSave();
+    this.emit();
+  }
+
   private fetchOne(url: string): Promise<void> {
     if (this.blocked) return Promise.resolve();
     const existing = this.inflight.get(url);

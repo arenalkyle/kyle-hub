@@ -107,7 +107,11 @@ export interface Settings {
   statuses: StatusDef[];
   defaultStatus: string;
   labelColors: Record<string, string>;
+  /** Repos (`owner/repo`) watched for auto-linking. */
   ghRepos: string[];
+  autoLinkPrs: boolean;
+  /** PR urls the user unlinked, per issue id; auto-link never re-adds them. */
+  unlinkedPrs: Record<string, string[]>;
   prRefreshMinutes: number;
   /** Optional absolute path to the `gh` executable (empty = PATH lookup). */
   ghPath: string;

@@ -9,6 +9,7 @@ import { bootstrapFolder } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
 import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";
 import { IssueStore } from "./store/IssueStore";
+import { AutoLinker } from "./github/autolink";
 import { PrService } from "./github/PrService";
 import { IssueView, VIEW_TYPE_ISSUE } from "./views/IssueView";
 import { IssueInterceptor } from "./views/intercept";
@@ -22,6 +23,8 @@ export default class KyleTicketsPlugin extends Plugin {
   readonly interceptor = new IssueInterceptor(this);
   /** Live PR state via the `gh` CLI. */
   readonly prs = new PrService(this);
+  /** Auto-links PRs of watched repos by issue ID. */
+  readonly autoLinker = new AutoLinker(this);
 
   override async onload(): Promise<void> {
     this.data = mergeData(await this.loadData());
@@ -54,15 +57,24 @@ export default class KyleTicketsPlugin extends Plugin {
     this.addSettingTab(new KyleTicketsSettingTab(this.app, this));
 
     this.app.workspace.onLayoutReady(() => {
-      void this.store.start().then(() => void this.prs.refreshAll());
+      void this.store.start().then(() => {
+        void this.prs.refreshAll();
+        void this.autoLinker.tick();
+      });
       if (!this.data.setupDone) this.openSetup();
     });
     // Background PR refresh: a 1-minute tick; staleness is judged against the `prRefreshMinutes` setting.
-    this.registerInterval(window.setInterval(() => void this.prs.refreshAll(), 60_000));
+    this.registerInterval(
+      window.setInterval(() => {
+        void this.prs.refreshAll();
+        void this.autoLinker.tick();
+      }, 60_000),
+    );
   }
 
   override onunload(): void {
     this.store.stop();
+    this.autoLinker.stop();
     this.prs.stop();
     // Views, commands, ribbon icons and the settings tab are cleaned up by Plugin.
   }
