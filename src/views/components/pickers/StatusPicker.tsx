@@ -4,15 +4,6 @@ import { usePlugin } from "../../PluginContext";
 import { Picker } from "../Picker";
 import { StatusIcon } from "../icons";
 
-const CATEGORY_LABEL: Record<string, string> = {
-  triage: "Triage",
-  backlog: "Backlog",
-  unstarted: "Unstarted",
-  started: "Started",
-  completed: "Completed",
-  canceled: "Canceled",
-};
-
 export interface StatusPickerProps {
   anchor: HTMLElement | null;
   value: string;
@@ -29,9 +20,8 @@ export function StatusPicker({ anchor, value, onChange, onClose }: StatusPickerP
       items={items}
       getKey={(s) => s.name}
       getSearch={(s) => [s.name]}
-      groupOf={(s) => CATEGORY_LABEL[s.category] ?? s.category}
       selectedKeys={[value]}
-      placeholder="Change status..."
+      searchable={false}
       renderItem={(s) => (
         <>
           <StatusIcon category={s.category} color={s.color} />
