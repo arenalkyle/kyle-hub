@@ -133,32 +133,32 @@ kyle-term/
 
 ## Phases
 
-Each phase splits into two sub-phases (N.1, N.2), each sized for one sub-agent to complete in one context. Executed in series.
+One Sonnet sub-agent per phase, executed in series. Bullets are each phase's scope checklist.
 
 1. **Scaffold & first terminal**
-   - 1.1 Repo scaffold (manifest, esbuild, TS strict, vitest, deploy script, README/CLAUDE.md setup steps, LICENSE, GitHub repo); ribbon + single-instance view.
-   - 1.2 Helper process + JSON protocol, node path resolution, xterm render of one PowerShell session with resize; integration test.
+   - Repo scaffold (manifest, esbuild, TS strict, vitest, deploy script, README/CLAUDE.md setup steps, LICENSE, GitHub repo); ribbon + single-instance view.
+   - Helper process + JSON protocol, node path resolution, xterm render of one PowerShell session with resize; integration test.
 2. **Sessions & sidebar**
-   - 2.1 SessionManager (plugin-owned lifecycle, profiles, exit handling, never auto-close), sidebar list with scroll/resize/collapse, `New Session` / `+`.
-   - 2.2 Rename + title priority (OSC), context menu, drag reorder, color tags, keys (copy/paste/Shift+Enter, session commands).
+   - SessionManager (plugin-owned lifecycle, profiles, exit handling, never auto-close), sidebar list with scroll/resize/collapse, `New Session` / `+`.
+   - Rename + title priority (OSC), context menu, drag reorder, color tags, keys (copy/paste/Shift+Enter, session commands).
 3. **Hooks & agent state**
-   - 3.1 HookServer (token, port), kyle-hook.js, installer/uninstaller with backup; tests.
-   - 3.2 State machine, lights, activity line, sub-agent rows, bell/idle fallback; tests.
+   - HookServer (token, port), kyle-hook.js, installer/uninstaller with backup; tests.
+   - State machine, lights, activity line, sub-agent rows, bell/idle fallback; tests.
 4. **Attention & sounds**
-   - 4.1 WebAudio tones + vault file playback, per-event/master volume, mute, preview, focus suppression.
-   - 4.2 Status-bar badge, next-attention hotkey, clear-on-view.
+   - WebAudio tones + vault file playback, per-event/master volume, mute, preview, focus suppression.
+   - Status-bar badge, next-attention hotkey, clear-on-view.
 5. **Appearance**
-   - 5.1 Theme presets + custom ANSI palette, font family/size, per-session zoom.
-   - 5.2 Background image, opacity/blur/dim sliders, terminal opacity.
+   - Theme presets + custom ANSI palette, font family/size, per-session zoom.
+   - Background image, opacity/blur/dim sliders, terminal opacity.
 6. **Vault integration**
-   - 6.1 Open terminal here (file menu), `New Session` right-click menu (continue, choose folder, saved folders).
-   - 6.2 Send to agent (`@path`), drag-and-drop notes onto terminal.
+   - Open terminal here (file menu), `New Session` right-click menu (continue, choose folder, saved folders).
+   - Send to agent (`@path`), drag-and-drop notes onto terminal.
 7. **Persistence**
-   - 7.1 Persist session metadata + Claude session_id; restore sidebar on load.
-   - 7.2 Scrollback serialize/restore (2000 lines), Resume action.
+   - Persist session metadata + Claude session_id; restore sidebar on load.
+   - Scrollback serialize/restore (2000 lines), Resume action.
 8. **macOS pass**
-   - 8.1 Login-shell PATH resolution, `/opt/homebrew/bin` fallback, bash/zsh profiles, Cmd key mappings.
-   - 8.2 Mac smoke test, README mac section, fixes.
+   - Login-shell PATH resolution, `/opt/homebrew/bin` fallback, bash/zsh profiles, Cmd key mappings.
+   - Mac smoke test, README mac section, fixes.
 
 ## Out of scope (v1)
 
