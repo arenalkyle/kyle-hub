@@ -16,8 +16,10 @@ export interface BoardCell {
   issues: Issue[];
 }
 
-export const cellId = (keys: DropKeys): string => `cell:${keys.group}|${keys.sub ?? ""}`;
-export const itemId = (issueId: string, cell: string): string => `${issueId}@${cell}`;
+/** Values are encoded so separators inside group names ("In Progress", "a|b", "x@y") can't alter the id's structure. */
+export const cellId = (keys: DropKeys): string =>
+  `cell:${encodeURIComponent(keys.group)}|${encodeURIComponent(keys.sub ?? "")}`;
+export const itemId = (issueId: string, cell: string): string => `${encodeURIComponent(issueId)}@${cell}`;
 
 const noMove: SortingStrategy = () => null;
 

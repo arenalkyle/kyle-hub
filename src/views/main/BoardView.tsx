@@ -5,6 +5,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Notice, TFile } from "obsidian";
 import { useCallback, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { dropToPatch, planReorder, type DropKeys } from "../../core/dnd";
 import { ORDER_BY_LABELS, type DisplayState } from "../../core/display";
 import type { IssuePatch } from "../../core/issueFile";
@@ -58,7 +59,7 @@ export function BoardView({ groups, display, subCounts, issues, project, selecte
   const manual = display.orderBy === "manual";
   const hasLanes = display.subGroupBy !== "none" && display.subGroupBy !== display.groupBy;
 
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
   const [overCell, setOverCell] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -116,13 +117,13 @@ export function BoardView({ groups, display, subCounts, issues, project, selecte
   const cellOfEvent = (data: Record<string, unknown> | undefined): string | null =>
     typeof data?.cellId === "string" ? data.cellId : null;
 
-  const onDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
+  const onDragStart = (e: DragStartEvent) => setActiveIssueId(String(e.active.data.current?.issueId ?? ""));
   const onDragOver = (e: DragOverEvent) => {
     const next = e.over ? cellOfEvent(e.over.data.current) : null;
     setOverCell((cur) => (cur === next ? cur : next));
   };
   const reset = () => {
-    setActiveId(null);
+    setActiveIssueId(null);
     setOverCell(null);
   };
 
@@ -174,7 +175,7 @@ export function BoardView({ groups, display, subCounts, issues, project, selecte
     if (moves.length) onMove(moves);
   };
 
-  const active = activeId ? issueById.get(activeId.slice(0, activeId.indexOf("@"))) : undefined;
+  const active = activeIssueId ? issueById.get(activeIssueId) : undefined;
 
   const header = (g: Group) => (
     <ColumnHeader key={g.key} group={g} onAdd={() => plugin.openNewIssue({ project, ...presetFor([g]) })} />
@@ -244,13 +245,17 @@ export function BoardView({ groups, display, subCounts, issues, project, selecte
             ))}
           </div>
         )}
-        <DragOverlay>
-          {active ? (
-            <div className="kt-card is-overlay">
-              <IssueCard issue={active} settings={settings} properties={display.properties} subCount={subCounts.get(active.id)} />
-            </div>
-          ) : null}
-        </DragOverlay>
+        {/* Portalled to <body>: .kt-content is a container (layout containment), which would otherwise be the fixed-position origin. */}
+        {createPortal(
+          <DragOverlay>
+            {active ? (
+              <div className="kt-card is-overlay">
+                <IssueCard issue={active} settings={settings} properties={display.properties} subCount={subCounts.get(active.id)} />
+              </div>
+            ) : null}
+          </DragOverlay>,
+          document.body,
+        )}
       </DndContext>
     </div>
   );

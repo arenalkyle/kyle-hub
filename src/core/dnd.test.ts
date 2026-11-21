@@ -87,3 +87,22 @@ describe("planReorder", () => {
     expect(planReorder([{ id: "m" }, { id: "a" }], "m")).toEqual({ m: 1000 });
   });
 });
+
+describe("dropToPatch multi-word group values (LOCK-31)", () => {
+  it("drops into In Progress and In Review", () => {
+    expect(dropToPatch("status", "none", { group: "status:Todo" }, { group: "status:In Progress" }, issue())).toEqual({ status: "In Progress" });
+    expect(dropToPatch("status", "none", { group: "status:Todo" }, { group: "status:In Review" }, issue())).toEqual({ status: "In Review" });
+  });
+  it("multi-word values in swimlanes", () => {
+    expect(
+      dropToPatch("status", "priority", { group: "status:Todo", sub: "priority:low" }, { group: "status:In Progress", sub: "priority:high" }, issue()),
+    ).toEqual({ status: "In Progress", priority: "high" });
+    expect(
+      dropToPatch("project", "status", { group: "project:Big Launch", sub: "status:Todo" }, { group: "project:Big Launch", sub: "status:In Review" }, issue()),
+    ).toEqual({ status: "In Review" });
+  });
+  it("multi-word project and label values", () => {
+    expect(dropToPatch("project", "none", { group: "none:project" }, { group: "project:Big Launch" }, issue())).toEqual({ project: "Big Launch" });
+    expect(dropToPatch("label", "none", { group: "label:a" }, { group: "label:needs review" }, issue())).toEqual({ tags: ["b", "needs review"] });
+  });
+});
