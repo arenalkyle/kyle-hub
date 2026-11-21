@@ -629,7 +629,7 @@
 .kh-usage-fill { height: 100%; background: var(--interactive-accent); }
 .kh-usage-fill-warn { background: var(--text-error); }
 
-/* Settings: Claude accounts rows wrap instead of overflowing */
+/* Settings: Claude accounts and Repo map rows wrap instead of overflowing */
 .kh-accounts .setting-item { flex-wrap: wrap; gap: 8px; }
 .kh-accounts .setting-item-info { min-width: 0; flex: 1 1 240px; }
 .kh-accounts .setting-item-description { overflow-wrap: anywhere; }

@@ -259,6 +259,7 @@ class HubSettingTab extends PluginSettingTab {
     const launch = (core.launch ??= { maxConcurrentRuns: 3, defaultModel: "sonnet" }) as { maxConcurrentRuns: number; defaultModel: string };
     const save = () => this.plugin.hub.save();
     el.createEl("h2", { text: "Repo map and launch" });
+    el = el.createDiv({ cls: "kh-accounts" });
     new Setting(el).setName("Max concurrent runs").addText((t) =>
       t.setValue(String(launch.maxConcurrentRuns)).onChange(async (v) => {
         const n = Math.floor(Number(v));
