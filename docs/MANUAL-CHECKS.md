@@ -124,3 +124,12 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Launch a ticket linked to an ADR: the pack's "Docs included" section lists the ADR with its reason.
 - [ ] Turn the brain module off, launch again: the pack has no docs section (parent/blocker/previous-run sections remain).
 - [ ] Health score appears where expected (emitted on plugin load; `kh maintain` does not recompute it).
+
+## 8.1 Command center dashboard — LOCK-57
+
+- [ ] Enable Command center in kyle-hub settings, reload. Open the view from the ribbon icon or command palette: all tiles show values and the spend sparkline draws.
+- [ ] Disable Terminals, reload, reopen: session and retro tiles and the needs-attention list show "module disabled"; the rest still render.
+- [ ] Leave the view open >60 s while a new run starts: numbers refresh.
+- [ ] Clicking a needs-attention row focuses that session.
+- [ ] Optional: `node scripts/cdp-command-center-smoke.mjs` with Obsidian on `--remote-debugging-port=9222` and the module enabled prints PASS (not run unattended).
+- [ ] Note: "running" counts non-exited sessions; runs without an outcome show "running".
