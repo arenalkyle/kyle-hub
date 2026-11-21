@@ -1,20 +1,9 @@
 import { WorkspaceLeaf, type TFile, type View } from "obsidian";
 import type KyleTicketsPlugin from "../main";
+import { around } from "../core/around";
 import { isIssuePath, shouldIntercept } from "../core/intercept";
 
 export const VIEW_TYPE_ISSUE = "kyle-tickets-issue";
-
-type AnyFn = (...args: unknown[]) => unknown;
-
-/** Minimal monkey-around: wraps `obj[key]`; the returned function restores it if it is still ours. */
-function around(obj: Record<string, unknown>, key: string, wrap: (old: AnyFn) => AnyFn): () => void {
-  const old = obj[key] as AnyFn;
-  const wrapped = wrap(old);
-  obj[key] = wrapped;
-  return () => {
-    if (obj[key] === wrapped) obj[key] = old;
-  };
-}
 
 interface ViewStateLike {
   type?: string;
@@ -30,7 +19,7 @@ function fileOf(leaf: WorkspaceLeaf): string | undefined {
 /** Opens ticket files in the issue view and switches leaves between it and the Markdown editor. */
 export class IssueInterceptor {
   /** Leaves explicitly switched to Markdown, with the path they were switched for. */
-  private readonly forced = new Map<WorkspaceLeaf, string>();
+  private readonly forced = new WeakMap<WorkspaceLeaf, string>();
   private readonly actions = new WeakMap<View, HTMLElement>();
 
   constructor(private readonly plugin: KyleTicketsPlugin) {}
