@@ -97,3 +97,13 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] After a few days of real runs (`kh logs ingest` first), `kh retro detect` shows clusters that look real (a repeated command sequence, a denied permission).
 - [ ] Run `kh retro detect` twice: same output, and `%LOCALAPPDATA%\kyle-hub\<profile>\retro.json` is not created or changed.
 - [ ] Note: outliers appear only after 6.2 supplies ticket types; retro config is read from `term.retro` in data.json (no settings UI).
+
+## 6.2 Retro: templates, Perform Retro, Apply, recurrence — LOCK-54
+
+- [ ] Throwaway vault, Obsidian with `--remote-debugging-port=9222`: `npm run smoke:retro` passes (writes `retro.json` under `%LOCALAPPDATA%\kyle-hub\home`; not run unattended).
+- [ ] Click Perform Retro on real logs: Triage gets ≤5 proposal/finding tickets with evidence; "Last retro: just now"; sessions-since is 0.
+- [ ] Accept a permission proposal and click Apply: `~/.claude/settings.json` updated and a timestamped `.bak` sits next to it.
+- [ ] Click Perform Retro again right away: no duplicate tickets (repeats become "seen again" comments).
+- [ ] No "Draft rule with Haiku" button until `allowDraftRule` is on in Retro settings; with it on, the button appears on a `corr:` finding and opens the diff modal; check the Haiku spend cap with a real `claude`.
+- [ ] Settings → term → Retro section: `nudgeAt`, `maxTickets`, `allowDraftRule`, `dailyCapUsd`.
+- [ ] Known gap: built-in patcher on CRLF files is untested (git-apply path is tested).
