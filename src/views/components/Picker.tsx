@@ -26,6 +26,8 @@ export function Picker<T>(p: PickerProps<T>) {
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const placed = pos !== null;
 
   const filtered = useMemo(
     () => items.filter((i) => matchesQuery(query, ...p.getSearch(i))),
@@ -59,6 +61,10 @@ export function Picker<T>(p: PickerProps<T>) {
     return () => document.removeEventListener("mousedown", onDown, true);
   }, [anchor, onClose]);
 
+  // The popover is rendered hidden until positioned; focus only once it is visible.
+  useEffect(() => {
+    if (placed) inputRef.current?.focus({ preventScroll: true });
+  }, [placed]);
   useEffect(() => setActive(0), [query]);
   useEffect(() => {
     listRef.current?.querySelector<HTMLElement>(".kt-picker-row.is-active")?.scrollIntoView({ block: "nearest" });
@@ -139,7 +145,7 @@ export function Picker<T>(p: PickerProps<T>) {
     >
       <input
         className="kt-picker-input"
-        autoFocus
+        ref={inputRef}
         value={query}
         placeholder={p.placeholder ?? "Filter..."}
         onChange={(e) => setQuery(e.target.value)}
