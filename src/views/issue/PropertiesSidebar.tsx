@@ -38,8 +38,7 @@ const PRIORITY_LABELS: Record<string, string> = {
 function Row({ kind, label, onOpen, children }: { kind: PropKind; label: string; onOpen: PropertiesSidebarProps["onOpen"]; children: ReactNode }) {
   return (
     <div className="kt-prop">
-      <span className="kt-prop-label">{label}</span>
-      <button type="button" className="kt-prop-value" data-kt-prop={kind} onClick={(e) => onOpen(kind, e.currentTarget)}>
+      <button type="button" className="kt-prop-value" data-kt-prop={kind} title={label} aria-label={label} onClick={(e) => onOpen(kind, e.currentTarget)}>
         {children}
       </button>
     </div>
@@ -56,9 +55,8 @@ function TimeRow({ label, value }: { label: string; value?: string }) {
   }, []);
   return (
     <div className="kt-prop">
-      <span className="kt-prop-label">{label}</span>
       <span className="kt-prop-static" title={value ?? ""}>
-        {value ? (relativeTime(value, now) ?? shortDate(value)) : "-"}
+        {label} {value ? (relativeTime(value, now) ?? shortDate(value)) : "-"}
       </span>
     </div>
   );
@@ -137,14 +135,27 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
   const anchor = open?.anchor ?? null;
   return (
     <aside className="kt-issue-side">
+      <div className="kt-prop-group-title">Pull requests</div>
+      <PullRequests urls={issue.pullRequests} onLink={onLinkPr} onUnlink={onUnlinkPr} />
+
+
       <div className="kt-prop-group-title">Properties</div>
       <Row kind="status" label="Status" onOpen={onOpen}>
         <StatusIcon category={def?.category ?? "backlog"} color={def?.color} />
         <span>{issue.status}</span>
       </Row>
       <Row kind="priority" label="Priority" onOpen={onOpen}>
-        <PriorityIcon priority={issue.priority} />
-        <span>{PRIORITY_LABELS[issue.priority] ?? issue.priority}</span>
+        {issue.priority === "none" ? (
+          <>
+            <PriorityIcon priority={issue.priority} />
+            <Empty text="Set priority" />
+          </>
+        ) : (
+          <>
+            <PriorityIcon priority={issue.priority} />
+            <span>{PRIORITY_LABELS[issue.priority] ?? issue.priority}</span>
+          </>
+        )}
       </Row>
       <Row kind="assignee" label="Assignee" onOpen={onOpen}>
         {issue.assignee ? (
@@ -153,28 +164,10 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
             <span>{issue.assignee}</span>
           </>
         ) : (
-          <Empty text="Assign" />
-        )}
-      </Row>
-      <Row kind="labels" label="Labels" onOpen={onOpen}>
-        {issue.tags.length > 0 ? (
-          <span className="kt-prop-chips">
-            {issue.tags.map((t) => (
-              <LabelChip key={t} label={t} color={settings.labelColors[t]} />
-            ))}
-          </span>
-        ) : (
-          <Empty text="Add label" />
-        )}
-      </Row>
-      <Row kind="project" label="Project" onOpen={onOpen}>
-        {project ? (
           <>
-            <ProjectGlyph icon={projectDef?.icon} color={projectDef?.color} size={14} />
-            <span>{project}</span>
+            <Icon name="user" size={14} />
+            <Empty text="Assign" />
           </>
-        ) : (
-          <Empty text="Add to project" />
         )}
       </Row>
       <Row kind="milestone" label="Milestone" onOpen={onOpen}>
@@ -193,12 +186,42 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
         {issue.due ? <DueChip due={issue.due} /> : <Empty text="Set due date" />}
       </Row>
 
+
+      <div className="kt-prop-group-title">Labels</div>
+      <div className="kt-prop">
+        <button type="button" className="kt-prop-value kt-prop-labels" data-kt-prop="labels" title="Labels" aria-label="Labels" onClick={(e) => onOpen("labels", e.currentTarget)}>
+          {issue.tags.length > 0 ? (
+            <span className="kt-prop-chips">
+              {issue.tags.map((t) => (
+                <LabelChip key={t} label={t} color={settings.labelColors[t]} />
+              ))}
+              <span className="kt-prop-plus"><Icon name="plus" size={14} /></span>
+            </span>
+          ) : (
+            <>
+              <Icon name="plus" size={14} />
+              <Empty text="Add label" />
+            </>
+          )}
+        </button>
+      </div>
+
+      <div className="kt-prop-group-title">Project</div>
+      <Row kind="project" label="Project" onOpen={onOpen}>
+        {project ? (
+          <>
+            <ProjectGlyph icon={projectDef?.icon} color={projectDef?.color} size={14} />
+            <span>{project}</span>
+          </>
+        ) : (
+          <Empty text="Add to project" />
+        )}
+      </Row>
+
       <div className="kt-prop-group-title">Details</div>
       <TimeRow label="Created" value={issue.created} />
       <TimeRow label="Updated" value={issue.updated} />
 
-      <div className="kt-prop-group-title">Pull requests</div>
-      <PullRequests urls={issue.pullRequests} onLink={onLinkPr} onUnlink={onUnlinkPr} />
 
       {open?.kind === "status" && <StatusPicker anchor={anchor} value={issue.status} onChange={(status) => onUpdate({ status })} onClose={onClose} />}
       {open?.kind === "priority" && <PriorityPicker anchor={anchor} value={issue.priority} onChange={(priority) => onUpdate({ priority })} onClose={onClose} />}
