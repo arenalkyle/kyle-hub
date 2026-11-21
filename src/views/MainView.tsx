@@ -8,6 +8,7 @@ import { buildView, OTHER_GROUP_KEY, viewTitle } from "../core/query";
 import { useIssues, useProjects } from "../store/hooks";
 import { PluginContext, usePlugin } from "./PluginContext";
 import { BoardView, type BoardMove } from "./main/BoardView";
+import { FilterBar } from "./main/FilterBar";
 import { Header } from "./main/Header";
 import { ListView } from "./main/ListView";
 import { Sidebar } from "./main/Sidebar";
@@ -63,15 +64,15 @@ function MainApp() {
   );
 
   const view = ui.view;
-  const { display, setDisplay, reset } = useViewState(view);
+  const { display, setDisplay, filters, setFilters, reset } = useViewState(view);
   const built = useMemo(() => {
     // Linear shows every workflow column on a status board, even empty ones.
     const boardStatus = display.layout === "board" && display.groupBy === "status";
     const d = boardStatus ? { ...display, showEmptyGroups: true } : display;
-    const b = buildView(issues, view, projects, settings, d, undefined, new Date());
+    const b = buildView(issues, view, projects, settings, d, filters, new Date());
     if (!boardStatus || display.showEmptyGroups) return b;
     return { ...b, groups: b.groups.filter((g) => g.key !== OTHER_GROUP_KEY || g.issues.length > 0) };
-  }, [issues, view, projects, settings, display]);
+  }, [issues, view, projects, settings, display, filters]);
   const visible = built.groups;
   const collapsed = useMemo(() => new Set(ui.collapsedGroups[view] ?? []), [ui.collapsedGroups, view]);
   const project = view.startsWith("project:") ? view.slice("project:".length) : undefined;
@@ -107,7 +108,10 @@ function MainApp() {
           display={display}
           onDisplayChange={setDisplay}
           onDisplayReset={reset}
+          filters={filters}
+          onFiltersChange={setFilters}
         />
+        <FilterBar filters={filters} onChange={setFilters} />
         {!plugin.data.setupDone && (
           <div className="kt-notice">kyle-tickets setup has not run yet. Finish the setup window or open the plugin settings.</div>
         )}

@@ -228,3 +228,19 @@
 .kt-card-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--size-2-3); }
 .kt-card-chips:empty { display: none; }
 .kt-card-icon { display: inline-flex; align-items: center; }
+
+/* Filter bar */
+.kt-content { container-type: inline-size; }
+.kt-filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--size-4-2); padding: var(--size-4-2) var(--size-4-4); border-bottom: 1px solid var(--background-modifier-border); }
+.kt-filter-chip { display: inline-flex; align-items: center; gap: var(--size-2-2); height: 24px; padding: 0 var(--size-4-1) 0 var(--size-4-2); border: 1px solid var(--background-modifier-border); border-radius: 12px; font-size: var(--font-ui-smaller); }
+.kt-filter-chip button { height: 20px; padding: 0 var(--size-2-2); background: transparent; border: 0; box-shadow: none; cursor: pointer; font-size: inherit; }
+.kt-filter-chip button:hover { background: var(--background-modifier-hover); }
+.kt-filter-op { color: var(--text-muted); }
+.kt-filter-values { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kt-filter-x { display: inline-flex; align-items: center; }
+.kt-filter-clear { background: transparent; border: 0; box-shadow: none; color: var(--text-muted); cursor: pointer; font-size: var(--font-ui-smaller); }
+.kt-filter-count { display: none; min-width: 16px; padding: 0 4px; border-radius: 8px; background: var(--interactive-accent); color: var(--text-on-accent); font-size: 10px; text-align: center; }
+@container (max-width: 560px) {
+  .kt-filter-bar { display: none; }
+  .kt-filter-count { display: inline-block; }
+}

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import type { DisplayState } from "../../core/display";
+import { setFilterValues, type Filter, type FilterField } from "../../core/filters";
 import { Icon } from "../components/icons";
 import { DisplayPopover } from "./DisplayPopover";
+import { FieldPicker, ValuePicker } from "./FilterMenu";
 
 export interface HeaderProps {
   title: string;
@@ -12,10 +14,18 @@ export interface HeaderProps {
   display: DisplayState;
   onDisplayChange: (next: DisplayState) => void;
   onDisplayReset: () => void;
+  filters: readonly Filter[];
+  onFiltersChange: (next: Filter[]) => void;
 }
 
-export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewIssue, display, onDisplayChange, onDisplayReset }: HeaderProps) {
+export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewIssue, display, onDisplayChange, onDisplayReset, filters, onFiltersChange }: HeaderProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+  const [filterField, setFilterField] = useState<FilterField | null>(null);
+  const closeFilter = () => {
+    setFilterAnchor(null);
+    setFilterField(null);
+  };
   return (
     <div className="kt-header">
       <button
@@ -37,9 +47,24 @@ export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewI
           Board
         </button>
       </div>
-      <button type="button" className="kt-header-btn" disabled title="Filters come later">
+      <button
+        type="button"
+        className="kt-header-btn"
+        onClick={(e) => (filterAnchor ? closeFilter() : setFilterAnchor(e.currentTarget))}
+      >
         <Icon name="list-filter" size={14} /> Filter
+        {filters.length > 0 && <span className="kt-filter-count">{filters.length}</span>}
       </button>
+      {filterAnchor && !filterField && <FieldPicker anchor={filterAnchor} onSelect={setFilterField} onClose={closeFilter} />}
+      {filterAnchor && filterField && (
+        <ValuePicker
+          anchor={filterAnchor}
+          field={filterField}
+          value={filters.find((f) => f.field === filterField)?.values ?? []}
+          onChange={(vals) => onFiltersChange(setFilterValues(filters, filterField, vals))}
+          onClose={closeFilter}
+        />
+      )}
       <button type="button" className="kt-header-btn" onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}>
         <Icon name="sliders-horizontal" size={14} /> Display
       </button>
