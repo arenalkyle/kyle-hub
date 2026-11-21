@@ -4,7 +4,7 @@ A Linear-style issue tracker for Obsidian. Tickets are plain Markdown files with
 
 Windows 10, desktop only. Personal project — not in the community plugin store.
 
-**Status:** planning. See [STATUS.md](STATUS.md) and [docs/PLAN.md](docs/PLAN.md).
+**Status:** scaffold in place (Phase 1.1). See [STATUS.md](STATUS.md) and [docs/PLAN.md](docs/PLAN.md).
 
 ## Install (dev)
 
