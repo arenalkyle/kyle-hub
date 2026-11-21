@@ -241,6 +241,10 @@ export class KyleTermView extends ItemView {
         if (mgr.canResume(s)) {
           const resume = ex.createEl("button", { text: "Resume", cls: "mod-cta" });
           resume.onclick = (e) => { e.stopPropagation(); mgr.resume(s.id); };
+        } else if (s.status === "stopped" && s.kind === "claude") {
+          const why = "Can't resume: no Claude session id was captured. Run \"kyle-term: Install hooks\", then start a new session.";
+          const resume = ex.createEl("button", { text: "Resume", cls: "is-disabled", attr: { "aria-label": why } });
+          resume.onclick = (e) => { e.stopPropagation(); new Notice(why, 8000); };
         }
         const restart = ex.createEl("button", { text: "Restart" });
         restart.onclick = (e) => { e.stopPropagation(); mgr.restart(s.id); };

@@ -75,3 +75,4 @@
 .kterm-exit { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: var(--font-ui-smaller); }
 .kterm-exit-code { flex: 1; color: var(--text-muted); }
 .kterm-exit button { padding: 2px 8px; height: auto; font-size: var(--font-ui-smaller); }
+.kterm-exit button.is-disabled { opacity: 0.5; cursor: not-allowed; }
