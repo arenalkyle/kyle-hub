@@ -6,8 +6,8 @@ Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-10](https://linear.ap
 
 - **Done** (reviewed, pushed, Linear Done): LOCK-11 → LOCK-28 (all sub-tickets of LOCK-10). Scaffold + CI, `src/core` model (ticket/project files, feed, IDs, query/display pipeline), plugin shell + setup, IssueStore (index, write API, activity log, external-edit detection), pickers + New issue window, main view sidebar + grouped windowed List, Display popover (grouping, sub-grouping, ordering, toggles, chips; per-view state), Board (columns, swimlanes, preview cards, dnd-kit drag-and-drop, manual `sortOrder` reorder), filter bar (AND-ed chips, per-view), keyboard shortcuts + Statuses/Labels settings editors with bulkUpdate, issue page (IssueView, file-open interception, breadcrumb, inline title, properties sidebar), issue page description editor, sub-issues, activity feed and comments, project pages (create, edit, rename, delete; ProjectView + interception), milestones + project-scoped List/Board via shared IssueCollection, live PR status via gh CLI (cache, background refresh, chips), PR auto-link by issue ID for watched repos, kt CLI for agents over src/core (npm link), agent docs (generated AGENTS.md, Claude Code skill, README, PLAN updated). 242 tests passing.
 - **In progress**: round-1 manual-check feedback [LOCK-29](https://linear.app/divinity/issue/LOCK-29) (LOCK-30…34) merged and deployed; awaiting re-check in Obsidian (`docs/MANUAL-CHECKS.md` → "Round 1 feedback"). LOCK-30 focus fixes are unconfirmed in the app.
-- **Next**: run `docs/MANUAL-CHECKS.md` in Obsidian (1.1–9.2 + end-to-end UI steps); fill README screenshots.
-- **Manual checks**: 1.1–9.2 (LOCK-11…28) and the end-to-end script are written up in `docs/MANUAL-CHECKS.md` and have not been run in Obsidian yet.
+- **Next**: re-check the Round 1 fixes in Obsidian, then mark LOCK-29…34 Done; finish the remaining full checks; fill README screenshots.
+- **Manual checks**: smoke test run 2026-11-21. Setup and kt passed; the issues it found became LOCK-30…34. Not yet run: the full 1.1–9.2 checks, and the PR checks (8.x), which need a real PR.
 
 | Phase | Sub-phases | State |
 |---|---|---|
@@ -28,4 +28,4 @@ Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-10](https://linear.ap
 - Forced-Markdown tabs and the issue sidebar's collapsed state do not survive a restart.
 - Long activity feeds show the newest 50 entries with "Show earlier" (no virtualization); `main.js` is about 1.1 MB (React production build + bundled `@codemirror/lang-markdown`).
 - External edits made without `updatedBy` are logged as `@external`; `kt` writes log their own events once.
-- All manual (in-Obsidian) checks in `docs/MANUAL-CHECKS.md` are still unrun.
+- The full manual checks in `docs/MANUAL-CHECKS.md` haven't been run beyond the smoke test.
