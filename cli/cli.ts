@@ -8,7 +8,7 @@ import { appendEvent, parseIssue } from "../src/core/issueFile";
 import type { IssuePatch } from "../src/core/issueFile";
 import { fromLink } from "../src/core/links";
 import { milestoneAfterProjectChange } from "../src/core/milestones";
-import { commentIssueText, issueToJson, linkPrText, patchIssueText } from "../src/core/ops";
+import { addReplyText, commentIssueText, issueToJson, linkPrText, patchIssueText } from "../src/core/ops";
 import { parseProject } from "../src/core/projectFile";
 import type { Issue, Priority, Project, Settings } from "../src/core/types";
 import { mergeData } from "../src/data";
@@ -291,7 +291,7 @@ Usage: kt <command> [options]
 Commands:
   new <title>            Create an issue; prints its ID
   set <ID> <field> ...   Change a field (status, priority, assignee, project, milestone, due, parent, title, labels)
-  comment <ID> [text]    Add a comment (text "-" or omitted: read stdin)
+  comment <ID> [text]    Add a comment (text "-" or omitted: read stdin); --reply-to <comment-id> replies
   list                   List issues
   show <ID>              Show an issue
   pr <ID> <url>          Link a GitHub pull request
@@ -315,7 +315,7 @@ Exit codes: 0 ok, 1 usage error, 2 not found, 3 validation error.`,
 Fields: status, priority, assignee, project, milestone, due, parent, title
         labels +bug -frontend   (add / remove; several allowed)
 Use "none" to clear assignee, project, milestone, due or parent.`,
-  comment: "Usage: kt comment <ID> [text | -] [--as <author>]",
+  comment: "Usage: kt comment <ID> [text | -] [--as <author>] [--reply-to <comment-id>]",
   list: "Usage: kt list [--status <name>] [--project <name>] [--assignee <name>] [--label <name>] [--json]",
   show: "Usage: kt show <ID> [--json]",
   pr: "Usage: kt pr <ID> <github-pr-url> [--as <author>]",
@@ -449,15 +449,23 @@ function cmdSet(args: string[], io: Io): void {
 }
 
 function cmdComment(args: string[], io: Io): void {
-  const { values: v, positionals } = parse(args, { as: { type: "string" } });
+  const { values: v, positionals } = parse(args, { as: { type: "string" }, "reply-to": { type: "string" } });
   const [idArg, ...rest] = positionals;
   const ctx = loadCtx(discoverFolder(str(v.dir), io));
   const { issue, file } = findIssue(ctx, idArg);
   const who = authorOf(ctx, io, v.as);
+  const replyTo = str(v["reply-to"]);
   const body = rest.length === 0 || (rest.length === 1 && rest[0] === "-") ? io.stdin() : rest.join(" ");
   if (body.trim() === "") throw invalid("Comment body is empty.");
-  atomicWrite(file, commentIssueText(fs.readFileSync(file, "utf8"), issue.fileName, who, body, io.now()));
-  io.out(`${issue.id} commented`);
+  const text = fs.readFileSync(file, "utf8");
+  let out: string;
+  try {
+    out = replyTo ? addReplyText(text, issue.fileName, replyTo, who, body, io.now()) : commentIssueText(text, issue.fileName, who, body, io.now());
+  } catch (e) {
+    throw invalid(e instanceof Error ? e.message : String(e));
+  }
+  atomicWrite(file, out);
+  io.out(replyTo ? `${issue.id} replied` : `${issue.id} commented`);
 }
 
 function cmdPr(args: string[], io: Io): void {

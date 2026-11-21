@@ -80,7 +80,7 @@ describe("issue round-trip", () => {
       { type: "event", time: "2026-11-21 10:04", author: "kyle", text: "created the issue" },
       { type: "event", time: "2026-11-21 10:20", author: "kyle", text: "set status: Todo → In Progress" },
       {
-        type: "comment",
+        type: "comment", id: "L0",
         author: "claude",
         time: "2026-11-21 10:31",
         body: "Implemented the parser;\ntests in `core.test.ts`.\n\n- a bullet in the comment",
@@ -145,7 +145,7 @@ describe("appending to the feed", () => {
     expect(out.slice(ISSUE.length)).toBe("\n### @claude · 2026-11-22 09:05\nDone.\nSee PR.\n");
     const back = parseIssue(out, "TIX-12.md");
     expect(back.feed.at(-1)).toEqual({
-      type: "comment",
+      type: "comment", id: "L1",
       author: "claude",
       time: "2026-11-22 09:05",
       body: "Done.\nSee PR.",

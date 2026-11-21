@@ -76,6 +76,7 @@ Everything under the first \`## Activity\` heading is the feed, oldest first, ne
 
 - Event: one line, \`- YYYY-MM-DD HH:mm · @author text\`.
 - Comment: a \`### @author · YYYY-MM-DD HH:mm\` heading, then a Markdown body until the next \`###\` or the end of the file.
+- Comment ids/threads: the heading may end with an HTML comment, \`### @author · YYYY-MM-DD HH:mm <!-- kt id:c1a2b3 reply:c9z8y7 edited -->\` (\`id\` stable id, \`reply\` parent id, \`edited\` flag). Headings without it are legacy comments with implicit ids \`L0\`, \`L1\`, … (by order). Use \`kt comment <ID> --reply-to <comment-id>\`; \`kt show --json\` lists comment ids.
 - Escaping: in a comment body, a line that starts with \`###\` or with \`- YYYY-MM-DD HH:mm \` gets one leading backslash (\`\### text\`). The parser removes it. \`kt comment\` does this for you.
 
 ## IDs
@@ -91,6 +92,7 @@ kt new "Fix login bug" --status Todo --priority high --project Website --label b
 kt set ${P}-12 status "${review}" --as claude          # also: priority, assignee, project, milestone, due, parent, title
 kt set ${P}-12 labels +bug -frontend --as claude
 kt comment ${P}-12 --as claude "Implemented; tests pass"   # "-" or no text reads stdin
+kt comment ${P}-12 --as claude --reply-to c1a2b3 "Thanks"   # reply in a thread (one level)
 kt list --status Todo --project Website --json
 kt show ${P}-12
 kt pr ${P}-12 https://github.com/owner/repo/pull/4 --as claude
