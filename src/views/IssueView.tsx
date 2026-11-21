@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type KyleTicketsPlugin from "../main";
 import type { IssuePatch } from "../core/issueFile";
 import { fromLink } from "../core/links";
+import { parsePrUrl } from "../core/pr";
 import { useIssue, useIssues, useSettings, useStoreReady } from "../store/hooks";
 import { confirmModal } from "../settings/modals";
 import { PluginContext, usePlugin } from "./PluginContext";
@@ -54,6 +55,26 @@ function IssueApp({ path, leaf }: IssueAppProps) {
     },
     [plugin, id],
   );
+
+  const linkPr = useCallback(async (url: string) => {
+    await plugin.store.linkPr(id, url);
+  }, [plugin, id]);
+  const unlinkPr = useCallback(
+    (url: string) => {
+      void plugin.store.unlinkPr(id, url).catch((e) => {
+        console.error("kyle-tickets: unlink PR failed", e);
+        new Notice("Could not unlink the pull request.");
+      });
+    },
+    [plugin, id],
+  );
+
+  // Refresh live PR state when the page opens or the linked PRs change (stale entries only).
+  const prKey = issue?.pullRequests.join("\n") ?? "";
+  useEffect(() => {
+    if (!prKey) return;
+    void plugin.prs.ensure(prKey.split("\n").map((u) => parsePrUrl(u)?.url ?? u), true);
+  }, [plugin, prKey]);
 
   const openPicker = useCallback((kind: PropKind, anchor: HTMLElement | null) => {
     setSidebarOpen(true);
@@ -178,7 +199,7 @@ function IssueApp({ path, leaf }: IssueAppProps) {
             />
           </div>
         </div>
-        {sidebarOpen && <PropertiesSidebar issue={issue} settings={settings} open={open} onOpen={openPicker} onClose={closePicker} onUpdate={update} />}
+        {sidebarOpen && <PropertiesSidebar issue={issue} settings={settings} open={open} onOpen={openPicker} onClose={closePicker} onUpdate={update} onLinkPr={linkPr} onUnlinkPr={unlinkPr} />}
       </div>
     </div>
   );

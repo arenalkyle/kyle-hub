@@ -1,5 +1,6 @@
 import { Notice, Plugin, TFile } from "obsidian";
 import { defaultSettings } from "./core/defaults";
+import { parsePrUrl } from "./core/pr";
 import type { Settings } from "./core/types";
 import { mergeData, type PluginData } from "./data";
 import { KyleTicketsSettingTab } from "./settings/SettingsTab";
@@ -8,6 +9,7 @@ import { bootstrapFolder } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
 import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";
 import { IssueStore } from "./store/IssueStore";
+import { PrService } from "./github/PrService";
 import { IssueView, VIEW_TYPE_ISSUE } from "./views/IssueView";
 import { IssueInterceptor } from "./views/intercept";
 import { NewProjectModal } from "./views/NewProjectModal";
@@ -18,6 +20,8 @@ export default class KyleTicketsPlugin extends Plugin {
   /** Public for debugging: `app.plugins.plugins["kyle-tickets"].store`. */
   readonly store = new IssueStore(this);
   readonly interceptor = new IssueInterceptor(this);
+  /** Live PR state via the `gh` CLI. */
+  readonly prs = new PrService(this);
 
   override async onload(): Promise<void> {
     this.data = mergeData(await this.loadData());
@@ -50,14 +54,22 @@ export default class KyleTicketsPlugin extends Plugin {
     this.addSettingTab(new KyleTicketsSettingTab(this.app, this));
 
     this.app.workspace.onLayoutReady(() => {
-      void this.store.start();
+      void this.store.start().then(() => void this.prs.refreshAll());
       if (!this.data.setupDone) this.openSetup();
     });
+    // Background PR refresh: a 1-minute tick; staleness is judged against the `prRefreshMinutes` setting.
+    this.registerInterval(window.setInterval(() => void this.prs.refreshAll(), 60_000));
   }
 
   override onunload(): void {
     this.store.stop();
+    this.prs.stop();
     // Views, commands, ribbon icons and the settings tab are cleaned up by Plugin.
+  }
+
+  /** Every PR url held by any issue (for background refresh). */
+  allPrUrls(): string[] {
+    return this.store.getIssues().flatMap((i) => i.pullRequests.map((u) => parsePrUrl(u)?.url ?? u));
   }
 
   private readonly settingsListeners = new Set<() => void>();

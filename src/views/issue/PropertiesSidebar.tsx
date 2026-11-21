@@ -1,9 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { IssuePatch } from "../../core/issueFile";
 import { fromLink } from "../../core/links";
+import { prLabel, prLabelOfUrl } from "../../core/pr";
 import { relativeTime } from "../../core/time";
+import { usePrs } from "../../store/hooks";
 import type { Issue, Settings } from "../../core/types";
-import { DueChip, LabelChip, shortDate } from "../components/chips";
+import { DueChip, LabelChip, PrStateIcon, shortDate } from "../components/chips";
 import { Icon, PriorityIcon, StatusIcon } from "../components/icons";
 import { AssigneePicker } from "../components/pickers/AssigneePicker";
 import { DatePicker } from "../components/pickers/DatePicker";
@@ -23,6 +25,9 @@ export interface PropertiesSidebarProps {
   onOpen: (kind: PropKind, anchor: HTMLElement) => void;
   onClose: () => void;
   onUpdate: (patch: IssuePatch) => void;
+  /** Links a PR url; rejects with a user-facing message when invalid. */
+  onLinkPr: (url: string) => Promise<void>;
+  onUnlinkPr: (url: string) => void;
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -58,12 +63,73 @@ function TimeRow({ label, value }: { label: string; value?: string }) {
   );
 }
 
-function prLabel(url: string): string {
-  const m = /github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/.exec(url);
-  return m ? `${m[1]}#${m[2]}` : url;
+const STATE_LABEL = { open: "Open", draft: "Draft", merged: "Merged", closed: "Closed" } as const;
+
+function PullRequests({ urls, onLink, onUnlink }: { urls: readonly string[]; onLink: (url: string) => Promise<void>; onUnlink: (url: string) => void }) {
+  const prs = usePrs(urls);
+  const [adding, setAdding] = useState(false);
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const submit = (e: FormEvent): void => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    onLink(text).then(
+      () => {
+        setText("");
+        setError("");
+        setAdding(false);
+      },
+      (err: unknown) => setError(err instanceof Error ? err.message : "Could not link the pull request."),
+    );
+  };
+  return (
+    <>
+      {prs.length === 0 && !adding && <div className="kt-prop-empty kt-prop-pad">None</div>}
+      <ul className="kt-prs">
+        {prs.map((p) => (
+          <li key={p.url} className="kt-pr-row">
+            <a href={p.canonical ?? p.url} className="external-link kt-pr-link" title={p.info?.title ?? p.url}>
+              {p.info && <PrStateIcon state={p.info.state} size={14} />}
+              <span className="kt-pr-text">
+                {p.info ? `${prLabel(p.info)} · ${p.info.title}` : prLabelOfUrl(p.url)}
+              </span>
+            </a>
+            {p.info && <span className={`kt-pr-badge kt-pr-${p.info.state}`}>{STATE_LABEL[p.info.state]}</span>}
+            <button type="button" className="kt-pr-remove clickable-icon" aria-label="Unlink pull request" title="Unlink" onClick={() => onUnlink(p.url)}>
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+      {adding ? (
+        <form className="kt-pr-add" onSubmit={submit}>
+          <input
+            autoFocus
+            type="text"
+            placeholder="https://github.com/owner/repo/pull/123"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Escape") {
+                setAdding(false);
+                setError("");
+              }
+            }}
+          />
+          {error && <div className="kt-pr-error">{error}</div>}
+        </form>
+      ) : (
+        <button type="button" className="kt-prop-value kt-pr-link-btn" onClick={() => setAdding(true)}>
+          <Icon name="plus" size={14} />
+          <span>Link PR</span>
+        </button>
+      )}
+    </>
+  );
 }
 
-export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUpdate }: PropertiesSidebarProps) {
+export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUpdate, onLinkPr, onUnlinkPr }: PropertiesSidebarProps) {
   const def = settings.statuses.find((s) => s.name === issue.status);
   const project = issue.project ? fromLink(issue.project) : undefined;
   const anchor = open?.anchor ?? null;
@@ -128,19 +194,7 @@ export function PropertiesSidebar({ issue, settings, open, onOpen, onClose, onUp
       <TimeRow label="Updated" value={issue.updated} />
 
       <div className="kt-prop-group-title">Pull requests</div>
-      {issue.pullRequests.length === 0 ? (
-        <div className="kt-prop-empty kt-prop-pad">None</div>
-      ) : (
-        <ul className="kt-prs">
-          {issue.pullRequests.map((u) => (
-            <li key={u}>
-              <a href={u} className="external-link" title={u}>
-                {prLabel(u)}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
+      <PullRequests urls={issue.pullRequests} onLink={onLinkPr} onUnlink={onUnlinkPr} />
 
       {open?.kind === "status" && <StatusPicker anchor={anchor} value={issue.status} onChange={(status) => onUpdate({ status })} onClose={onClose} />}
       {open?.kind === "priority" && <PriorityPicker anchor={anchor} value={issue.priority} onChange={(priority) => onUpdate({ priority })} onClose={onClose} />}

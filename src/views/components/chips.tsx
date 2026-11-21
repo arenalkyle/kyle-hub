@@ -1,5 +1,7 @@
 import { fromLink } from "../../core/links";
+import { bestState, prLabel, prLabelOfUrl, type PrState } from "../../core/pr";
 import { formatDate } from "../../core/time";
+import { usePrs } from "../../store/hooks";
 import { Dot, Icon } from "./icons";
 
 export function LabelChip({ label, color }: { label: string; color?: string }) {
@@ -69,11 +71,27 @@ export function MilestoneChip({ milestone }: { milestone: string }) {
   );
 }
 
-export function PullRequestChip({ count }: { count: number }) {
+const PR_ICON: Record<PrState, string> = {
+  open: "git-pull-request", draft: "git-pull-request-draft", merged: "git-merge", closed: "git-pull-request-closed",
+};
+
+export function PrStateIcon({ state, size = 12 }: { state?: PrState; size?: number }) {
   return (
-    <span className="kt-chip" title={`${count} pull request${count === 1 ? "" : "s"}`}>
-      <Icon name="git-pull-request" size={12} />
-      <span className="kt-chip-text">{count}</span>
+    <span className={`kt-pr-icon${state ? ` kt-pr-${state}` : ""}`}>
+      <Icon name={state ? PR_ICON[state] : "git-pull-request"} size={size} />
+    </span>
+  );
+}
+
+/** PR chip for rows/cards: icon colored by the best known state, plus a count when more than one. */
+export function PullRequestChip({ urls }: { urls: readonly string[] }) {
+  const prs = usePrs(urls);
+  const best = bestState(prs.flatMap((p) => (p.info ? [p.info] : [])));
+  const count = urls.length;
+  return (
+    <span className="kt-chip" title={prs.map((p) => (p.info ? `${prLabel(p.info)} · ${p.info.title} (${p.info.state})` : prLabelOfUrl(p.url))).join("\n")}>
+      <PrStateIcon state={best} />
+      {count > 1 && <span className="kt-chip-text">{count}</span>}
     </span>
   );
 }

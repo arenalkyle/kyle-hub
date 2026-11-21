@@ -1,4 +1,5 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { parsePrUrl, type PrInfo } from "../core/pr";
 import type { Issue, Project, Settings } from "../core/types";
 import { usePlugin } from "../views/PluginContext";
 import type { IssueStore } from "./IssueStore";
@@ -21,3 +22,24 @@ export function useSettings(): Settings {
 }
 
 export const useStoreReady = (): boolean => useStoreSelector((s) => s.isReady());
+
+export interface PrEntry {
+  url: string;
+  /** Canonical github.com URL, or null when the stored text is not a PR URL. */
+  canonical: string | null;
+  /** Live info once fetched; undefined means show a plain link. */
+  info?: PrInfo;
+}
+
+/** Stored PR urls joined with cached live state; re-renders when the PR cache changes. */
+export function usePrs(urls: readonly string[]): PrEntry[] {
+  const { prs } = usePlugin();
+  const subscribe = useCallback((cb: () => void) => prs.subscribe(cb), [prs]);
+  const version = useSyncExternalStore(subscribe, () => prs.getVersion());
+  const key = urls.join("\n");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => urls.map((url) => {
+    const canonical = parsePrUrl(url)?.url ?? null;
+    return { url, canonical, info: canonical ? prs.get(canonical) : undefined };
+  }), [prs, key, version]);
+}

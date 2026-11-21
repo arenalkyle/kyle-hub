@@ -42,7 +42,7 @@ export const IssueCard = memo(function IssueCard({ issue, settings, properties: 
         {p.project && issue.project && <ProjectChip project={issue.project} />}
         {p.due && issue.due && <DueChip due={issue.due} />}
         {p.milestone && issue.milestone && <MilestoneChip milestone={issue.milestone} />}
-        {p.pullRequests && issue.pullRequests.length > 0 && <PullRequestChip count={issue.pullRequests.length} />}
+        {p.pullRequests && issue.pullRequests.length > 0 && <PullRequestChip urls={issue.pullRequests} />}
         {subCount ? <SubIssuesChip count={subCount} /> : null}
       </div>
     </>

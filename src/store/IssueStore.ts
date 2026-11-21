@@ -12,6 +12,7 @@ import {
 } from "../core/issueFile";
 import { fromLink } from "../core/links";
 import { issueInMilestone, milestoneAfterProjectChange, reorderMilestones, validateMilestoneName } from "../core/milestones";
+import { parsePrUrl, prLabelOfUrl } from "../core/pr";
 import { parseProject, serializeProject } from "../core/projectFile";
 import { issueInProject, rewriteProjectLink, validateProjectName } from "../core/projects";
 import type { Issue, Milestone, Project, ProjectStatus } from "../core/types";
@@ -210,6 +211,44 @@ export class IssueStore {
       }
       let out = serializeIssue(after);
       for (const e of events) out = appendEvent(parseIssue(out, file.name), { author: e.author, text: e.text }, now);
+      this.expected.set(path, out);
+      written = out;
+      return out;
+    });
+    const issue = parseIssue(written, file.name);
+    this.setIssue(path, issue, true);
+    this.emit();
+    return issue;
+  }
+
+  /** Adds a GitHub PR url to `pullRequests` (canonicalized, de-duplicated) and logs "linked PR owner/repo#N". */
+  async linkPr(id: string, url: string, author?: string): Promise<Issue> {
+    const ref = parsePrUrl(url);
+    if (!ref) throw new Error("Not a GitHub pull request URL (https://github.com/owner/repo/pull/123).");
+    const key = (u: string): string => parsePrUrl(u)?.url ?? u;
+    return this.editPrs(id, (cur) => (cur.some((u) => key(u) === ref.url) ? null : [...cur, ref.url]), `linked PR ${prLabelOfUrl(ref.url)}`, author);
+  }
+
+  /** Removes a PR url (matched by canonical form) and logs "unlinked PR owner/repo#N". */
+  async unlinkPr(id: string, url: string, author?: string): Promise<Issue> {
+    const key = (u: string): string => parsePrUrl(u)?.url ?? u;
+    const target = key(url);
+    return this.editPrs(id, (cur) => (cur.some((u) => key(u) === target) ? cur.filter((u) => key(u) !== target) : null), `unlinked PR ${prLabelOfUrl(target)}`, author);
+  }
+
+  private async editPrs(id: string, change: (cur: string[]) => string[] | null, event: string, author?: string): Promise<Issue> {
+    const { path, file } = this.requireIssueFile(id);
+    const now = new Date();
+    const who = (author ?? this.host.data.settings.displayName).replace(/^@/, "");
+    let written = "";
+    await this.host.app.vault.process(file, (text) => {
+      const before = parseIssue(text, file.name);
+      const next = change(before.pullRequests);
+      if (next === null) {
+        written = text;
+        return text;
+      }
+      const out = appendEvent(parseIssue(serializeIssue(applyPatch(before, { pullRequests: next }, now)), file.name), { author: who, text: event }, now);
       this.expected.set(path, out);
       written = out;
       return out;

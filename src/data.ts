@@ -1,4 +1,5 @@
 import { defaultSettings } from "./core/defaults";
+import type { PrCacheEntry } from "./core/pr";
 import type { Settings } from "./core/types";
 
 export interface MainUiState {
@@ -22,8 +23,8 @@ export interface PluginData {
   setupDone: boolean;
   /** Per-view display/filter state; filled in by Phase 4/5. */
   views: Record<string, unknown>;
-  /** Pull request cache; filled in by Phase 8. */
-  prCache: Record<string, unknown>;
+  /** Pull request cache keyed by canonical PR url. */
+  prCache: Record<string, PrCacheEntry>;
 }
 
 export function defaultData(): PluginData {
@@ -54,6 +55,6 @@ export function mergeData(raw: unknown): PluginData {
     idCounter: typeof raw.idCounter === "number" ? raw.idCounter : d.idCounter,
     setupDone: typeof raw.setupDone === "boolean" ? raw.setupDone : d.setupDone,
     views: isRecord(raw.views) ? raw.views : d.views,
-    prCache: isRecord(raw.prCache) ? raw.prCache : d.prCache,
+    prCache: isRecord(raw.prCache) ? (raw.prCache as Record<string, PrCacheEntry>) : d.prCache,
   };
 }

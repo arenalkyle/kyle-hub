@@ -51,7 +51,7 @@ export const IssueRow = memo(function IssueRow({
         {p.labels && issue.tags.map((t) => <LabelChip key={t} label={t} color={settings.labelColors[t]} />)}
         {p.project && issue.project && <ProjectChip project={issue.project} />}
         {p.milestone && issue.milestone && <MilestoneChip milestone={issue.milestone} />}
-        {p.pullRequests && issue.pullRequests.length > 0 && <PullRequestChip count={issue.pullRequests.length} />}
+        {p.pullRequests && issue.pullRequests.length > 0 && <PullRequestChip urls={issue.pullRequests} />}
         {p.due && issue.due && <DueChip due={issue.due} />}
         {p.assignee && issue.assignee && <AssigneeChip assignee={issue.assignee} />}
         {p.created && issue.created && <CreatedChip created={issue.created} />}

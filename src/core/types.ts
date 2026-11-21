@@ -109,4 +109,6 @@ export interface Settings {
   labelColors: Record<string, string>;
   ghRepos: string[];
   prRefreshMinutes: number;
+  /** Optional absolute path to the `gh` executable (empty = PATH lookup). */
+  ghPath: string;
 }

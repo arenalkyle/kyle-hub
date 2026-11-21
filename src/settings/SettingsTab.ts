@@ -5,6 +5,7 @@ import { PluginContext } from "../views/PluginContext";
 import { LabelsEditor } from "./LabelsEditor";
 import { StatusesEditor } from "./StatusesEditor";
 import type KyleTicketsPlugin from "../main";
+import { checkGh } from "../github/gh";
 import { FolderSuggest } from "./SetupModal";
 import { normalizeFolder, validateFolder, validatePrefix } from "./validate";
 
@@ -93,8 +94,53 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
         }),
       );
 
+    this.githubSection(containerEl);
+
     this.mountEditor("Statuses", "Drag to reorder. Renaming or deleting rewrites every issue that uses the status.", StatusesEditor);
     this.mountEditor("Labels", "Every label used by an issue. Renaming or deleting rewrites those issues.", LabelsEditor);
+  }
+
+  private githubSection(containerEl: HTMLElement): void {
+    new Setting(containerEl).setName("GitHub").setHeading();
+    const status = new Setting(containerEl).setName("GitHub CLI").setDesc("Checking gh...");
+    const check = async (): Promise<void> => {
+      status.setDesc("Checking gh...");
+      const r = await checkGh({ bin: this.plugin.data.settings.ghPath, timeoutMs: 10000 });
+      status.setDesc(r.message);
+      status.descEl.toggleClass("kt-gh-ok", r.ok);
+      status.descEl.toggleClass("kt-gh-bad", !r.ok);
+      this.plugin.prs.resetAvailability();
+      if (r.ok) void this.plugin.prs.refreshAll();
+    };
+    status.addButton((b) => b.setButtonText("Re-check").onClick(() => void check()));
+    void check();
+
+    new Setting(containerEl)
+      .setName("gh path")
+      .setDesc("Optional. Full path to the gh executable if it is not on PATH (leave empty to use PATH).")
+      .addText((t) =>
+        t
+          .setPlaceholder("gh")
+          .setValue(this.plugin.data.settings.ghPath)
+          .onChange(async (x) => {
+            await this.plugin.updateSettings({ ghPath: x.trim() });
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("PR refresh interval (minutes)")
+      .setDesc("How often open and draft pull requests are re-checked in the background. Linked PR states also refresh when an issue page opens.")
+      .addText((t) =>
+        t
+          .setValue(String(this.plugin.data.settings.prRefreshMinutes))
+          .onChange(async (x) => {
+            const n = Number(x);
+            const ok = Number.isFinite(n) && n >= 1 && n <= 1440;
+            t.inputEl.toggleClass("kt-invalid", !ok);
+            if (!ok) return;
+            await this.plugin.updateSettings({ prRefreshMinutes: Math.round(n) });
+          }),
+      );
   }
 
   override hide(): void {

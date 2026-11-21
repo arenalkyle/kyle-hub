@@ -104,6 +104,29 @@ describe("IssueStore", () => {
     expect(store.getIssue("TIX-1")!.status).toBe("Todo");
   });
 
+  it("links and unlinks PRs with activity events, canonicalizing and de-duplicating", async () => {
+    const { store, vault } = setup();
+    await store.start();
+    await store.createIssue({ title: "One" });
+    await expect(store.linkPr("TIX-1", "https://example.com/x")).rejects.toThrow(/pull request URL/);
+    await store.linkPr("TIX-1", "https://github.com/a/b/pull/5/files");
+    await store.linkPr("TIX-1", "https://github.com/a/b/pull/5");
+    expect(store.getIssue("TIX-1")!.pullRequests).toEqual(["https://github.com/a/b/pull/5"]);
+    await flush();
+    vi.advanceTimersByTime(1000);
+    await flush();
+    let text = vault.files.get("Tickets/Issues/TIX-1.md")!;
+    expect(text.match(/linked PR a\/b#5/g)).toHaveLength(1);
+    expect(text).not.toMatch(/@external/);
+    await store.unlinkPr("TIX-1", "https://github.com/a/b/pull/5");
+    await flush();
+    vi.advanceTimersByTime(1000);
+    await flush();
+    text = vault.files.get("Tickets/Issues/TIX-1.md")!;
+    expect(store.getIssue("TIX-1")!.pullRequests).toEqual([]);
+    expect(text).toMatch(/unlinked PR a\/b#5/);
+  });
+
   it("bulkUpdate writes matching issues sequentially, one event each, with progress", async () => {
     const { store, vault } = setup();
     await store.start();

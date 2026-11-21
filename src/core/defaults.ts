@@ -34,5 +34,6 @@ export function defaultSettings(): Settings {
     labelColors: {},
     ghRepos: [],
     prRefreshMinutes: 10,
+    ghPath: "",
   };
 }
