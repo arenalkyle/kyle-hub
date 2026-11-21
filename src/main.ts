@@ -126,7 +126,7 @@ export default class KyleTermPlugin extends Plugin {
     );
     this.player = new SoundPlayer(this.app);
     this.statusEl = this.addStatusBarItem();
-    this.statusEl.addClass("mod-clickable", "kt-status");
+    this.statusEl.addClass("mod-clickable", "kterm-status");
     this.statusEl.style.display = "none";
     this.statusEl.onclick = () => void this.jumpToAttention();
     this.addSettingTab(new KyleTermSettingTab(this.app, this));
@@ -222,11 +222,11 @@ export default class KyleTermPlugin extends Plugin {
     const a = this.settings.appearance;
     const url = this.bgUrl(notify);
     return {
-      "--kt-bg": toHex(this.currentPalette().background),
-      "--kt-img": url ? `url("${url}")` : "none",
-      "--kt-img-opacity": String(a.imageOpacity / 100),
-      "--kt-img-blur": `${blurPx(a.imageBlur)}px`,
-      "--kt-img-dim": String(a.imageDim / 100),
+      "--kterm-bg": toHex(this.currentPalette().background),
+      "--kterm-img": url ? `url("${url}")` : "none",
+      "--kterm-img-opacity": String(a.imageOpacity / 100),
+      "--kterm-img-blur": `${blurPx(a.imageBlur)}px`,
+      "--kterm-img-dim": String(a.imageDim / 100),
     };
   }
 

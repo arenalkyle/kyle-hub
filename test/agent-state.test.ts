@@ -23,12 +23,17 @@ describe("state transitions", () => {
     expect(i.activity).toBeUndefined();
   });
   it("PostToolUse returns to working after an approved permission", () => {
-    expect(run([hook("Notification"), hook("PostToolUse")]).state).toBe("working");
+    expect(run([hook("UserPromptSubmit"), hook("Notification"), hook("PostToolUse")]).state).toBe("working");
   });
   it("viewed clears needs-input and finished, but not working", () => {
     expect(run([hook("Stop"), { type: "viewed" }]).state).toBe("idle");
-    expect(run([hook("Notification"), { type: "viewed" }]).state).toBe("idle");
+    expect(run([hook("UserPromptSubmit"), hook("Notification"), { type: "viewed" }]).state).toBe("idle");
     expect(run([hook("UserPromptSubmit"), { type: "viewed" }]).state).toBe("working");
+  });
+  it("ignores Notification when no turn is running (idle prompt reminders)", () => {
+    expect(run([hook("SessionStart", { session_id: "a" }), hook("Notification", { message: "Claude is waiting for your input" })]).state).toBe("idle");
+    expect(run([hook("UserPromptSubmit"), hook("Stop"), hook("Notification", { notification_type: "idle_prompt" })]).state).toBe("finished");
+    expect(run([hook("UserPromptSubmit"), hook("Notification", { notification_type: "idle_prompt" })]).state).toBe("working");
   });
   it("exit overrides everything and is terminal", () => {
     const i = run([hook("UserPromptSubmit"), { type: "exit" }, hook("Stop"), { type: "bell" }]);

@@ -123,6 +123,9 @@ function reduceHook(info: AgentInfo, event: string, p: Record<string, unknown>, 
     case "PostToolUse":
       return { ...base, state: "working" };
     case "Notification":
+      // Only mid-turn notifications (permission prompts, questions) need the user. Claude Code also
+      // sends an "idle_prompt" Notification when the prompt sits unused, even before any prompt.
+      if (info.state !== "working" || p.notification_type === "idle_prompt") return base;
       return { ...base, state: "needs-input", activity: str(p.message) ? trunc(str(p.message)!, 80) : "Needs input" };
     case "Stop": {
       const subAgents = base.subAgents.map((s) =>

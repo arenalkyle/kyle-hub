@@ -305,7 +305,7 @@ PATH: ${this.plugin.resolvedPath ?? process.env.PATH ?? ""}`)
         });
       });
       if (cfg.sound.startsWith("vault:")) {
-        const listId = `kt-audio-${ev}`;
+        const listId = `kterm-audio-${ev}`;
         setting.addText((t) => {
           t.setPlaceholder("path/to/sound.mp3").setValue(cfg.sound.slice(6)).onChange((v) => {
             cfg.sound = `vault:${v.trim()}`;

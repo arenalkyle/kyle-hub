@@ -72,12 +72,12 @@ export class KyleTermView extends ItemView {
     this.mgr = mgr;
     const settings = this.plugin.settings;
 
-    this.sidebar = root.createDiv({ cls: "kt-sidebar" });
-    const resizer = root.createDiv({ cls: "kt-resizer" });
-    const wrap = root.createDiv({ cls: "kt-term-wrap" });
-    wrap.createDiv({ cls: "kt-bg-img" });
-    wrap.createDiv({ cls: "kt-bg-dim" });
-    this.area = wrap.createDiv({ cls: "kt-term-area" });
+    this.sidebar = root.createDiv({ cls: "kterm-sidebar" });
+    const resizer = root.createDiv({ cls: "kterm-resizer" });
+    const wrap = root.createDiv({ cls: "kterm-term-wrap" });
+    wrap.createDiv({ cls: "kterm-bg-img" });
+    wrap.createDiv({ cls: "kterm-bg-dim" });
+    this.area = wrap.createDiv({ cls: "kterm-term-area" });
     this.wrap = wrap;
     // Accept drops from the explorer (and plain text) onto the terminal.
     this.area.addEventListener("dragover", (e) => { if (!this.dragId) e.preventDefault(); });
@@ -92,13 +92,13 @@ export class KyleTermView extends ItemView {
     }, true);
     this.applyBackground(this.plugin.bgVars(true));
 
-    const header = this.sidebar.createDiv({ cls: "kt-header" });
-    const newClaude = header.createEl("button", { text: "New Session", cls: "kt-btn-new mod-cta" });
+    const header = this.sidebar.createDiv({ cls: "kterm-header" });
+    const newClaude = header.createEl("button", { text: "New Session", cls: "kterm-btn-new mod-cta" });
     newClaude.onclick = () => void this.plugin.newClaude();
     newClaude.oncontextmenu = (e) => { e.preventDefault(); this.plugin.showNewSessionMenu(e); };
-    const plus = header.createEl("button", { text: "+", cls: "kt-btn-plus", attr: { "aria-label": "New terminal" } });
+    const plus = header.createEl("button", { text: "+", cls: "kterm-btn-plus", attr: { "aria-label": "New terminal" } });
     plus.onclick = () => void this.plugin.newShell();
-    const mute = header.createEl("button", { cls: "kt-btn-mute" });
+    const mute = header.createEl("button", { cls: "kterm-btn-mute" });
     mute.onclick = () => this.plugin.setMuted(!settings.sounds.muted);
     const syncMute = () => {
       const m = settings.sounds.muted;
@@ -108,13 +108,13 @@ export class KyleTermView extends ItemView {
     };
     syncMute();
     this.unsubMute = this.plugin.onMuteChange(syncMute);
-    const collapse = header.createEl("button", { cls: "kt-btn-collapse", attr: { "aria-label": "Collapse sidebar" } });
+    const collapse = header.createEl("button", { cls: "kterm-btn-collapse", attr: { "aria-label": "Collapse sidebar" } });
     collapse.onclick = () => {
       settings.sidebarCollapsed = !settings.sidebarCollapsed;
       void this.plugin.saveSettings();
       this.applySidebar();
     };
-    this.list = this.sidebar.createDiv({ cls: "kt-list" });
+    this.list = this.sidebar.createDiv({ cls: "kterm-list" });
 
     resizer.addEventListener("pointerdown", (e) => {
       if (settings.sidebarCollapsed) return;
@@ -165,9 +165,9 @@ export class KyleTermView extends ItemView {
 
   private applySidebar(): void {
     const s = this.plugin.settings;
-    this.sidebar.toggleClass("kt-collapsed", s.sidebarCollapsed);
+    this.sidebar.toggleClass("kterm-collapsed", s.sidebarCollapsed);
     this.sidebar.style.width = s.sidebarCollapsed ? "" : `${s.sidebarWidth}px`;
-    const btn = this.sidebar.querySelector<HTMLElement>(".kt-btn-collapse");
+    const btn = this.sidebar.querySelector<HTMLElement>(".kterm-btn-collapse");
     if (btn) setIcon(btn, s.sidebarCollapsed ? "chevrons-right" : "chevrons-left");
     const id = this.mgr?.active?.id;
     if (id) window.setTimeout(() => this.mgr?.term(id)?.fit(), 0);
@@ -185,7 +185,7 @@ export class KyleTermView extends ItemView {
         t?.attach(this.area);
         window.setTimeout(() => { t?.fit(); t?.focus(); }, 0);
       } else {
-        this.area.createDiv({ cls: "kyle-term-message kt-empty", text: "No sessions. Use New Session or + to start one." });
+        this.area.createDiv({ cls: "kyle-term-message kterm-empty", text: "No sessions. Use New Session or + to start one." });
       }
     }
   }
@@ -197,47 +197,47 @@ export class KyleTermView extends ItemView {
     this.list.empty();
     const now = Date.now();
     for (const s of mgr.list()) {
-      const row = this.list.createDiv({ cls: "kt-row" });
+      const row = this.list.createDiv({ cls: "kterm-row" });
       if (mgr.active?.id === s.id) row.addClass("is-active");
       if (s.status !== "running") row.addClass("is-exited");
       row.draggable = true;
-      const stripe = row.createDiv({ cls: "kt-stripe" });
+      const stripe = row.createDiv({ cls: "kterm-stripe" });
       if (s.color) stripe.style.background = s.color;
-      const main = row.createDiv({ cls: "kt-main" });
+      const main = row.createDiv({ cls: "kterm-main" });
 
-      const top = main.createDiv({ cls: "kt-top" });
+      const top = main.createDiv({ cls: "kterm-top" });
       const state = s.status === "running" ? s.agent.state : "exited";
       const stateLabel = s.status === "stopped" ? "Stopped" : STATE_LABEL[state];
-      top.createDiv({ cls: `kt-light kt-light-${state}`, attr: { "aria-label": stateLabel, title: stateLabel } });
-      const title = top.createDiv({ cls: "kt-title", text: mgr.title(s) });
-      if (s.manualTitle) setIcon(top.createDiv({ cls: "kt-pin", attr: { "aria-label": "Named manually" } }), "pin");
+      top.createDiv({ cls: `kterm-light kterm-light-${state}`, attr: { "aria-label": stateLabel, title: stateLabel } });
+      const title = top.createDiv({ cls: "kterm-title", text: mgr.title(s) });
+      if (s.manualTitle) setIcon(top.createDiv({ cls: "kterm-pin", attr: { "aria-label": "Named manually" } }), "pin");
       const subs = s.agent.subAgents.filter((a) => a.status === "running" || now - (a.endedAt ?? now) < SUBAGENT_FADE_MS);
       const running = runningCount(s.agent);
       if (subs.length > 0) {
-        const badge = top.createSpan({ cls: "kt-count", text: `⚙ ${running}`, attr: { "aria-label": "Sub-agents (click to collapse)" } });
+        const badge = top.createSpan({ cls: "kterm-count", text: `⚙ ${running}`, attr: { "aria-label": "Sub-agents (click to collapse)" } });
         badge.onclick = (e) => {
           e.stopPropagation();
           if (!this.subsClosed.delete(s.id)) this.subsClosed.add(s.id);
           this.renderList();
         };
       }
-      top.createDiv({ cls: "kt-age", text: formatAge(now - s.lastOutputAt) });
+      top.createDiv({ cls: "kterm-age", text: formatAge(now - s.lastOutputAt) });
       if (s.status === "running" && s.agent.activity && (state === "working" || state === "needs-input")) {
-        main.createDiv({ cls: "kt-activity", text: s.agent.activity });
+        main.createDiv({ cls: "kterm-activity", text: s.agent.activity });
       }
       if (subs.length > 0 && !this.subsClosed.has(s.id)) {
-        const ul = main.createDiv({ cls: "kt-subs" });
+        const ul = main.createDiv({ cls: "kterm-subs" });
         for (const a of subs) {
-          const line = ul.createDiv({ cls: `kt-sub is-${a.status}` });
+          const line = ul.createDiv({ cls: `kterm-sub is-${a.status}` });
           if (a.status === "done") line.style.animationDelay = `${SUBAGENT_FADE_MS * 0.7 - (now - (a.endedAt ?? now))}ms`;
-          line.createSpan({ cls: "kt-sub-mark", text: a.status === "done" ? "✓" : "" });
-          line.createSpan({ cls: "kt-sub-text", text: [a.type, a.description].filter(Boolean).join(": ") || "sub-agent" });
+          line.createSpan({ cls: "kterm-sub-mark", text: a.status === "done" ? "✓" : "" });
+          line.createSpan({ cls: "kterm-sub-text", text: [a.type, a.description].filter(Boolean).join(": ") || "sub-agent" });
         }
       }
 
       if (s.status !== "running") {
-        const ex = main.createDiv({ cls: "kt-exit" });
-        ex.createSpan({ text: s.status === "stopped" ? "stopped" : `exit ${s.exitCode ?? "?"}`, cls: "kt-exit-code" });
+        const ex = main.createDiv({ cls: "kterm-exit" });
+        ex.createSpan({ text: s.status === "stopped" ? "stopped" : `exit ${s.exitCode ?? "?"}`, cls: "kterm-exit-code" });
         if (mgr.canResume(s)) {
           const resume = ex.createEl("button", { text: "Resume", cls: "mod-cta" });
           resume.onclick = (e) => { e.stopPropagation(); mgr.resume(s.id); };
@@ -258,14 +258,14 @@ export class KyleTermView extends ItemView {
       });
       row.addEventListener("dragend", () => {
         this.dragId = null;
-        this.list.querySelectorAll(".kt-drop").forEach((n) => n.removeClass("kt-drop"));
+        this.list.querySelectorAll(".kterm-drop").forEach((n) => n.removeClass("kterm-drop"));
       });
       row.addEventListener("dragover", (e) => {
         if (!this.dragId) return;
         e.preventDefault();
-        row.addClass("kt-drop");
+        row.addClass("kterm-drop");
       });
-      row.addEventListener("dragleave", () => row.removeClass("kt-drop"));
+      row.addEventListener("dragleave", () => row.removeClass("kterm-drop"));
       row.addEventListener("drop", (e) => {
         e.preventDefault();
         const id = this.dragId;
@@ -280,7 +280,7 @@ export class KyleTermView extends ItemView {
     const mgr = this.mgr;
     if (!mgr || this.renamingId !== null) return;
     this.renamingId = s.id;
-    const input = createEl("input", { type: "text", cls: "kt-rename", value: s.manualTitle ?? mgr.title(s) });
+    const input = createEl("input", { type: "text", cls: "kterm-rename", value: s.manualTitle ?? mgr.title(s) });
     titleEl.replaceWith(input);
     input.focus();
     input.select();
