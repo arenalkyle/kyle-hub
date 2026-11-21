@@ -93,3 +93,17 @@ No Obsidian checks (pure module). Optional: skim `src/core/core.test.ts` to conf
 6. Deleting the default status is refused; deleting a used status asks where to move its issues. Make another status the default.
 7. Labels: change the "bug" color → chips update in open views immediately. Rename a label (confirmation + count) and delete one; check the ticket files.
 8. Rename a status used by more than 20 issues → a progress notice appears.
+
+## 6.1 Issue page — LOCK-21
+
+1. Click a row or card in the main view → the Linear-style issue page opens in the tab. Opening the same ticket from the file explorer, a `[[TIX-12]]` link or the quick switcher gives the same page. A normal note opens in the normal editor.
+2. Header breadcrumb reads `Project › TIX-12` (sub-issue: `› TIX-3 Parent title ›` too). Clicking the project opens its note; clicking the parent opens the parent issue.
+3. Click the title, edit, Enter → saved; blur → saved; Esc → cancelled. Tab title shows `TIX-12 Title`.
+4. Sidebar: Status, Priority, Assignee, Labels, Project, Milestone, Due date each open their picker; the raw file's frontmatter changes and activity lines are appended. Changing project clears the milestone. Created/Updated show relative time with full date on hover.
+5. With focus on the page, `S`/`P`/`L`/`A` open the pickers; `Esc` goes back to the previous view.
+6. **Open as Markdown** → raw editor in the same tab with an "Open as issue" header button → back. Command "kyle-tickets: Toggle issue / Markdown view" does the same.
+7. "…" menu: Copy link; Delete issue (asks for confirmation) → page shows "This issue was deleted".
+8. Add a PR URL to `pullRequests` in the raw file → listed under Pull requests.
+9. Restart Obsidian with an issue tab open → it reopens as the issue page (a tab forced to Markdown also reopens as the issue page).
+10. With the page open, edit `priority:` in the raw file in another pane → the sidebar updates within about a second.
+11. With another plugin that patches leaves (e.g. Kanban) installed, disable and re-enable kyle-tickets → files open normally while disabled, issue page again after re-enabling.
