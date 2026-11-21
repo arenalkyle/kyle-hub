@@ -4,8 +4,15 @@ import { parseArgs } from "node:util";
 import { buildIssueText } from "../../../src/core/domain/create";
 import { PRIORITY_ORDER, defaultSettings } from "../../../src/core/domain/defaults";
 import { formatId, nextId, parseId } from "../../../src/core/domain/ids";
-import { appendEvent, parseIssue } from "../../../src/core/domain/issueFile";
+import { appendComment, appendEvent, parseIssue } from "../../../src/core/domain/issueFile";
 import type { IssuePatch } from "../../../src/core/domain/issueFile";
+import { MODELS, OUTCOMES, TICKET_TYPES, parseModel, parseOutcome, parseType } from "../../../src/core/domain/fields";
+import type { Model, Outcome, TicketType } from "../../../src/core/domain/fields";
+import { DEFAULT_FLOOD, expiredTriage } from "../../../src/core/domain/flood";
+import type { FloodSettings } from "../../../src/core/domain/flood";
+import { planAgentCreate } from "../../../src/core/domain/agentCreate";
+import { agentSource, checkAgentLabels, checkAgentStatus, isAgentMode } from "../../../src/core/domain/gates";
+import type { GateResult } from "../../../src/core/domain/gates";
 import { fromLink } from "../../../src/core/domain/links";
 import { milestoneAfterProjectChange } from "../../../src/core/domain/milestones";
 import { addRelatedList, relatedIds, removeRelatedLists } from "../../../src/core/domain/related";
@@ -89,11 +96,21 @@ export interface Ctx {
   counter: number;
   issuesDir: string;
   projectsDir: string;
+  flood: FloodSettings;
+}
+
+const HUB_DATA = [".obsidian", "plugins", "kyle-hub", "data.json"];
+
+/** Flood numbers from the hub's `core` namespace (defaults when absent). */
+function floodFrom(vaultRoot: string): FloodSettings {
+  const raw = readJson(path.join(vaultRoot, ...HUB_DATA)) as { modules?: { core?: { flood?: Partial<FloodSettings> } } } | undefined;
+  return { ...DEFAULT_FLOOD, ...(raw?.modules?.core?.flood ?? {}) };
 }
 
 export function loadCtx(folder: string): Ctx {
   const settings = defaultSettings();
   let counter = 0;
+  let flood = DEFAULT_FLOOD;
   const marker = readJson(path.join(folder, MARKER)) as { prefix?: unknown } | undefined;
   if (typeof marker?.prefix === "string" && marker.prefix) settings.prefix = marker.prefix;
   // Vault root = nearest ancestor holding the plugin's data.json (read-only here).
@@ -107,13 +124,14 @@ export function loadCtx(folder: string): Ctx {
         Object.assign(settings, d.settings);
         counter = d.idCounter;
       }
+      flood = floodFrom(cur);
       break;
     }
     const parent = path.dirname(cur);
     if (parent === cur) break;
     cur = parent;
   }
-  return { folder, settings, counter, issuesDir: path.join(folder, "Issues"), projectsDir: path.join(folder, "Projects") };
+  return { folder, settings, counter, flood, issuesDir: path.join(folder, "Issues"), projectsDir: path.join(folder, "Projects") };
 }
 
 // ---- files ---------------------------------------------------------------
@@ -235,6 +253,29 @@ export function normAuthor(v: string): string {
   return a;
 }
 
+function normType(v: string): TicketType {
+  const t = parseType(v);
+  if (!t) throw invalid(`Invalid type "${v}" (expected ${TICKET_TYPES.join(" | ")}).`);
+  return t;
+}
+
+function normModel(v: string): Model {
+  const m = parseModel(v);
+  if (!m) throw invalid(`Invalid model "${v}" (expected ${MODELS.join(" | ")}).`);
+  return m;
+}
+
+function normOutcome(v: string): Outcome {
+  const o = parseOutcome(v);
+  if (!o) throw invalid(`Invalid outcome "${v}" (expected ${OUTCOMES.join(" | ")}).`);
+  return o;
+}
+
+/** Turns a refused gate into a CLI error (exit code from the gate). */
+function gateOrThrow(r: GateResult): void {
+  if (!r.ok) throw new KtError(r.exitCode, r.message);
+}
+
 function normIssueRef(ctx: Ctx, v: string, what: string): string {
   const p = parseId(fromLink(v));
   if (!p) throw invalid(`Invalid ${what} "${v}" (expected an ID like ${ctx.settings.prefix}-1).`);
@@ -290,8 +331,9 @@ const HELP: Record<string, string> = {
 Usage: kt <command> [options]
 
 Commands:
-  new <title>            Create an issue; prints its ID
-  set <ID> <field> ...   Change a field (status, priority, assignee, project, milestone, due, parent, title, labels)
+  new <title>            Create an issue; prints its ID (--agent: triage-only, deduped, capped)
+  set <ID> <field> ...   Change a field (status, priority, assignee, project, milestone, due, parent, title, labels, type, repo, model, outcome, blockedBy)
+  expire [--days <n>]    Cancel triage tickets untouched for n days (default 14)
   comment <ID> [text]    Add a comment (text "-" or omitted: read stdin); --reply-to <comment-id> replies
   list                   List issues
   show <ID>              Show an issue
@@ -311,6 +353,11 @@ Exit codes: 0 ok, 1 usage error, 2 not found, 3 validation error.`,
   --parent <ID>          --assignee <name>   --due <YYYY-MM-DD>
   --label <name>         repeatable
   --description <text>   "-" reads stdin
+  --type <t>             task | bug | plan | proposal | question | finding
+  --repo <key>           settings repo map key
+  --blocked-by <ID>      repeatable or comma-separated
+  --model <m>            haiku | sonnet | opus
+  --agent                agent mode (also KH_AGENT=1 or KH_RUN set)
   --as <author>          author of the "created the issue" event (default: KT_AUTHOR or the plugin display name)`,
   set: `Usage: kt set <ID> <field> <value> [--as <author>]
 
@@ -336,6 +383,8 @@ function cmdNew(args: string[], io: Io): void {
     status: { type: "string" }, priority: { type: "string" }, project: { type: "string" }, milestone: { type: "string" },
     parent: { type: "string" }, assignee: { type: "string" }, due: { type: "string" }, label: { type: "string", multiple: true },
     description: { type: "string" }, as: { type: "string" },
+    type: { type: "string" }, repo: { type: "string" }, "blocked-by": { type: "string", multiple: true },
+    model: { type: "string" }, agent: { type: "boolean" },
   });
   if (positionals.length !== 1 || positionals[0]!.trim() === "") throw usage('Expected exactly one title: kt new "Title" [options]');
   const ctx = loadCtx(discoverFolder(str(v.dir), io));
@@ -360,6 +409,30 @@ function cmdNew(args: string[], io: Io): void {
   } else if (str(v.milestone) !== undefined) throw invalid("--milestone needs --project.");
   const desc = str(v.description);
   if (desc !== undefined) input.description = desc === "-" ? io.stdin() : desc;
+  if (str(v.type) !== undefined) input.type = normType(str(v.type)!);
+  if (str(v.model) !== undefined) input.model = normModel(str(v.model)!);
+  if (str(v.repo)) input.repo = str(v.repo)!.trim();
+  const blocked = list(v["blocked-by"]).flatMap((b) => b.split(",")).map((b) => b.trim()).filter(Boolean);
+  if (blocked.length) input.blockedBy = blocked.map((b) => normIssueRef(ctx, b, "blocked-by"));
+
+  if (isAgentMode(io.env, v.agent === true)) {
+    const source = agentSource(io.env);
+    const plan = planAgentCreate(
+      { title: input.title, type: input.type, repo: input.repo, tags: input.tags },
+      { statuses: ctx.settings.statuses, issues: loadIssues(ctx), source, flood: ctx.flood },
+    );
+    if (!plan.ok) throw new KtError(plan.exitCode, plan.message);
+    if (plan.duplicate) {
+      const file = path.join(ctx.issuesDir, plan.duplicate.fileName);
+      const text = appendComment(parseIssue(fs.readFileSync(file, "utf8"), plan.duplicate.fileName), { author: source, body: `seen again (+1) from ${source}` }, now);
+      atomicWrite(file, text);
+      io.out(plan.duplicate.id);
+      return;
+    }
+    input.status = plan.status;
+    input.source = source;
+    input.fingerprint = plan.fingerprint;
+  }
 
   fs.mkdirSync(ctx.issuesDir, { recursive: true });
   for (let attempt = 0; attempt < 20; attempt++) {
@@ -377,12 +450,13 @@ function cmdNew(args: string[], io: Io): void {
 }
 
 function cmdSet(args: string[], io: Io): void {
-  const { values: v, positionals } = parse(args, { as: { type: "string" } });
+  const { values: v, positionals } = parse(args, { as: { type: "string" }, agent: { type: "boolean" } });
   const [idArg, fieldArg, ...rest] = positionals;
   if (!idArg || !fieldArg) throw usage("Usage: kt set <ID> <field> <value>");
   const ctx = loadCtx(discoverFolder(str(v.dir), io));
   const { issue, file } = findIssue(ctx, idArg);
   const who = authorOf(ctx, io, v.as);
+  const agent = isAgentMode(io.env, v.agent === true);
   const field = fieldArg.toLowerCase();
   const patch: IssuePatch = {};
   const value = rest.join(" ").trim();
@@ -390,7 +464,19 @@ function cmdSet(args: string[], io: Io): void {
   if (field !== "labels" && field !== "label" && rest.length === 0) throw usage(`Missing value for ${field}.`);
 
   switch (field) {
-    case "status": patch.status = normStatus(ctx, value); break;
+    case "status": {
+      const status = normStatus(ctx, value);
+      if (agent) gateOrThrow(checkAgentStatus(status, ctx.settings.statuses));
+      patch.status = status;
+      break;
+    }
+    case "type": patch.type = clearing ? null : normType(value); break;
+    case "repo": patch.repo = clearing ? null : value; break;
+    case "model": patch.model = clearing ? null : normModel(value); break;
+    case "outcome": patch.outcome = clearing ? null : normOutcome(value); break;
+    case "blockedby":
+      patch.blockedBy = value.split(/[\s,]+/).filter(Boolean).map((b) => normIssueRef(ctx, b, "blocked-by"));
+      break;
     case "priority": patch.priority = normPriority(value); break;
     case "assignee": patch.assignee = clearing ? null : value.replace(/^@/, ""); break;
     case "due": patch.due = clearing ? null : normDate(value); break;
@@ -432,13 +518,16 @@ function cmdSet(args: string[], io: Io): void {
         const name = tok.replace(/^[+-]/, "").trim();
         if (name === "") throw usage(`Invalid label token "${tok}".`);
         if (tok.startsWith("-")) tags = tags.filter((t) => !ci(t, name));
-        else if (!tags.some((t) => ci(t, name))) tags.push(name);
+        else {
+          if (agent) gateOrThrow(checkAgentLabels([name]));
+          if (!tags.some((t) => ci(t, name))) tags.push(name);
+        }
       }
       patch.tags = tags;
       break;
     }
     default:
-      throw usage(`Unknown field "${fieldArg}". Fields: status, priority, assignee, project, milestone, due, parent, title, labels.`);
+      throw usage(`Unknown field "${fieldArg}". Fields: status, priority, assignee, project, milestone, due, parent, title, labels, type, repo, model, outcome, blockedBy.`);
   }
 
   const text = fs.readFileSync(file, "utf8");
@@ -583,8 +672,28 @@ function cmdShow(args: string[], io: Io): void {
   }
 }
 
+/** Cancels triage tickets untouched for `--days` (default 14); each gets an `expired` event. */
+function cmdExpire(args: string[], io: Io): void {
+  const { values: v } = parse(args, { as: { type: "string" }, days: { type: "string" } });
+  const ctx = loadCtx(discoverFolder(str(v.dir), io));
+  const days = str(v.days) === undefined ? ctx.flood.expireDays : Number(str(v.days));
+  if (!Number.isFinite(days) || days <= 0) throw invalid(`Invalid --days "${str(v.days)}".`);
+  const canceled = ctx.settings.statuses.find((s) => s.category === "canceled");
+  if (!canceled) throw invalid("No canceled-category status to expire into.");
+  const who = authorOf(ctx, io, v.as);
+  const now = io.now();
+  const stale = expiredTriage(loadIssues(ctx), ctx.settings.statuses, now, days);
+  for (const issue of stale) {
+    const file = path.join(ctx.issuesDir, issue.fileName);
+    const patched = patchIssueText(fs.readFileSync(file, "utf8"), issue.fileName, { status: canceled.name }, who, now);
+    atomicWrite(file, appendEvent(parseIssue(patched, issue.fileName), { author: who, text: `expired (no update for ${days} days)` }, now));
+    io.out(`${issue.id} expired`);
+  }
+  if (stale.length === 0) io.out("0 expired");
+}
+
 const COMMANDS: Record<string, (args: string[], io: Io) => void> = {
-  new: cmdNew, set: cmdSet, comment: cmdComment, list: cmdList, show: cmdShow, pr: cmdPr, relate: (a, io) => cmdRelate(a, io, false), unrelate: (a, io) => cmdRelate(a, io, true),
+  expire: cmdExpire, new: cmdNew, set: cmdSet, comment: cmdComment, list: cmdList, show: cmdShow, pr: cmdPr, relate: (a, io) => cmdRelate(a, io, false), unrelate: (a, io) => cmdRelate(a, io, true),
 };
 
 /** Runs the CLI; returns the process exit code. */

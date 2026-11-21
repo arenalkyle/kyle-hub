@@ -1,4 +1,5 @@
 import type { Document } from "yaml";
+import type { Model, Outcome, Source, TicketType } from "./fields";
 
 export type StatusCategory =
   | "triage"
@@ -76,6 +77,17 @@ export interface Issue {
   parent?: string;
   /** Linear identifier (e.g. `LOCK-14`) for tickets imported by `kh import linear`. */
   linearId?: string;
+  /** Absent means `task` (see `effectiveType`). */
+  type?: TicketType;
+  /** Key into the settings repo map; see `effectiveRepo`. */
+  repo?: string;
+  blockedBy?: string[];
+  model?: Model;
+  runs?: string[];
+  outcome?: Outcome;
+  costUsd?: number;
+  source?: Source;
+  fingerprint?: string;
   pullRequests: string[];
   /** IDs of related issues listed by this issue (display is symmetric; see `relatedIds`). */
   related: string[];
@@ -99,6 +111,8 @@ export interface Project {
   fileName: string;
   name: string;
   status: ProjectStatus;
+  /** Key into the settings repo map; tickets inherit it. */
+  repo?: string;
   lead?: string;
   target?: string;
   color?: string;

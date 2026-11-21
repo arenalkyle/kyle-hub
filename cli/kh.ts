@@ -4,7 +4,7 @@ import type { LinearTransport } from "./commands/import/linear";
 
 const MAIN = [
   "kh <command>",
-  "  tickets <new|set|comment|list|show|pr|relate|unrelate> [...]   same as kt (see kt --help)",
+  "  tickets <new|set|comment|list|show|pr|relate|unrelate|expire> [...]   same as kt (see kt --help)",
   "  import linear --team <key> [--project <name>] [--dry-run] [--update]",
 ].join("\n");
 

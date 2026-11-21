@@ -42,6 +42,7 @@ function fieldsFromFm(fm: Fields, fileName: string): Fields {
   return {
     name: str(fm.name) ?? fileName.replace(/\.md$/i, ""),
     status: (STATUSES as readonly string[]).includes(s ?? "") ? s : "backlog",
+    repo: str(fm.repo),
     lead: str(fm.lead),
     target: str(fm.target),
     color: str(fm.color),

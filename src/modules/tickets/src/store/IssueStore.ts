@@ -18,7 +18,7 @@ import { parsePrUrl, prLabelOfUrl } from "../../../../core/domain/pr";
 import { clearUnlinked, markUnlinked } from "../../../../core/domain/prMatch";
 import { parseProject, serializeProject } from "../../../../core/domain/projectFile";
 import { issueInProject, rewriteProjectLink, validateProjectName } from "../../../../core/domain/projects";
-import type { Issue, Milestone, Project, ProjectStatus } from "../../../../core/domain/types";
+import type { Issue, Milestone, Project, ProjectStatus, StatusDef } from "../../../../core/domain/types";
 import type { EventBus } from "../../../../core";
 import type { PluginData } from "../data";
 
@@ -151,6 +151,10 @@ export class IssueStore {
 
   getProjects(): readonly Project[] {
     return (this.projectsCache ??= [...this.projectsByPath.values()]);
+  }
+
+  getStatuses(): readonly StatusDef[] {
+    return this.host.data.settings.statuses;
   }
 
   getIssue(id: string): Issue | undefined {

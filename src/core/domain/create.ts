@@ -1,6 +1,7 @@
 import { stringify } from "yaml";
 import { assemble } from "./frontmatter";
 import { formatIso } from "./time";
+import type { Model, Source, TicketType } from "./fields";
 import type { Milestone, Priority, ProjectStatus } from "./types";
 import { toLink } from "./links";
 
@@ -18,6 +19,12 @@ export interface NewIssueInput {
   description?: string;
   sortOrder?: number;
   linearId?: string;
+  type?: TicketType;
+  repo?: string;
+  blockedBy?: string[];
+  model?: Model;
+  source?: Source;
+  fingerprint?: string;
   created?: Date;
   updated?: Date;
 }
@@ -51,6 +58,12 @@ export function buildIssueText(id: string, input: NewIssueInput, defaultStatus: 
   if (input.parent) fm.parent = asLink(input.parent);
   if (input.pullRequests?.length) fm.pullRequests = input.pullRequests;
   if (input.linearId) fm.linearId = input.linearId;
+  if (input.type && input.type !== "task") fm.type = input.type;
+  if (input.repo) fm.repo = input.repo;
+  if (input.blockedBy?.length) fm.blockedBy = input.blockedBy;
+  if (input.model) fm.model = input.model;
+  if (input.source) fm.source = input.source;
+  if (input.fingerprint) fm.fingerprint = input.fingerprint;
   fm.created = formatIso(input.created ?? now);
   fm.updated = formatIso(input.updated ?? now);
   if (input.sortOrder !== undefined) fm.sortOrder = input.sortOrder;

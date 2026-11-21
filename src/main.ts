@@ -9,6 +9,7 @@ import {
   type ModuleId,
   type SectionRegistry,
 } from "./core";
+import { DEFAULT_FLOOD } from "./core/domain/flood";
 import { termModule, termSettings } from "./modules/term";
 import { ticketsModule, ticketsSettings } from "./modules/tickets";
 
@@ -29,7 +30,7 @@ export default class KyleHubPlugin extends Plugin {
 
   override async onload(): Promise<void> {
     const parts = createHubParts();
-    parts.settings.register({ id: "core", defaults: {} });
+    parts.settings.register({ id: "core", defaults: { repos: {}, flood: { ...DEFAULT_FLOOD } } });
     parts.settings.register(ticketsSettings);
     parts.settings.register(termSettings);
     parts.settings.register({ id: "brain", defaults: {}, enabledByDefault: false });

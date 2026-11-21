@@ -7,6 +7,14 @@ import {
   strList,
   syncFrontmatter,
 } from "./frontmatter";
+import {
+  parseCost,
+  parseModel,
+  parseOutcome,
+  parseSource,
+  parseType,
+} from "./fields";
+import type { Model, Outcome, TicketType } from "./fields";
 import { formatFeedTime, formatIso } from "./time";
 import type { ActivityEvent, Comment, FeedEntry, Issue, Priority } from "./types";
 
@@ -39,6 +47,15 @@ function fieldsFromFm(fm: Fields, fileName: string): Fields {
     due: str(fm.due),
     parent: str(fm.parent),
     linearId: str(fm.linearId),
+    type: parseType(fm.type),
+    repo: str(fm.repo),
+    blockedBy: strList(fm.blockedBy),
+    model: parseModel(fm.model),
+    runs: strList(fm.runs),
+    outcome: parseOutcome(fm.outcome),
+    costUsd: parseCost(fm.costUsd),
+    source: parseSource(fm.source),
+    fingerprint: str(fm.fingerprint),
     pullRequests: strList(fm.pullRequests),
     related: strList(fm.related),
     created: str(fm.created),
@@ -202,7 +219,7 @@ function serializeFrontmatterOnly(issue: Issue): string {
   const baseline = fieldsFromFm(fmToJs(raw.doc), issue.fileName);
   return syncFrontmatter(raw.doc, raw.frontmatterText, issueFields(issue), baseline, {
     priority: "none",
-  }, ["aliases", "tags", "related"]);
+  }, ["aliases", "tags", "related", "blockedBy", "runs"]);
 }
 
 /** Append a comment; returns the new file text. Pure: pass `now` explicitly. */
@@ -288,7 +305,7 @@ export function appendEvent(
 }
 
 export type IssuePatch = Partial<
-  Pick<Issue, "title" | "status" | "priority" | "tags" | "pullRequests" | "related" | "description" | "sortOrder">
+  Pick<Issue, "title" | "status" | "priority" | "tags" | "pullRequests" | "related" | "description" | "sortOrder" | "blockedBy">
 > & {
   assignee?: string | null;
   project?: string | null;
@@ -297,6 +314,11 @@ export type IssuePatch = Partial<
   parent?: string | null;
   updatedBy?: string | null;
   sortOrder?: number | null;
+  type?: TicketType | null;
+  repo?: string | null;
+  model?: Model | null;
+  outcome?: Outcome | null;
+  costUsd?: number | null;
 };
 
 /** Returns a new issue with fields changed, `updated` bumped and `aliases` synced to `title`. */
