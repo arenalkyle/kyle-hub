@@ -1,9 +1,0 @@
-{
-  "id": "kyle-tickets",
-  "name": "kyle-tickets",
-  "version": "0.1.0",
-  "minAppVersion": "1.5.0",
-  "description": "Linear-style issue tracker over Markdown files.",
-  "author": "Kyle",
-  "isDesktopOnly": true
-}
