@@ -90,6 +90,7 @@ export class SessionManager {
   private rt = new Map<string, Runtime>();
   private listeners = new Set<() => void>();
   private stateListeners = new Set<StateListener>();
+  private subDoneListeners = new Set<(s: Session) => void>();
   private soon?: ReturnType<typeof setTimeout>;
   private fade?: ReturnType<typeof setTimeout>;
   private activeId: string | null = null;
@@ -114,6 +115,12 @@ export class SessionManager {
     return () => this.stateListeners.delete(cb);
   }
 
+  /** Fires when a sub-agent of a session goes from running to done. */
+  onSubAgentDone(cb: (s: Session) => void): () => void {
+    this.subDoneListeners.add(cb);
+    return () => this.subDoneListeners.delete(cb);
+  }
+
   private emitSoon(): void {
     if (this.soon) return;
     this.soon = setTimeout(() => { this.soon = undefined; this.emit(); }, ACTIVITY_THROTTLE_MS);
@@ -126,6 +133,12 @@ export class SessionManager {
     s.agent = next;
     if (next.state !== prev.state) {
       for (const l of this.stateListeners) l(s, prev.state, next.state);
+    }
+    if (next.subAgents !== prev.subAgents) {
+      const was = new Set(prev.subAgents.filter((a) => a.status === "running").map((a) => a.id));
+      if (next.subAgents.some((a) => a.status === "done" && was.has(a.id))) {
+        for (const l of this.subDoneListeners) l(s);
+      }
     }
     const onlyActivity =
       next.state === prev.state && next.subAgents === prev.subAgents && next.firstPrompt === prev.firstPrompt &&
@@ -343,5 +356,6 @@ export class SessionManager {
     this.activeId = null;
     this.listeners.clear();
     this.stateListeners.clear();
+    this.subDoneListeners.clear();
   }
 }

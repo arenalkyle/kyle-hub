@@ -6,9 +6,11 @@ import { HookServer } from "./hook-server";
 import xtermCss from "@xterm/xterm/css/xterm.css";
 import { PtyManager } from "./pty-manager";
 import { resolveNode } from "./node-path";
-import { DEFAULT_SETTINGS, KyleTermSettingTab, type KyleTermSettings } from "./settings";
+import { DEFAULT_SETTINGS, KyleTermSettingTab, mergeSounds, type KyleTermSettings } from "./settings";
+import { decideAlert, nextAttention, sessionKey, type AlertEvent } from "./alert";
+import { SoundPlayer } from "./sound";
 import { KyleTermView, VIEW_TYPE } from "./view";
-import { SessionManager } from "./session-manager";
+import { SessionManager, type Session } from "./session-manager";
 import { detectProfiles, type ShellProfile } from "./shells";
 import { XtermSession } from "./xterm-session";
 
@@ -20,6 +22,10 @@ export default class KyleTermPlugin extends Plugin {
   private styleEl: HTMLStyleElement | null = null;
   private hookServer: HookServer | null = null;
   private hookEnv: Record<string, string> = {};
+  private player: SoundPlayer | null = null;
+  private statusEl: HTMLElement | null = null;
+  private muteListeners = new Set<() => void>();
+  private lastPlayed: { bySession: Record<string, number>; byEvent: Partial<Record<AlertEvent, number>> } = { bySession: {}, byEvent: {} };
 
   override async onload(): Promise<void> {
     await this.loadSettings();
@@ -57,6 +63,18 @@ export default class KyleTermPlugin extends Plugin {
     });
     this.addCommand({ id: "install-hooks", name: "Install hooks", callback: () => this.hooks("install") });
     this.addCommand({ id: "uninstall-hooks", name: "Uninstall hooks", callback: () => this.hooks("uninstall") });
+    this.addCommand({
+      id: "jump-next-attention",
+      name: "Jump to next session needing attention",
+      hotkeys: [{ modifiers: ["Alt"], key: "a" }],
+      callback: () => void this.jumpToAttention(),
+    });
+    this.addCommand({ id: "toggle-mute", name: "Toggle mute", callback: () => this.setMuted(!this.settings.sounds.muted) });
+    this.player = new SoundPlayer(this.app);
+    this.statusEl = this.addStatusBarItem();
+    this.statusEl.addClass("mod-clickable", "kt-status");
+    this.statusEl.style.display = "none";
+    this.statusEl.onclick = () => void this.jumpToAttention();
     this.addSettingTab(new KyleTermSettingTab(this.app, this));
   }
 
@@ -68,6 +86,67 @@ export default class KyleTermPlugin extends Plugin {
     this.pty?.dispose();
     this.pty = null;
     this.styleEl?.remove();
+    this.player?.dispose();
+    this.player = null;
+    this.muteListeners.clear();
+  }
+
+  /** Subscribe to mute changes (sidebar icon). */
+  onMuteChange(cb: () => void): () => void {
+    this.muteListeners.add(cb);
+    return () => this.muteListeners.delete(cb);
+  }
+
+  setMuted(v: boolean): void {
+    this.settings.sounds.muted = v;
+    void this.saveSettings();
+    for (const l of this.muteListeners) l();
+  }
+
+  preview(sound: string, volume: number): void {
+    this.player?.play(sound, volume);
+  }
+
+  /** Obsidian focused, kyle-term tab active, and this session is the visible one. */
+  private isViewing(s: Session): boolean {
+    if (!document.hasFocus()) return false;
+    const view = this.app.workspace.getActiveViewOfType(KyleTermView);
+    return !!view && this.sessions?.active?.id === s.id;
+  }
+
+  private alert(event: AlertEvent, s: Session): void {
+    const now = Date.now();
+    const d = decideAlert({
+      event, sessionId: s.id, now, sounds: this.settings.sounds,
+      viewing: this.isViewing(s), lastPlayed: this.lastPlayed,
+    });
+    if (!d) return;
+    this.lastPlayed.bySession[sessionKey(event, s.id)] = now;
+    this.lastPlayed.byEvent[event] = now;
+    this.player?.play(d.sound, d.volume);
+  }
+
+  private updateStatusBar(): void {
+    const el = this.statusEl;
+    const m = this.sessions;
+    if (!el || !m) return;
+    const waiting = m.list().filter((s) => s.agent.state === "needs-input");
+    if (waiting.length === 0) {
+      el.style.display = "none";
+      return;
+    }
+    el.style.display = "";
+    el.setText(`⚠ ${waiting.length} need you`);
+    el.setAttribute("aria-label", waiting.map((s) => m.title(s)).join("\n"));
+  }
+
+  async jumpToAttention(): Promise<void> {
+    const m = this.sessions;
+    if (!m) return;
+    const id = nextAttention(m.list().map((s) => ({ id: s.id, state: s.agent.state })), m.active?.id ?? null);
+    if (!id) return void new Notice("kyle-term: no session needs attention");
+    await this.activateView();
+    m.setActive(id);
   }
 
   async activateView(): Promise<void> {
@@ -109,6 +188,11 @@ export default class KyleTermPlugin extends Plugin {
       env: () => this.hookEnv,
       idleMs: () => this.settings.idleSeconds * 1000,
     });
+    this.sessions.onStateChange((s, _prev, next) => {
+      if (next === "needs-input" || next === "finished") this.alert(next, s);
+    });
+    this.sessions.onSubAgentDone((s) => this.alert("sub-agent-done", s));
+    this.sessions.onChange(() => this.updateStatusBar());
     return this.sessions;
   }
 
@@ -138,7 +222,8 @@ export default class KyleTermPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, (await this.loadData()) as Partial<KyleTermSettings> | null);
+    const saved = (await this.loadData()) as Partial<KyleTermSettings> | null;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved, { sounds: mergeSounds(saved?.sounds) });
   }
 
   async saveSettings(): Promise<void> {

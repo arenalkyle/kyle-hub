@@ -289,4 +289,16 @@ describe("agent state integration", () => {
     expect(s.agent.state).toBe("idle");
     expect(s.agent.hasHookEvents).toBe(false);
   });
+
+  it("fires onSubAgentDone once when a sub-agent finishes", () => {
+    const s = shell();
+    let n = 0;
+    m.onSubAgentDone(() => n++);
+    m.handleHook(s.id, "SubagentStart", { agent_id: "x", agent_type: "t" });
+    expect(n).toBe(0);
+    m.handleHook(s.id, "SubagentStop", { agent_id: "x" });
+    expect(n).toBe(1);
+    m.handleHook(s.id, "SubagentStop", { agent_id: "x" });
+    expect(n).toBe(1);
+  });
 });

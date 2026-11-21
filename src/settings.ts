@@ -1,5 +1,7 @@
 import { PluginSettingTab, Setting, type App } from "obsidian";
 import type KyleTermPlugin from "./main";
+import { DEFAULT_SOUNDS, TONES, type AlertEvent, type SoundSettings } from "./alert";
+import { AUDIO_EXTS } from "./sound";
 
 export interface KyleTermSettings {
   nodePath: string;
@@ -11,6 +13,7 @@ export interface KyleTermSettings {
   idleSeconds: number;
   sidebarWidth: number;
   sidebarCollapsed: boolean;
+  sounds: SoundSettings;
 }
 
 export const DEFAULT_SETTINGS: KyleTermSettings = {
@@ -21,7 +24,29 @@ export const DEFAULT_SETTINGS: KyleTermSettings = {
   idleSeconds: 10,
   sidebarWidth: 240,
   sidebarCollapsed: false,
+  sounds: DEFAULT_SOUNDS,
 };
+
+const EVENT_LABEL: Record<AlertEvent, string> = {
+  "needs-input": "Needs input",
+  finished: "Finished",
+  "sub-agent-done": "Sub-agent done",
+};
+const TONE_LABEL: Record<string, string> = { chime: "Chime", ping: "Ping", bell: "Bell", pulse: "Pulse" };
+
+/** Merge saved sound settings over defaults (deep, one level per event). */
+export function mergeSounds(saved: Partial<SoundSettings> | undefined): SoundSettings {
+  const d = DEFAULT_SOUNDS;
+  return {
+    muted: saved?.muted ?? d.muted,
+    master: saved?.master ?? d.master,
+    events: {
+      "needs-input": { ...d.events["needs-input"], ...saved?.events?.["needs-input"] },
+      finished: { ...d.events.finished, ...saved?.events?.finished },
+      "sub-agent-done": { ...d.events["sub-agent-done"], ...saved?.events?.["sub-agent-done"] },
+    },
+  };
+}
 
 export class KyleTermSettingTab extends PluginSettingTab {
   constructor(app: App, private plugin: KyleTermPlugin) {
@@ -80,5 +105,51 @@ export class KyleTermSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         }),
       );
+    this.displaySounds(el);
+  }
+
+  private displaySounds(el: HTMLElement): void {
+    const snd = this.plugin.settings.sounds;
+    const save = () => void this.plugin.saveSettings();
+    new Setting(el).setName("Sounds").setHeading();
+    new Setting(el).setName("Mute all sounds").addToggle((t) => t.setValue(snd.muted).onChange((v) => this.plugin.setMuted(v)));
+    new Setting(el).setName("Master volume").addSlider((sl) =>
+      sl.setLimits(0, 100, 1).setValue(snd.master).setDynamicTooltip().onChange((v) => { snd.master = v; save(); }),
+    );
+    const audioFiles = this.app.vault.getFiles().filter((f) => AUDIO_EXTS.includes(f.extension.toLowerCase()));
+    for (const ev of Object.keys(EVENT_LABEL) as AlertEvent[]) {
+      const cfg = snd.events[ev];
+      const setting = new Setting(this.containerEl).setName(EVENT_LABEL[ev]);
+      setting.addDropdown((d) => {
+        d.addOption("none", "None");
+        for (const t of TONES) d.addOption(t, TONE_LABEL[t]!);
+        d.addOption("vault:", "Vault file…");
+        d.setValue(cfg.sound.startsWith("vault:") ? "vault:" : cfg.sound);
+        d.onChange((v) => {
+          cfg.sound = v === "vault:" ? `vault:${cfg.sound.startsWith("vault:") ? cfg.sound.slice(6) : ""}` : v;
+          save();
+          this.display();
+        });
+      });
+      if (cfg.sound.startsWith("vault:")) {
+        const listId = `kt-audio-${ev}`;
+        setting.addText((t) => {
+          t.setPlaceholder("path/to/sound.mp3").setValue(cfg.sound.slice(6)).onChange((v) => {
+            cfg.sound = `vault:${v.trim()}`;
+            save();
+          });
+          t.inputEl.setAttribute("list", listId);
+          const dl = createEl("datalist", { attr: { id: listId } });
+          for (const f of audioFiles) dl.createEl("option", { attr: { value: f.path } });
+          t.inputEl.after(dl);
+        });
+      }
+      setting.addSlider((sl) =>
+        sl.setLimits(0, 100, 1).setValue(cfg.volume).setDynamicTooltip().onChange((v) => { cfg.volume = v; save(); }),
+      );
+      setting.addButton((b) =>
+        b.setButtonText("Preview").onClick(() => this.plugin.preview(cfg.sound, (snd.master / 100) * (cfg.volume / 100))),
+      );
+    }
   }
 }

@@ -33,6 +33,8 @@ export class XtermSession implements TermLike {
       if (e.type !== "keydown") return true;
       const k = e.key.toLowerCase();
       // Let Obsidian hotkeys (Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+Shift+T) bubble.
+      // Alt+A: jump to next session needing attention.
+      if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && k === "a") return false;
       if (e.ctrlKey && !e.altKey && (k === "tab" || (e.shiftKey && k === "t"))) return false;
       if (e.ctrlKey && !e.altKey && !e.shiftKey && k === "c" && term.hasSelection()) {
         void navigator.clipboard.writeText(term.getSelection());

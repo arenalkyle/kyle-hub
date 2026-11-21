@@ -14,6 +14,10 @@
 .kt-header { display: flex; gap: 4px; padding: 6px; align-items: center; }
 .kt-sidebar.kt-collapsed .kt-header { padding: 6px 2px; justify-content: center; }
 .kt-btn-new { flex: 1; }
+.kt-btn-mute { padding: 4px 6px; background: transparent; box-shadow: none; }
+.kt-btn-mute.is-muted { color: var(--text-faint); }
+.kt-sidebar.kt-collapsed .kt-btn-mute { display: none; }
+.kt-status { color: #ff3b30; font-weight: 600; }
 .kt-btn-collapse { padding: 4px 6px; background: transparent; box-shadow: none; }
 .kt-list { flex: 1; overflow-y: auto; }
 

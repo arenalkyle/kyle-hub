@@ -40,6 +40,7 @@ class ConfirmModal extends Modal {
 export class KyleTermView extends ItemView {
   private mgr: SessionManager | null = null;
   private unsub: (() => void) | null = null;
+  private unsubMute: (() => void) | null = null;
   private ro: ResizeObserver | null = null;
   private sidebar!: HTMLElement;
   private list!: HTMLElement;
@@ -79,6 +80,16 @@ export class KyleTermView extends ItemView {
     newClaude.onclick = () => void this.plugin.newClaude();
     const plus = header.createEl("button", { text: "+", cls: "kt-btn-plus", attr: { "aria-label": "New terminal" } });
     plus.onclick = () => void this.plugin.newShell();
+    const mute = header.createEl("button", { cls: "kt-btn-mute" });
+    mute.onclick = () => this.plugin.setMuted(!settings.sounds.muted);
+    const syncMute = () => {
+      const m = settings.sounds.muted;
+      setIcon(mute, m ? "volume-x" : "volume-2");
+      mute.setAttribute("aria-label", m ? "Unmute sounds" : "Mute sounds");
+      mute.toggleClass("is-muted", m);
+    };
+    syncMute();
+    this.unsubMute = this.plugin.onMuteChange(syncMute);
     const collapse = header.createEl("button", { cls: "kt-btn-collapse", attr: { "aria-label": "Collapse sidebar" } });
     collapse.onclick = () => {
       settings.sidebarCollapsed = !settings.sidebarCollapsed;
@@ -119,6 +130,8 @@ export class KyleTermView extends ItemView {
     // Sessions belong to the plugin: just detach, never kill.
     this.unsub?.();
     this.unsub = null;
+    this.unsubMute?.();
+    this.unsubMute = null;
     this.ro?.disconnect();
     this.ro = null;
     this.area?.empty();

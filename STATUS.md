@@ -14,7 +14,7 @@ Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-1](https://linear.app
 | 1 First terminal | LOCK-2 | In Review |
 | 2 Sessions + sidebar | LOCK-3 | In Review |
 | 3 Hooks + agent state | LOCK-4 | In Review |
-| 4 Sounds + attention | LOCK-5 | Todo |
+| 4 Sounds + attention | LOCK-5 | In Review |
 | 5 Appearance | LOCK-6 | Todo |
 | 6 Vault integration | LOCK-7 | Todo |
 | 7 Persistence | LOCK-8 | Todo |
