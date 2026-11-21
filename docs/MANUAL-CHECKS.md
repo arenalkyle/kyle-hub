@@ -133,3 +133,11 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Clicking a needs-attention row focuses that session.
 - [ ] Optional: `node scripts/cdp-command-center-smoke.mjs` with Obsidian on `--remote-debugging-port=9222` and the module enabled prints PASS (not run unattended).
 - [ ] Note: "running" counts non-exited sessions; runs without an outcome show "running".
+
+## 8.2 Work/home profiles + promote — LOCK-58
+
+- [ ] Settings → kyle-hub → "Profile and promote": set Vault profile to `work`. Launch a ticket whose repo is a `home` repo: refusal notice names both profiles and nothing is spawned.
+- [ ] Set the home vault path. In a work vault, open a `type: lesson` note and run "Promote to home" (needs the brain module on): the diff shows `<repo>` and `<path>` placeholders; confirm writes to the home vault's `Brain/lessons/` (never overwrites; adds `-2`, `-3`); cancel writes nothing.
+- [ ] `kh promote <file> --to <homeVault> --dry-run` changes no files.
+- [ ] In a work vault, "Draft rule" is hidden/refused; command center and retro show only the vault profile's data.
+- [ ] With CDP on port 9222: `npm run smoke:promote` passes (not run unattended).
