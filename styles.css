@@ -437,3 +437,5 @@
 /* LOCK-31 */
 .kt-col-header .kt-col-hide { margin-left: 0; opacity: 0; }
 .kt-col-header:hover .kt-col-hide, .kt-col-hide:focus-visible { opacity: 1; }
+/* LOCK-30 */
+.modal-container > .kt-picker { pointer-events: auto; }

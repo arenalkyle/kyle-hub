@@ -28,6 +28,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
   useEffect(() => {
     const el = host.current;
     if (!el) return;
+    let alive = true;
     const text = (v: EditorView): string => v.state.doc.toString();
     const view = new EditorView({
       parent: el,
@@ -62,7 +63,11 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
             if (u.docChanged) latest.current.onChange?.(text(u.view));
           }),
           EditorView.domEventHandlers({
-            blur: (_e, v) => {
+            blur: (e, v) => {
+              // Ignore blur from a destroyed view (StrictMode remount) or focus moving within the editor/its popups.
+              if (!alive) return;
+              const to = (e as FocusEvent).relatedTarget as Node | null;
+              if (to && v.dom.contains(to)) return;
               latest.current.onBlur?.(text(v));
             },
           }),
@@ -76,6 +81,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       view.dispatch({ selection: { anchor: view.state.doc.length } });
     }
     return () => {
+      alive = false;
       if (ref) ref.current = null;
       view.destroy();
     };

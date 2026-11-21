@@ -1,6 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { matchesQuery } from "../../core/match";
+
+/** Where popovers are portalled; inside an Obsidian modal this is the modal container so the modal keeps them in its focus scope. */
+export const PickerContainerContext = createContext<HTMLElement | null>(null);
 
 export interface PickerProps<T> {
   anchor: HTMLElement | null;
@@ -26,6 +29,9 @@ export function Picker<T>(p: PickerProps<T>) {
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const placed = pos !== null;
+  const container = useContext(PickerContainerContext) ?? document.body;
 
   const filtered = useMemo(
     () => items.filter((i) => matchesQuery(query, ...p.getSearch(i))),
@@ -59,6 +65,17 @@ export function Picker<T>(p: PickerProps<T>) {
     return () => document.removeEventListener("mousedown", onDown, true);
   }, [anchor, onClose]);
 
+  // The popover is rendered hidden until positioned; focus only once it is visible.
+  useEffect(() => {
+    if (placed) inputRef.current?.focus({ preventScroll: true });
+  }, [placed]);
+  // Safety net: if something other than a click elsewhere drops focus to nothing, take it back.
+  const onInputBlur = () => {
+    requestAnimationFrame(() => {
+      const a = document.activeElement;
+      if (ref.current && inputRef.current && (!a || a === document.body)) inputRef.current.focus({ preventScroll: true });
+    });
+  };
   useEffect(() => setActive(0), [query]);
   useEffect(() => {
     listRef.current?.querySelector<HTMLElement>(".kt-picker-row.is-active")?.scrollIntoView({ block: "nearest" });
@@ -136,13 +153,17 @@ export function Picker<T>(p: PickerProps<T>) {
       className="kt-picker"
       style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? "visible" : "hidden" }}
       onKeyDown={onKeyDown}
+      // Portals bubble React events to ancestors (e.g. a root onMouseDown that refocuses itself); keep them out.
+      onMouseDown={(e) => e.stopPropagation()}
+      onFocus={(e) => e.stopPropagation()}
     >
       <input
         className="kt-picker-input"
-        autoFocus
+        ref={inputRef}
         value={query}
         placeholder={p.placeholder ?? "Filter..."}
         onChange={(e) => setQuery(e.target.value)}
+        onBlur={onInputBlur}
       />
       <div className="kt-picker-list" ref={listRef}>
         {rows.length === 0 && <div className="kt-picker-empty">No results</div>}
@@ -150,6 +171,6 @@ export function Picker<T>(p: PickerProps<T>) {
       </div>
       {p.footer}
     </div>,
-    document.body,
+    container,
   );
 }

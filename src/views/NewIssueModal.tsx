@@ -7,6 +7,7 @@ import type { Priority } from "../core/types";
 import type KyleTicketsPlugin from "../main";
 import { PluginContext, usePlugin } from "./PluginContext";
 import { Dot, Icon, PriorityIcon, StatusIcon } from "./components/icons";
+import { PickerContainerContext } from "./components/Picker";
 import { AssigneePicker } from "./components/pickers/AssigneePicker";
 import { DatePicker } from "./components/pickers/DatePicker";
 import { IssuePicker } from "./components/pickers/IssuePicker";
@@ -270,7 +271,9 @@ export class NewIssueModal extends Modal {
     this.root.render(
       <StrictMode>
         <PluginContext.Provider value={this.plugin}>
-          <NewIssueForm defaults={this.defaults} close={() => this.close()} />
+          <PickerContainerContext.Provider value={this.containerEl}>
+            <NewIssueForm defaults={this.defaults} close={() => this.close()} />
+          </PickerContainerContext.Provider>
         </PluginContext.Provider>
       </StrictMode>,
     );
