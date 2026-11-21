@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Linear-style issue tracker over Markdown files for Obsidian",
   "private": true,
+  "bin": { "kt": "cli/kt.js" },
   "license": "MIT",
   "scripts": {
     "build": "tsc --noEmit && node esbuild.config.mjs",

@@ -44,6 +44,20 @@ const options = {
     : [],
 };
 
+/** @type {import('esbuild').BuildOptions} */
+const cliOptions = {
+  entryPoints: ["cli/kt.ts"],
+  bundle: true,
+  format: "cjs",
+  platform: "node",
+  target: "node18",
+  outfile: "cli/kt.js",
+  banner: { js: "#!/usr/bin/env node" },
+  logLevel: "info",
+};
+
+await esbuild.build(cliOptions);
+
 if (watch) {
   const ctx = await esbuild.context(options);
   await ctx.watch();
