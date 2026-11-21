@@ -39,3 +39,13 @@ Things that need a person using Obsidian. Agents ran the automated checks (`npm 
 7. Run `claude` in Windows Terminal: works normally, no errors.
 8. A non-Claude CLI ringing the bell shows needs-input; a hookless session going quiet after typed input shows finished after the idle timeout (default 10 s).
 9. Run **kyle-term: Uninstall hooks**: only kyle-term's entries are gone.
+
+## Phase 4 — Sounds + attention (LOCK-5)
+
+1. Settings → preview each built-in tone (Chime, Ping, Bell, Pulse) and a vault audio file at different master/event volumes (preview plays even when muted, by design).
+2. Start a Claude session, switch to a note, trigger a permission prompt: urgent sound plays; status bar shows "⚠ 1 need you"; hover shows the title.
+3. Press Alt+A from a note, from inside a terminal, and with the kyle-term tab closed: it jumps to the waiting session and the status bar clears. (If Alt+A clashes, rebind under Hotkeys.)
+4. Let a turn finish while on a note: soft sound.
+5. Stay on the session while it finishes: no sound.
+6. Sidebar mute button, the mute setting and "Toggle mute" stay in sync, and survive an Obsidian restart.
+7. Set a vault sound to a missing path: Chime plays and a notice appears once.
