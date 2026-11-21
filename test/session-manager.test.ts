@@ -206,3 +206,87 @@ describe("dispose", () => {
     expect(m.list()).toHaveLength(0);
   });
 });
+
+describe("agent state integration", () => {
+  const hook = (id: string, event: string, payload: Record<string, unknown> = {}) => m.handleHook(id, event, payload);
+
+  it("gives every PTY session id and hook env", () => {
+    const m2 = new SessionManager({
+      pty, profiles: () => profiles, now: () => clock,
+      makeTerm: (h) => new MockTerm(h),
+      env: () => ({ KYLE_TERM_PORT: "123", KYLE_TERM_TOKEN: "tok" }),
+    });
+    const s = m2.create({ kind: "shell", profileId: "powershell", cwd: "x" });
+    expect(pty.spawned.at(-1)!.opts.env).toEqual({ KYLE_TERM_PORT: "123", KYLE_TERM_TOKEN: "tok", KYLE_TERM_SESSION: s.id });
+  });
+  it("hook events drive state, title and state-change listeners", () => {
+    const s = shell();
+    const seen: string[] = [];
+    m.onStateChange((_s, a, b) => seen.push(`${a}>${b}`));
+    hook(s.id, "UserPromptSubmit", { prompt: "fix   the\nbug" });
+    expect(s.agent.state).toBe("working");
+    expect(m.title(s)).toBe("fix the bug");
+    hook(s.id, "Stop");
+    expect(seen).toEqual(["idle>working", "working>finished"]);
+  });
+  it("title priority keeps manual and osc above the first prompt", () => {
+    const s = shell();
+    hook(s.id, "UserPromptSubmit", { prompt: "hello" });
+    terms[0]!.h.onTitle("Task");
+    expect(m.title(s)).toBe("Task");
+    m.rename(s.id, "Mine");
+    expect(m.title(s)).toBe("Mine");
+  });
+  it("long first prompts are shortened", () => {
+    const s = shell();
+    hook(s.id, "UserPromptSubmit", { prompt: "x".repeat(200) });
+    expect(m.title(s).length).toBeLessThanOrEqual(60);
+  });
+  it("viewing a session clears finished", () => {
+    const a = shell();
+    const b = shell();
+    hook(a.id, "Stop");
+    expect(a.agent.state).toBe("finished");
+    m.setActive(a.id);
+    expect(a.agent.state).toBe("idle");
+    expect(b.agent.state).toBe("idle");
+  });
+  it("process exit overrides state", () => {
+    const s = shell();
+    hook(s.id, "UserPromptSubmit");
+    pty.listeners.get("p1")!.onExit(0);
+    expect(s.agent.state).toBe("exited");
+  });
+  it("activity-only updates are throttled", () => {
+    const s = shell();
+    let n = 0;
+    m.onChange(() => n++);
+    for (let i = 0; i < 10; i++) hook(s.id, "PreToolUse", { tool_name: "Bash", tool_input: { command: `c${i}` } });
+    expect(n).toBe(1); // first call changed state; the rest only changed activity
+    vi.advanceTimersByTime(400);
+    expect(n).toBe(2);
+    expect(s.agent.activity).toBe("Running c9");
+  });
+  it("bell and idle fallback apply only to never-hooked sessions", () => {
+    const s = shell();
+    terms[0]!.h.onBell();
+    expect(s.agent.state).toBe("needs-input");
+    terms[0]!.h.onInput("y");
+    pty.listeners.get("p1")!.onData("output");
+    expect(s.agent.state).toBe("working");
+    vi.advanceTimersByTime(10_001);
+    expect(s.agent.state).toBe("finished");
+    const h = shell();
+    hook(h.id, "SessionStart", { session_id: "c1" });
+    terms[1]!.h.onBell();
+    expect(h.agent.state).toBe("idle");
+    expect(h.agent.claudeSessionId).toBe("c1");
+  });
+  it("restart resets agent state", () => {
+    const s = shell();
+    hook(s.id, "Stop");
+    m.restart(s.id);
+    expect(s.agent.state).toBe("idle");
+    expect(s.agent.hasHookEvents).toBe(false);
+  });
+});

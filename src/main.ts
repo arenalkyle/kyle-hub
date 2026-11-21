@@ -1,5 +1,8 @@
 import { FileSystemAdapter, Notice, Plugin } from "obsidian";
 import path from "node:path";
+import os from "node:os";
+import { applyToFile } from "./hook-installer";
+import { HookServer } from "./hook-server";
 import xtermCss from "@xterm/xterm/css/xterm.css";
 import { PtyManager } from "./pty-manager";
 import { resolveNode } from "./node-path";
@@ -15,11 +18,21 @@ export default class KyleTermPlugin extends Plugin {
   private pty: PtyManager | null = null;
   private sessions: SessionManager | null = null;
   private styleEl: HTMLStyleElement | null = null;
+  private hookServer: HookServer | null = null;
+  private hookEnv: Record<string, string> = {};
 
   override async onload(): Promise<void> {
     await this.loadSettings();
     this.profiles = detectProfiles();
     this.styleEl = document.head.createEl("style", { text: xtermCss });
+    const server = new HookServer((m) => this.sessions?.handleHook(m.session, m.event, m.payload));
+    try {
+      await server.start();
+      this.hookServer = server;
+      this.hookEnv = { KYLE_TERM_PORT: String(server.port), KYLE_TERM_TOKEN: server.token };
+    } catch (e) {
+      console.error("[kyle-term] hook server failed to start", e);
+    }
     this.registerView(VIEW_TYPE, (leaf) => new KyleTermView(leaf, this));
     this.addRibbonIcon("terminal", "Open kyle-term", () => void this.activateView());
     this.addCommand({ id: "open", name: "Open terminal", callback: () => void this.activateView() });
@@ -42,10 +55,14 @@ export default class KyleTermPlugin extends Plugin {
       hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "Tab" }],
       callback: () => this.sessions?.prev(),
     });
+    this.addCommand({ id: "install-hooks", name: "Install hooks", callback: () => this.hooks("install") });
+    this.addCommand({ id: "uninstall-hooks", name: "Uninstall hooks", callback: () => this.hooks("uninstall") });
     this.addSettingTab(new KyleTermSettingTab(this.app, this));
   }
 
   override onunload(): void {
+    this.hookServer?.stop();
+    this.hookServer = null;
     this.sessions?.dispose();
     this.sessions = null;
     this.pty?.dispose();
@@ -89,8 +106,16 @@ export default class KyleTermPlugin extends Plugin {
       pty,
       makeTerm: (h) => new XtermSession(h),
       profiles: () => this.profiles,
+      env: () => this.hookEnv,
+      idleMs: () => this.settings.idleSeconds * 1000,
     });
     return this.sessions;
+  }
+
+  private hooks(mode: "install" | "uninstall"): void {
+    const script = path.join(this.vaultRoot(), this.manifest.dir ?? "", "hooks", "kyle-hook.js");
+    const r = applyToFile(path.join(os.homedir(), ".claude", "settings.json"), mode, script);
+    new Notice(`kyle-term: ${r.message}`, r.ok ? 6000 : 12000);
   }
 
   async newShell(reveal = false): Promise<void> {

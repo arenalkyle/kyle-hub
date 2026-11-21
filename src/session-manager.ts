@@ -1,5 +1,6 @@
 import type { ShellProfile } from "./shells";
 import { resolveTitle } from "./title";
+import { initialAgent, reduceAgent, SUBAGENT_FADE_MS, type AgentEvent, type AgentInfo, type AgentState } from "./agent-state";
 import type { SessionListener, SpawnOptions } from "./pty-manager";
 
 export type SessionKind = "claude" | "shell";
@@ -16,6 +17,7 @@ export interface Session {
   status: "running" | "exited";
   exitCode?: number;
   lastOutputAt: number;
+  agent: AgentInfo;
 }
 
 export interface PtyLike {
@@ -29,6 +31,7 @@ export interface TermHandlers {
   onInput(data: string): void;
   onResize(cols: number, rows: number): void;
   onTitle(title: string): void;
+  onBell(): void;
 }
 
 export interface TermLike {
@@ -50,6 +53,10 @@ export interface SessionManagerDeps {
   profiles: () => ShellProfile[];
   now?: () => number;
   uuid?: () => string;
+  /** Extra env for each PTY (hook server port/token); session id is added automatically. */
+  env?: () => Record<string, string>;
+  /** Quiet period before a never-hooked session is treated as finished. */
+  idleMs?: () => number;
 }
 
 export interface CreateOptions {
@@ -64,18 +71,27 @@ interface Runtime {
   ptyId: string | null;
   gen: number;
   cmdSent: boolean;
+  inputSeen: boolean;
+  idleTimer?: ReturnType<typeof setTimeout>;
   quietTimer?: ReturnType<typeof setTimeout>;
   fallbackTimer?: ReturnType<typeof setTimeout>;
 }
 
 const QUIET_MS = 400;
 const FALLBACK_MS = 5000;
+const ACTIVITY_THROTTLE_MS = 300;
+const TITLE_MAX = 60;
+
+export type StateListener = (s: Session, prev: AgentState, next: AgentState) => void;
 
 /** Plugin-owned session state; sessions (and their terminals) outlive any view. */
 export class SessionManager {
   private sessions: Session[] = [];
   private rt = new Map<string, Runtime>();
   private listeners = new Set<() => void>();
+  private stateListeners = new Set<StateListener>();
+  private soon?: ReturnType<typeof setTimeout>;
+  private fade?: ReturnType<typeof setTimeout>;
   private activeId: string | null = null;
   private now: () => number;
   private uuid: () => string;
@@ -92,6 +108,42 @@ export class SessionManager {
   }
   private emit(): void { for (const l of this.listeners) l(); }
 
+  /** Phase 4 hook point: fires whenever a session's agent state changes. */
+  onStateChange(cb: StateListener): () => void {
+    this.stateListeners.add(cb);
+    return () => this.stateListeners.delete(cb);
+  }
+
+  private emitSoon(): void {
+    if (this.soon) return;
+    this.soon = setTimeout(() => { this.soon = undefined; this.emit(); }, ACTIVITY_THROTTLE_MS);
+  }
+
+  private dispatch(s: Session, ev: AgentEvent): void {
+    const prev = s.agent;
+    const next = reduceAgent(prev, ev);
+    if (next === prev) return;
+    s.agent = next;
+    if (next.state !== prev.state) {
+      for (const l of this.stateListeners) l(s, prev.state, next.state);
+    }
+    const onlyActivity =
+      next.state === prev.state && next.subAgents === prev.subAgents && next.firstPrompt === prev.firstPrompt &&
+      next.claudeSessionId === prev.claudeSessionId && next.hasHookEvents === prev.hasHookEvents;
+    if (onlyActivity) this.emitSoon(); else this.emit();
+    if (next.subAgents.some((a) => a.status === "done")) {
+      if (this.fade) clearTimeout(this.fade);
+      this.fade = setTimeout(() => { this.fade = undefined; this.emit(); }, SUBAGENT_FADE_MS + 100);
+    }
+  }
+
+  /** Entry point for events posted by hooks/kyle-hook.js. */
+  handleHook(sessionId: string, event: string, payload: Record<string, unknown>): void {
+    const s = this.get(sessionId);
+    if (!s) return;
+    this.dispatch(s, { type: "hook", event, payload, at: this.now() });
+  }
+
   list(): readonly Session[] { return this.sessions; }
   get(id: string): Session | undefined { return this.sessions.find((s) => s.id === id); }
   get active(): Session | undefined { return this.activeId ? this.get(this.activeId) : undefined; }
@@ -103,20 +155,28 @@ export class SessionManager {
   }
 
   title(s: Session): string {
-    return resolveTitle({ manual: s.manualTitle, osc: s.oscTitle, profileName: this.profile(s.profileId).name });
+    const fp = s.agent.firstPrompt?.replace(/\s+/g, " ").trim();
+    const firstPrompt = fp && fp.length > TITLE_MAX ? `${fp.slice(0, TITLE_MAX - 1)}…` : fp;
+    return resolveTitle({ manual: s.manualTitle, osc: s.oscTitle, firstPrompt, profileName: this.profile(s.profileId).name });
   }
 
   create(opts: CreateOptions): Session {
     const id = `${this.uuid()}-${this.seq++}`;
     const s: Session = {
       id, kind: opts.kind, profileId: opts.profileId, cwd: opts.cwd, command: opts.command,
-      status: "running", lastOutputAt: this.now(),
+      status: "running", lastOutputAt: this.now(), agent: initialAgent(),
     };
-    const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true };
+    const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true, inputSeen: false };
     rt.term = this.deps.makeTerm({
-      onInput: (d) => { if (rt.ptyId && s.status === "running") this.deps.pty.write(rt.ptyId, d); },
+      onInput: (d) => {
+        if (!rt.ptyId || s.status !== "running") return;
+        rt.inputSeen = true;
+        if (!s.agent.hasHookEvents) this.dispatch(s, { type: "viewed" });
+        this.deps.pty.write(rt.ptyId, d);
+      },
       onResize: (c, r) => { if (rt.ptyId && s.status === "running") this.deps.pty.resize(rt.ptyId, c, r); },
       onTitle: (t) => { s.oscTitle = t; this.emit(); },
+      onBell: () => { if (s.status === "running") this.dispatch(s, { type: "bell" }); },
     });
     this.sessions.push(s);
     this.rt.set(id, rt);
@@ -131,23 +191,30 @@ export class SessionManager {
     const gen = ++rt.gen;
     s.status = "running";
     delete s.exitCode;
+    s.agent = initialAgent();
+    rt.inputSeen = false;
     s.lastOutputAt = this.now();
     rt.cmdSent = !(s.kind === "claude" && s.command);
     this.clearTimers(rt);
     rt.ptyId = this.deps.pty.spawnSession(
-      { shell: p.shell, args: p.args, cwd: s.cwd, cols: rt.term.cols, rows: rt.term.rows },
+      {
+        shell: p.shell, args: p.args, cwd: s.cwd, cols: rt.term.cols, rows: rt.term.rows,
+        env: { ...this.deps.env?.(), KYLE_TERM_SESSION: s.id },
+      },
       {
         onData: (d) => {
           if (rt.gen !== gen) return;
           s.lastOutputAt = this.now();
           rt.term.write(d);
           this.armCommand(s, rt);
+          this.armIdle(s, rt);
         },
         onExit: (code) => {
           if (rt.gen !== gen) return;
           this.clearTimers(rt);
           s.status = "exited";
           s.exitCode = code;
+          this.dispatch(s, { type: "exit" });
           rt.term.write(`\r\n[process exited with code ${code}]\r\n`);
           this.emit();
         },
@@ -170,15 +237,27 @@ export class SessionManager {
     this.deps.pty.write(rt.ptyId, `${s.command}\r`);
   }
 
+  /** Fallback for CLIs without hooks: output after user input means busy; quiet means finished. */
+  private armIdle(s: Session, rt: Runtime): void {
+    if (s.agent.hasHookEvents || !rt.inputSeen) return;
+    this.dispatch(s, { type: "output" });
+    if (rt.idleTimer) clearTimeout(rt.idleTimer);
+    rt.idleTimer = setTimeout(() => this.dispatch(s, { type: "idle" }), this.deps.idleMs?.() ?? 10_000);
+  }
+
   private clearTimers(rt: Runtime): void {
+    if (rt.idleTimer) clearTimeout(rt.idleTimer);
+    rt.idleTimer = undefined;
     if (rt.quietTimer) clearTimeout(rt.quietTimer);
     if (rt.fallbackTimer) clearTimeout(rt.fallbackTimer);
     rt.quietTimer = rt.fallbackTimer = undefined;
   }
 
   setActive(id: string): void {
-    if (!this.get(id) || this.activeId === id) return;
+    const s = this.get(id);
+    if (!s || this.activeId === id) return;
     this.activeId = id;
+    this.dispatch(s, { type: "viewed" });
     this.emit();
   }
 
@@ -258,8 +337,11 @@ export class SessionManager {
       rt.term.dispose();
       this.rt.delete(id);
     }
+    if (this.soon) clearTimeout(this.soon);
+    if (this.fade) clearTimeout(this.fade);
     this.sessions = [];
     this.activeId = null;
     this.listeners.clear();
+    this.stateListeners.clear();
   }
 }

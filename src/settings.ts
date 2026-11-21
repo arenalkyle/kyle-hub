@@ -7,6 +7,8 @@ export interface KyleTermSettings {
   /** Empty = vault root. */
   claudeStartFolder: string;
   claudeCommand: string;
+  /** Seconds of quiet before a non-hook CLI session shows "finished". */
+  idleSeconds: number;
   sidebarWidth: number;
   sidebarCollapsed: boolean;
 }
@@ -16,6 +18,7 @@ export const DEFAULT_SETTINGS: KyleTermSettings = {
   defaultProfile: "powershell",
   claudeStartFolder: "",
   claudeCommand: "claude",
+  idleSeconds: 10,
   sidebarWidth: 240,
   sidebarCollapsed: false,
 };
@@ -64,6 +67,16 @@ export class KyleTermSettingTab extends PluginSettingTab {
       .addText((t) =>
         t.setPlaceholder("claude").setValue(s.claudeCommand).onChange(async (v) => {
           s.claudeCommand = v.trim() || "claude";
+          await this.plugin.saveSettings();
+        }),
+      );
+    new Setting(el)
+      .setName("Idle timeout (seconds)")
+      .setDesc("For CLIs without hooks (Codex, Gemini, Aider): quiet this long after output shows finished.")
+      .addText((t) =>
+        t.setPlaceholder("10").setValue(String(s.idleSeconds)).onChange(async (v) => {
+          const n = Number(v);
+          s.idleSeconds = Number.isFinite(n) && n >= 1 ? n : DEFAULT_SETTINGS.idleSeconds;
           await this.plugin.saveSettings();
         }),
       );

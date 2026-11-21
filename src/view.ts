@@ -2,6 +2,15 @@ import { ItemView, Menu, Modal, Notice, setIcon, type WorkspaceLeaf } from "obsi
 import type KyleTermPlugin from "./main";
 import type { Session, SessionManager } from "./session-manager";
 import { formatAge } from "./title";
+import { runningCount, SUBAGENT_FADE_MS, type AgentState } from "./agent-state";
+
+const STATE_LABEL: Record<AgentState, string> = {
+  idle: "Idle",
+  working: "Working",
+  "needs-input": "Needs input",
+  finished: "Finished",
+  exited: "Exited",
+};
 
 export const VIEW_TYPE = "kyle-term-view";
 
@@ -38,6 +47,7 @@ export class KyleTermView extends ItemView {
   private mountedId: string | null = null;
   private renamingId: string | null = null;
   private dragId: string | null = null;
+  private subsClosed = new Set<string>();
 
   constructor(leaf: WorkspaceLeaf, private plugin: KyleTermPlugin) {
     super(leaf);
@@ -159,13 +169,33 @@ export class KyleTermView extends ItemView {
       const main = row.createDiv({ cls: "kt-main" });
 
       const top = main.createDiv({ cls: "kt-top" });
-      top.createDiv({ cls: "kt-slot kt-slot-light" }); // Phase 3: status light
+      const state = s.status === "exited" ? "exited" : s.agent.state;
+      top.createDiv({ cls: `kt-light kt-light-${state}`, attr: { "aria-label": STATE_LABEL[state], title: STATE_LABEL[state] } });
       const title = top.createDiv({ cls: "kt-title", text: mgr.title(s) });
       if (s.manualTitle) setIcon(top.createDiv({ cls: "kt-pin", attr: { "aria-label": "Named manually" } }), "pin");
-      top.createDiv({ cls: "kt-slot kt-slot-count" }); // Phase 3: sub-agent count
+      const subs = s.agent.subAgents.filter((a) => a.status === "running" || now - (a.endedAt ?? now) < SUBAGENT_FADE_MS);
+      const running = runningCount(s.agent);
+      if (subs.length > 0) {
+        const badge = top.createSpan({ cls: "kt-count", text: `⚙ ${running}`, attr: { "aria-label": "Sub-agents (click to collapse)" } });
+        badge.onclick = (e) => {
+          e.stopPropagation();
+          if (!this.subsClosed.delete(s.id)) this.subsClosed.add(s.id);
+          this.renderList();
+        };
+      }
       top.createDiv({ cls: "kt-age", text: formatAge(now - s.lastOutputAt) });
-      main.createDiv({ cls: "kt-slot kt-slot-activity" }); // Phase 3: activity line
-      main.createDiv({ cls: "kt-slot kt-slot-subagents" }); // Phase 3: sub-agent list
+      if (s.status === "running" && s.agent.activity && (state === "working" || state === "needs-input")) {
+        main.createDiv({ cls: "kt-activity", text: s.agent.activity });
+      }
+      if (subs.length > 0 && !this.subsClosed.has(s.id)) {
+        const ul = main.createDiv({ cls: "kt-subs" });
+        for (const a of subs) {
+          const line = ul.createDiv({ cls: `kt-sub is-${a.status}` });
+          if (a.status === "done") line.style.animationDelay = `${SUBAGENT_FADE_MS * 0.7 - (now - (a.endedAt ?? now))}ms`;
+          line.createSpan({ cls: "kt-sub-mark", text: a.status === "done" ? "✓" : "" });
+          line.createSpan({ cls: "kt-sub-text", text: [a.type, a.description].filter(Boolean).join(": ") || "sub-agent" });
+        }
+      }
 
       if (s.status === "exited") {
         const ex = main.createDiv({ cls: "kt-exit" });

@@ -23,6 +23,7 @@ export class XtermSession implements TermLike {
     term.onData(h.onInput);
     term.onResize(({ cols, rows }) => h.onResize(cols, rows));
     term.onTitleChange(h.onTitle);
+    term.onBell(h.onBell);
     this.el.className = "kyle-term-term";
     this.el.addEventListener("contextmenu", (e) => {
       e.preventDefault();
