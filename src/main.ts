@@ -1,5 +1,6 @@
-import { Notice, Plugin } from "obsidian";
+import { Notice, Plugin, TFile } from "obsidian";
 import { defaultSettings } from "./core/defaults";
+import type { Settings } from "./core/types";
 import { mergeData, type PluginData } from "./data";
 import { KyleTicketsSettingTab } from "./settings/SettingsTab";
 import { SetupModal } from "./settings/SetupModal";
@@ -39,6 +40,30 @@ export default class KyleTicketsPlugin extends Plugin {
   override onunload(): void {
     this.store.stop();
     // Views, commands, ribbon icons and the settings tab are cleaned up by Plugin.
+  }
+
+  private readonly settingsListeners = new Set<() => void>();
+
+  /** Subscribe to settings changes made through `updateSettings`. */
+  onSettingsChange(cb: () => void): () => void {
+    this.settingsListeners.add(cb);
+    return () => {
+      this.settingsListeners.delete(cb);
+    };
+  }
+
+  /** Replaces `data.settings` with a new object (so memoized views re-render), saves and notifies. */
+  async updateSettings(patch: Partial<Settings>): Promise<void> {
+    this.data.settings = { ...this.data.settings, ...patch };
+    for (const l of [...this.settingsListeners]) l();
+    await this.savePluginData();
+  }
+
+  /** Opens an issue's file (in a new tab or the current leaf). */
+  openIssue(id: string, newTab = false): void {
+    const path = this.store.pathOf(id);
+    const f = path ? this.app.vault.getAbstractFileByPath(path) : null;
+    if (f instanceof TFile) void this.app.workspace.getLeaf(newTab ? "tab" : false).openFile(f);
   }
 
   async savePluginData(): Promise<void> {

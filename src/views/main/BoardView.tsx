@@ -29,6 +29,7 @@ export interface BoardViewProps {
   /** Issues as currently displayed (including optimistic changes), for lookups. */
   issues: readonly Issue[];
   project?: string;
+  selectedId: string | null;
   collapsed: ReadonlySet<string>;
   onToggleGroup: (key: string) => void;
   /** Applies the moves optimistically and writes them via the store. */
@@ -51,7 +52,7 @@ function laneRank(display: DisplayState, leaf: string, statusOrder: ReadonlyMap<
   return leaf.startsWith("none:") || leaf === OTHER_GROUP_KEY ? 1e6 : 0;
 }
 
-export function BoardView({ groups, display, subCounts, issues, project, collapsed, onToggleGroup, onMove }: BoardViewProps) {
+export function BoardView({ groups, display, subCounts, issues, project, selectedId, collapsed, onToggleGroup, onMove }: BoardViewProps) {
   const plugin = usePlugin();
   const { settings } = plugin.data;
   const manual = display.orderBy === "manual";
@@ -187,6 +188,7 @@ export function BoardView({ groups, display, subCounts, issues, project, collaps
       settings={settings}
       properties={display.properties}
       subCounts={subCounts}
+      selectedId={selectedId}
       onOpen={open}
       scroll={scroll}
     />

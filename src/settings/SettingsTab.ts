@@ -1,4 +1,9 @@
 import { Modal, Notice, PluginSettingTab, Setting, type App } from "obsidian";
+import { createElement, StrictMode, type ReactElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { PluginContext } from "../views/PluginContext";
+import { LabelsEditor } from "./LabelsEditor";
+import { StatusesEditor } from "./StatusesEditor";
 import type KyleTicketsPlugin from "../main";
 import { FolderSuggest } from "./SetupModal";
 import { normalizeFolder, validateFolder, validatePrefix } from "./validate";
@@ -34,6 +39,8 @@ class ConfirmModal extends Modal {
 }
 
 export class KyleTicketsSettingTab extends PluginSettingTab {
+  private roots: Root[] = [];
+
   constructor(
     app: App,
     private readonly plugin: KyleTicketsPlugin,
@@ -43,6 +50,7 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
 
   override display(): void {
     const { containerEl } = this;
+    this.unmount();
     containerEl.empty();
     const s = this.plugin.data.settings;
 
@@ -54,8 +62,8 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
           const folder = normalizeFolder(x);
           const err = validateFolder(folder);
           t.inputEl.toggleClass("kt-invalid", err !== null);
-          if (err || folder === s.folder) return;
-          s.folder = folder;
+          if (err || folder === this.plugin.data.settings.folder) return;
+          this.plugin.data.settings.folder = folder;
           await this.plugin.savePluginData();
         });
         t.inputEl.addEventListener("blur", () => void this.offerStructure());
@@ -70,7 +78,7 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
           const err = validatePrefix(x);
           t.inputEl.toggleClass("kt-invalid", err !== null);
           if (err) return;
-          s.prefix = x;
+          this.plugin.data.settings.prefix = x;
           await this.plugin.savePluginData();
         }),
       );
@@ -80,10 +88,32 @@ export class KyleTicketsSettingTab extends PluginSettingTab {
       .setDesc("Default @author for comments and activity.")
       .addText((t) =>
         t.setValue(s.displayName).onChange(async (x) => {
-          s.displayName = x.trim() || "kyle";
+          this.plugin.data.settings.displayName = x.trim() || "kyle";
           await this.plugin.savePluginData();
         }),
       );
+
+    this.mountEditor("Statuses", "Drag to reorder. Renaming or deleting rewrites every issue that uses the status.", StatusesEditor);
+    this.mountEditor("Labels", "Every label used by an issue. Renaming or deleting rewrites those issues.", LabelsEditor);
+  }
+
+  override hide(): void {
+    this.unmount();
+  }
+
+  private unmount(): void {
+    for (const r of this.roots) r.unmount();
+    this.roots = [];
+  }
+
+  private mountEditor(name: string, desc: string, component: () => ReactElement): void {
+    const { containerEl } = this;
+    new Setting(containerEl).setName(name).setDesc(desc).setHeading();
+    const root = createRoot(containerEl.createDiv({ cls: "kt-set-host" }));
+    this.roots.push(root);
+    root.render(
+      createElement(StrictMode, null, createElement(PluginContext.Provider, { value: this.plugin }, createElement(component))),
+    );
   }
 
   private async offerStructure(): Promise<void> {

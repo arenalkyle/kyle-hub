@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DisplayState } from "../../core/display";
 import { setFilterValues, type Filter, type FilterField } from "../../core/filters";
 import { Icon } from "../components/icons";
@@ -16,12 +16,21 @@ export interface HeaderProps {
   onDisplayReset: () => void;
   filters: readonly Filter[];
   onFiltersChange: (next: Filter[]) => void;
+  /** Increment to open the filter menu (the `F` shortcut). */
+  filterSignal?: number;
 }
 
-export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewIssue, display, onDisplayChange, onDisplayReset, filters, onFiltersChange }: HeaderProps) {
+export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewIssue, display, onDisplayChange, onDisplayReset, filters, onFiltersChange, filterSignal = 0 }: HeaderProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [filterField, setFilterField] = useState<FilterField | null>(null);
+  const filterBtn = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (filterSignal > 0 && filterBtn.current) {
+      setFilterField(null);
+      setFilterAnchor(filterBtn.current);
+    }
+  }, [filterSignal]);
   const closeFilter = () => {
     setFilterAnchor(null);
     setFilterField(null);
@@ -49,6 +58,7 @@ export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewI
       </div>
       <button
         type="button"
+        ref={filterBtn}
         className="kt-header-btn"
         onClick={(e) => (filterAnchor ? closeFilter() : setFilterAnchor(e.currentTarget))}
       >

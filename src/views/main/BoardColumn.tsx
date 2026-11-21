@@ -27,10 +27,11 @@ interface SortableCardProps {
   settings: Settings;
   properties: Record<PropKey, boolean>;
   subCount?: number;
+  selected: boolean;
   onOpen: (issue: Issue, newTab: boolean) => void;
 }
 
-const SortableCard = memo(function SortableCard({ issue, cell, settings, properties, subCount, onOpen }: SortableCardProps) {
+const SortableCard = memo(function SortableCard({ issue, cell, settings, properties, subCount, selected, onOpen }: SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: itemId(issue.id, cell.id),
     data: { type: "card", issueId: issue.id, cellId: cell.id },
@@ -38,7 +39,8 @@ const SortableCard = memo(function SortableCard({ issue, cell, settings, propert
   return (
     <div
       ref={setNodeRef}
-      className={`kt-card${isDragging ? " is-dragging" : ""}`}
+      className={`kt-card${isDragging ? " is-dragging" : ""}${selected ? " is-selected" : ""}`}
+      data-kt-id={issue.id}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
@@ -56,20 +58,21 @@ export interface BoardCellViewProps {
   settings: Settings;
   properties: Record<PropKey, boolean>;
   subCounts: ReadonlyMap<string, number>;
+  selectedId: string | null;
   onOpen: (issue: Issue, newTab: boolean) => void;
   /** Own scrollbar (no swimlanes) or grows with its content (swimlanes). */
   scroll: boolean;
 }
 
 export const BoardCellView = memo(function BoardCellView({
-  cell, manual, isOver, settings, properties, subCounts, onOpen, scroll,
+  cell, manual, isOver, settings, properties, subCounts, selectedId, onOpen, scroll,
 }: BoardCellViewProps) {
   const { setNodeRef } = useDroppable({ id: cell.id, data: { type: "cell", cellId: cell.id } });
   return (
     <div ref={setNodeRef} className={`kt-cell${scroll ? " is-scroll" : ""}${isOver ? " is-over" : ""}`}>
       <SortableContext items={cell.issues.map((i) => itemId(i.id, cell.id))} strategy={manual ? verticalListSortingStrategy : noMove}>
         {cell.issues.map((i) => (
-          <SortableCard key={i.id} issue={i} cell={cell} settings={settings} properties={properties} subCount={subCounts.get(i.id)} onOpen={onOpen} />
+          <SortableCard key={i.id} issue={i} cell={cell} settings={settings} properties={properties} subCount={subCounts.get(i.id)} selected={i.id === selectedId} onOpen={onOpen} />
         ))}
       </SortableContext>
     </div>

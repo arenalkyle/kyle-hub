@@ -14,13 +14,14 @@ export interface IssueRowProps {
   subCount?: number;
   /** Indented under a sub-group header. */
   sub?: boolean;
+  selected?: boolean;
   onOpen: (issue: Issue, newTab: boolean) => void;
   onStatus: (issue: Issue, anchor: HTMLElement) => void;
   onPriority: (issue: Issue, anchor: HTMLElement) => void;
 }
 
 export const IssueRow = memo(function IssueRow({
-  issue, settings, properties: p, subCount, sub, onOpen, onStatus, onPriority,
+  issue, settings, properties: p, subCount, sub, selected, onOpen, onStatus, onPriority,
 }: IssueRowProps) {
   const def = settings.statuses.find((s) => s.name === issue.status);
   const stop = (fn: (anchor: HTMLElement) => void) => (e: MouseEvent<HTMLButtonElement>) => {
@@ -28,7 +29,7 @@ export const IssueRow = memo(function IssueRow({
     fn(e.currentTarget);
   };
   return (
-    <div className={`kt-row${sub ? " is-sub" : ""}`} onClick={(e) => onOpen(issue, e.ctrlKey || e.metaKey)}>
+    <div className={`kt-row${sub ? " is-sub" : ""}${selected ? " is-selected" : ""}`} data-kt-id={issue.id} onClick={(e) => onOpen(issue, e.ctrlKey || e.metaKey)}>
       {p.priority ? (
         <button type="button" className="kt-row-btn" title="Priority" onClick={stop((a) => onPriority(issue, a))}>
           <PriorityIcon priority={issue.priority} />

@@ -98,6 +98,25 @@ describe("IssueStore", () => {
     expect(store.getIssue("TIX-1")!.status).toBe("Todo");
   });
 
+  it("bulkUpdate writes matching issues sequentially, one event each, with progress", async () => {
+    const { store, vault } = setup();
+    await store.start();
+    for (const t of ["A", "B", "C"]) await store.createIssue({ title: t, tags: t === "C" ? [] : ["bug"] });
+    const progress: Array<[number, number]> = [];
+    const n = await store.bulkUpdate(
+      (i) => i.tags.includes("bug"),
+      (i) => ({ tags: i.tags.map((t) => (t === "bug" ? "defect" : t)) }),
+      { onProgress: (d, t) => progress.push([d, t]) },
+    );
+    expect(n).toBe(2);
+    expect(progress).toEqual([[0, 2], [1, 2], [2, 2]]);
+    expect(store.getIssue("TIX-1")!.tags).toEqual(["defect"]);
+    expect(store.getIssue("TIX-3")!.tags).toEqual([]);
+    expect(vault.files.get("Tickets/Issues/TIX-1.md")!.match(/bug → defect|defect/g)!.length).toBeGreaterThan(0);
+    expect(await store.bulkUpdate((i) => i.status === "Backlog", { status: "Todo" })).toBe(3);
+    expect(vault.files.get("Tickets/Issues/TIX-2.md")!.match(/set status: Backlog → Todo/g)).toHaveLength(1);
+  });
+
   it("appends an @external event for raw frontmatter edits, once", async () => {
     const { store, vault } = setup();
     await store.start();

@@ -161,6 +161,9 @@
   height: 100%; padding: 0 var(--size-4-4); border-bottom: 1px solid var(--background-modifier-border); cursor: pointer;
 }
 .kt-row:hover { background: var(--background-modifier-hover); }
+.kt-main:focus { outline: none; }
+.kt-row.is-selected { background: var(--background-modifier-active-hover); box-shadow: inset 2px 0 0 var(--interactive-accent); }
+.kt-card.is-selected { border-color: var(--interactive-accent); box-shadow: 0 0 0 1px var(--interactive-accent); }
 .kt-row-btn { display: inline-flex; align-items: center; justify-content: center; padding: 2px; background: transparent; border: 0; box-shadow: none; cursor: pointer; }
 .kt-row-id { color: var(--text-muted); font-variant-numeric: tabular-nums; font-size: var(--font-ui-small); }
 .kt-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: var(--size-4-1); }
@@ -244,3 +247,19 @@
   .kt-filter-bar { display: none; }
   .kt-filter-count { display: inline-block; }
 }
+
+/* ---- settings editors ---- */
+.kt-set-host { margin-bottom: var(--size-4-4); }
+.kt-set-editor { display: flex; flex-direction: column; gap: var(--size-4-1); }
+.kt-set-row {
+  display: flex; align-items: center; gap: var(--size-4-2); padding: var(--size-4-1) var(--size-4-2);
+  background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s);
+}
+.kt-set-row.is-dragging { opacity: 0.6; box-shadow: var(--shadow-s); }
+.kt-set-handle { cursor: grab; color: var(--text-faint); user-select: none; touch-action: none; padding: 0 var(--size-4-1); }
+.kt-set-color { width: 28px; height: 24px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.kt-set-name { flex: 1; min-width: 0; }
+.kt-set-label-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.kt-set-count { min-width: 28px; text-align: right; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.kt-set-error { color: var(--text-error); font-size: var(--font-ui-small); padding: var(--size-4-1) 0; }
+.kt-set-empty { color: var(--text-muted); padding: var(--size-4-2) 0; }

@@ -1,16 +1,21 @@
 import { ItemView, Notice, type WorkspaceLeaf } from "obsidian";
-import { StrictMode, useCallback, useMemo, useState } from "react";
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type KyleTicketsPlugin from "../main";
 import type { MainUiState } from "../data";
 import { applyPatch, type IssuePatch } from "../core/issueFile";
 import { buildView, OTHER_GROUP_KEY, viewTitle } from "../core/query";
-import { useIssues, useProjects } from "../store/hooks";
+import { useIssues, useProjects, useSettings } from "../store/hooks";
 import { PluginContext, usePlugin } from "./PluginContext";
+import { AssigneePicker } from "./components/pickers/AssigneePicker";
+import { LabelPicker } from "./components/pickers/LabelPicker";
+import { PriorityPicker } from "./components/pickers/PriorityPicker";
+import { StatusPicker } from "./components/pickers/StatusPicker";
+import { moveSelection, useShortcuts, type ShortcutAction } from "./shortcuts";
 import { BoardView, type BoardMove } from "./main/BoardView";
 import { FilterBar } from "./main/FilterBar";
 import { Header } from "./main/Header";
-import { ListView } from "./main/ListView";
+import { flatten, ListView } from "./main/ListView";
 import { Sidebar } from "./main/Sidebar";
 import { useViewState } from "./main/useViewState";
 
@@ -20,7 +25,11 @@ function MainApp() {
   const plugin = usePlugin();
   const storeIssues = useIssues();
   const projects = useProjects();
-  const { settings } = plugin.data;
+  const settings = useSettings();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [filterSignal, setFilterSignal] = useState(0);
+  const [sp, setSp] = useState<{ kind: "status" | "priority" | "labels" | "assignee"; id: string; anchor: HTMLElement | null } | null>(null);
   const [ui, setUi] = useState<MainUiState>(() => ({ ...plugin.data.main }));
   const [width, setWidth] = useState(ui.sidebarWidth);
 
@@ -84,8 +93,84 @@ function MainApp() {
   };
   const newIssue = () => plugin.openNewIssue({ project });
 
+  // Keyboard navigation order: the rows (List) or cards (Board) currently shown, top to bottom.
+  const navIds = useMemo(() => {
+    if (display.layout === "list") {
+      return flatten(visible, collapsed).flatMap((it) => (it.kind === "row" ? [it.issue.id] : []));
+    }
+    return visible.flatMap((g) =>
+      g.subgroups
+        ? g.subgroups.filter((sg) => !collapsed.has(`lane:${sg.key.slice(g.key.length + 1)}`)).flatMap((sg) => sg.issues.map((i) => i.id))
+        : g.issues.map((i) => i.id),
+    );
+  }, [display.layout, visible, collapsed]);
+  const current = selectedId !== null && navIds.includes(selectedId) ? selectedId : null;
+
+  useEffect(() => rootRef.current?.focus({ preventScroll: true }), []);
+  useEffect(() => {
+    if (current === null || display.layout !== "board") return;
+    rootRef.current?.querySelector(`[data-kt-id="${CSS.escape(current)}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [current, display.layout]);
+
+  const onShortcut = useCallback(
+    (action: ShortcutAction): boolean => {
+      switch (action) {
+        case "next":
+        case "prev":
+          setSelectedId(moveSelection(navIds, current, action === "next" ? 1 : -1));
+          return true;
+        case "clear":
+          if (current === null) return false;
+          setSelectedId(null);
+          return true;
+        case "open":
+          if (current === null) return false;
+          plugin.openIssue(current);
+          return true;
+        case "new":
+          plugin.openNewIssue({ project });
+          return true;
+        case "toggleLayout":
+          setDisplay({ ...display, layout: display.layout === "board" ? "list" : "board" });
+          return true;
+        case "filter":
+          setFilterSignal((n) => n + 1);
+          return true;
+        default: {
+          if (current === null) return false;
+          const root = rootRef.current;
+          const anchor =
+            root?.querySelector<HTMLElement>(`[data-kt-id="${CSS.escape(current)}"]`) ??
+            root?.querySelector<HTMLElement>(".kt-header") ??
+            null;
+          setSp({ kind: action, id: current, anchor });
+          return true;
+        }
+      }
+    },
+    [navIds, current, plugin, project, display, setDisplay],
+  );
+  useShortcuts(rootRef, onShortcut);
+
+  const closeSp = useCallback(() => {
+    setSp(null);
+    rootRef.current?.focus({ preventScroll: true });
+  }, []);
+  const spIssue = sp ? issues.find((i) => i.id === sp.id) : undefined;
+  const spUpdate = (patch: IssuePatch) => {
+    if (sp) void plugin.store.updateIssue(sp.id, patch).catch((e) => console.error("kyle-tickets: update failed", e));
+  };
+
   return (
-    <div className="kt-main">
+    <div
+      className="kt-main"
+      ref={rootRef}
+      tabIndex={-1}
+      onMouseDown={(e) => {
+        const t = e.target as HTMLElement;
+        if (!t.closest("input, textarea, select, [contenteditable]")) rootRef.current?.focus({ preventScroll: true });
+      }}
+    >
       {!ui.sidebarCollapsed && (
         <Sidebar
           view={view}
@@ -110,6 +195,7 @@ function MainApp() {
           onDisplayReset={reset}
           filters={filters}
           onFiltersChange={setFilters}
+          filterSignal={filterSignal}
         />
         <FilterBar filters={filters} onChange={setFilters} />
         {!plugin.data.setupDone && (
@@ -123,11 +209,23 @@ function MainApp() {
             </button>
           </div>
         ) : display.layout === "board" ? (
-          <BoardView groups={built.groups} display={display} subCounts={built.subCounts} issues={issues} project={project} collapsed={collapsed} onToggleGroup={toggleGroup} onMove={onMove} />
+          <BoardView groups={built.groups} display={display} subCounts={built.subCounts} issues={issues} project={project} selectedId={current} collapsed={collapsed} onToggleGroup={toggleGroup} onMove={onMove} />
         ) : (
-          <ListView groups={built.groups} display={display} subCounts={built.subCounts} issues={issues} viewId={view} project={project} collapsed={collapsed} onToggleGroup={toggleGroup} />
+          <ListView groups={built.groups} display={display} subCounts={built.subCounts} issues={issues} viewId={view} project={project} selectedId={current} collapsed={collapsed} onToggleGroup={toggleGroup} />
         )}
       </div>
+      {sp && spIssue && sp.kind === "status" && (
+        <StatusPicker anchor={sp.anchor} value={spIssue.status} onChange={(status) => spUpdate({ status })} onClose={closeSp} />
+      )}
+      {sp && spIssue && sp.kind === "priority" && (
+        <PriorityPicker anchor={sp.anchor} value={spIssue.priority} onChange={(priority) => spUpdate({ priority })} onClose={closeSp} />
+      )}
+      {sp && spIssue && sp.kind === "labels" && (
+        <LabelPicker anchor={sp.anchor} value={spIssue.tags} onChange={(tags) => spUpdate({ tags })} onClose={closeSp} />
+      )}
+      {sp && spIssue && sp.kind === "assignee" && (
+        <AssigneePicker anchor={sp.anchor} value={spIssue.assignee} onChange={(a) => spUpdate({ assignee: a ?? null })} onClose={closeSp} />
+      )}
     </div>
   );
 }

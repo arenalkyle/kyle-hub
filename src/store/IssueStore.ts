@@ -16,6 +16,8 @@ import type { Issue, Milestone, Project, ProjectStatus } from "../core/types";
 import type { PluginData } from "../data";
 
 export const EXTERNAL_DEBOUNCE_MS = 500;
+/** Bulk updates over more files than this show a progress notice. */
+export const BULK_PROGRESS_THRESHOLD = 20;
 
 export interface StoreHost {
   app: App;
@@ -200,6 +202,29 @@ export class IssueStore {
     this.setIssue(path, issue, true);
     this.emit();
     return issue;
+  }
+
+  /**
+   * Applies `patch` (or a per-issue patch) to every issue matching `predicate`, one file at a
+   * time; each write logs its own activity event. Returns the number of issues written.
+   * A failure aborts the rest and rethrows; already-written files stay written.
+   */
+  async bulkUpdate(
+    predicate: (issue: Issue) => boolean,
+    patch: IssuePatch | ((issue: Issue) => IssuePatch),
+    opts: { author?: string; onProgress?: (done: number, total: number) => void } = {},
+  ): Promise<number> {
+    const targets = this.getIssues().filter(predicate).map((i) => i.id);
+    opts.onProgress?.(0, targets.length);
+    let done = 0;
+    for (const id of targets) {
+      const current = this.getIssue(id);
+      if (!current) continue;
+      await this.updateIssue(id, typeof patch === "function" ? patch(current) : patch, opts.author);
+      done++;
+      opts.onProgress?.(done, targets.length);
+    }
+    return done;
   }
 
   async addComment(id: string, body: string, author?: string): Promise<Issue> {

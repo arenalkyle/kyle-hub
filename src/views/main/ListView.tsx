@@ -60,11 +60,12 @@ export interface ListViewProps {
   issues: readonly Issue[];
   viewId: string;
   project?: string;
+  selectedId: string | null;
   collapsed: ReadonlySet<string>;
   onToggleGroup: (key: string) => void;
 }
 
-export function ListView({ groups, display, subCounts, issues, viewId, project, collapsed, onToggleGroup }: ListViewProps) {
+export function ListView({ groups, display, subCounts, issues, viewId, project, selectedId, collapsed, onToggleGroup }: ListViewProps) {
   const plugin = usePlugin();
   const { settings } = plugin.data;
   const items = useMemo(() => flatten(groups, collapsed), [groups, collapsed]);
@@ -83,6 +84,16 @@ export function ListView({ groups, display, subCounts, issues, viewId, project, 
     return () => ro.disconnect();
   }, []);
   useEffect(() => setPicker(null), [viewId]);
+  // Keep the keyboard selection visible (rows are windowed, so scroll by index).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || selectedId === null) return;
+    const idx = items.findIndex((it) => it.kind === "row" && it.issue.id === selectedId);
+    if (idx < 0) return;
+    const top = idx * ITEM_HEIGHT;
+    if (top < el.scrollTop) el.scrollTop = top;
+    else if (top + ITEM_HEIGHT > el.scrollTop + el.clientHeight) el.scrollTop = top + ITEM_HEIGHT - el.clientHeight;
+  }, [selectedId, items]);
 
   const open = useCallback(
     (issue: Issue, newTab: boolean) => {
@@ -111,7 +122,7 @@ export function ListView({ groups, display, subCounts, issues, viewId, project, 
           if (item.kind === "row") {
             return (
               <div key={item.issue.id} className="kt-item" style={style}>
-                <IssueRow issue={item.issue} settings={settings} properties={display.properties} sub={item.depth === 1} subCount={subCounts.get(item.issue.id)} onOpen={open} onStatus={onStatus} onPriority={onPriority} />
+                <IssueRow issue={item.issue} settings={settings} properties={display.properties} sub={item.depth === 1} selected={item.issue.id === selectedId} subCount={subCounts.get(item.issue.id)} onOpen={open} onStatus={onStatus} onPriority={onPriority} />
               </div>
             );
           }
