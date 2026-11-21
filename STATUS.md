@@ -4,10 +4,9 @@ _Last updated: 2026-11-21_
 
 Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-10](https://linear.app/divinity/issue/LOCK-10) · Manual checks: [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md)
 
-- **Done** (reviewed, pushed, Linear Done): LOCK-11 → LOCK-27. Scaffold + CI, `src/core` model (ticket/project files, feed, IDs, query/display pipeline), plugin shell + setup, IssueStore (index, write API, activity log, external-edit detection), pickers + New issue window, main view sidebar + grouped windowed List, Display popover (grouping, sub-grouping, ordering, toggles, chips; per-view state), Board (columns, swimlanes, preview cards, dnd-kit drag-and-drop, manual `sortOrder` reorder), filter bar (AND-ed chips, per-view), keyboard shortcuts + Statuses/Labels settings editors with bulkUpdate, issue page (IssueView, file-open interception, breadcrumb, inline title, properties sidebar), issue page description editor, sub-issues, activity feed and comments, project pages (create, edit, rename, delete; ProjectView + interception), milestones + project-scoped List/Board via shared IssueCollection, live PR status via gh CLI (cache, background refresh, chips), PR auto-link by issue ID for watched repos, kt CLI for agents over src/core (npm link). 216 tests passing.
-- **In review**: LOCK-28 (9.2): generated `AGENTS.md` (`renderAgentsDoc`, never overwrites a hand-edited file), `skills/kyle-tickets/SKILL.md`, README, PLAN.md brought in line with the build, CLI end-to-end pass. 220 tests passing.
-- **Next**: owner review of LOCK-28 and the manual checks in Obsidian.
-- **Manual checks**: 1.1–9.1 (LOCK-11…27) are written up in `docs/MANUAL-CHECKS.md` and have not been run in Obsidian yet.
+- **Done** (reviewed, pushed, Linear Done): LOCK-11 → LOCK-28 (all sub-tickets of LOCK-10). Scaffold + CI, `src/core` model (ticket/project files, feed, IDs, query/display pipeline), plugin shell + setup, IssueStore (index, write API, activity log, external-edit detection), pickers + New issue window, main view sidebar + grouped windowed List, Display popover (grouping, sub-grouping, ordering, toggles, chips; per-view state), Board (columns, swimlanes, preview cards, dnd-kit drag-and-drop, manual `sortOrder` reorder), filter bar (AND-ed chips, per-view), keyboard shortcuts + Statuses/Labels settings editors with bulkUpdate, issue page (IssueView, file-open interception, breadcrumb, inline title, properties sidebar), issue page description editor, sub-issues, activity feed and comments, project pages (create, edit, rename, delete; ProjectView + interception), milestones + project-scoped List/Board via shared IssueCollection, live PR status via gh CLI (cache, background refresh, chips), PR auto-link by issue ID for watched repos, kt CLI for agents over src/core (npm link), agent docs (generated AGENTS.md, Claude Code skill, README, PLAN updated). 220 tests passing.
+- **Next**: run `docs/MANUAL-CHECKS.md` in Obsidian (1.1–9.2 + end-to-end UI steps); fill README screenshots.
+- **Manual checks**: 1.1–9.2 (LOCK-11…28) and the end-to-end script are written up in `docs/MANUAL-CHECKS.md` and have not been run in Obsidian yet.
 
 | Phase | Sub-phases | State |
 |---|---|---|
@@ -19,7 +18,7 @@ Plan: [docs/PLAN.md](docs/PLAN.md) · Linear parent: [LOCK-10](https://linear.ap
 | 6 Issue view | 6.1 page + properties (LOCK-21) · 6.2 description/sub-issues/activity (LOCK-22) | Done · Done |
 | 7 Projects | 7.1 project pages (LOCK-23) · 7.2 milestones + project issues (LOCK-24) | Done · Done |
 | 8 Pull requests | 8.1 gh status (LOCK-25) · 8.2 auto-link (LOCK-26) | Done · Done |
-| 9 Agent tooling | 9.1 kt CLI (LOCK-27) · 9.2 agent docs + e2e (LOCK-28) | Done · In Review |
+| 9 Agent tooling | 9.1 kt CLI (LOCK-27) · 9.2 agent docs + e2e (LOCK-28) | Done · Done |
 
 ## Known limitations
 
