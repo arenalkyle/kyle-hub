@@ -1,5 +1,6 @@
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { SerializeAddon } from "@xterm/addon-serialize";
 import { WebglAddon } from "@xterm/addon-webgl";
 import type { TermHandlers, TermLike } from "./session-manager";
 import { clampFont, type XtermTheme } from "./appearance";
@@ -15,6 +16,7 @@ export interface TermLook {
 export class XtermSession implements TermLike {
   private term: Terminal;
   private fitAddon = new FitAddon();
+  private serializer = new SerializeAddon();
   private el = document.createElement("div");
   private opened = false;
   private gl: WebglAddon | null = null;
@@ -34,6 +36,7 @@ export class XtermSession implements TermLike {
     });
     this.term = term;
     term.loadAddon(this.fitAddon);
+    term.loadAddon(this.serializer);
     term.onData(h.onInput);
     term.onResize(({ cols, rows }) => h.onResize(cols, rows));
     term.onTitleChange(h.onTitle);
@@ -95,6 +98,7 @@ export class XtermSession implements TermLike {
   get cols(): number { return this.term.cols; }
   get rows(): number { return this.term.rows; }
   write(data: string): void { this.term.write(data); }
+  serialize(lines: number): string { return this.serializer.serialize({ scrollback: lines }); }
   reset(): void { this.term.reset(); }
   dispose(): void { this.onDispose?.(this); this.el.remove(); this.term.dispose(); }
   focus(): void { this.term.focus(); }

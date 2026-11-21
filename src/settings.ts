@@ -25,6 +25,9 @@ export interface KyleTermSettings {
   claudeCommand: string;
   /** Seconds of quiet before a non-hook CLI session shows "finished". */
   idleSeconds: number;
+  /** Save terminal output so it can be shown again after a restart. */
+  restoreScrollback: boolean;
+  scrollbackLines: number;
   sidebarWidth: number;
   sidebarCollapsed: boolean;
   sounds: SoundSettings;
@@ -39,6 +42,8 @@ export const DEFAULT_SETTINGS: KyleTermSettings = {
   claudeStartFolder: "",
   claudeCommand: "claude",
   idleSeconds: 10,
+  restoreScrollback: true,
+  scrollbackLines: 2000,
   sidebarWidth: 240,
   sidebarCollapsed: false,
   sounds: DEFAULT_SOUNDS,
@@ -120,6 +125,19 @@ export class KyleTermSettingTab extends PluginSettingTab {
         t.setPlaceholder("10").setValue(String(s.idleSeconds)).onChange(async (v) => {
           const n = Number(v);
           s.idleSeconds = Number.isFinite(n) && n >= 1 ? n : DEFAULT_SETTINGS.idleSeconds;
+          await this.plugin.saveSettings();
+        }),
+      );
+    new Setting(el)
+      .setName("Restore scrollback")
+      .setDesc("Save each terminal's output so it shows (greyed out) after restarting Obsidian. Turning this off deletes saved output; sessions and Resume still work.")
+      .addToggle((t) => t.setValue(s.restoreScrollback).onChange((v) => this.plugin.setRestoreScrollback(v)));
+    new Setting(el)
+      .setName("Scrollback lines to restore")
+      .addText((t) =>
+        t.setPlaceholder("2000").setValue(String(s.scrollbackLines)).onChange(async (v) => {
+          const n = Math.floor(Number(v));
+          s.scrollbackLines = Number.isFinite(n) && n >= 100 ? Math.min(n, 20000) : DEFAULT_SETTINGS.scrollbackLines;
           await this.plugin.saveSettings();
         }),
       );

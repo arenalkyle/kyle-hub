@@ -1,6 +1,7 @@
 import type { ShellProfile } from "./shells";
 import { resolveTitle } from "./title";
 import { initialAgent, reduceAgent, SUBAGENT_FADE_MS, type AgentEvent, type AgentInfo, type AgentState } from "./agent-state";
+import { dimScrollback, dividerLine, serializeSessions, type PersistedSession } from "./persist";
 import type { SessionListener, SpawnOptions } from "./pty-manager";
 
 export type SessionKind = "claude" | "shell";
@@ -14,7 +15,7 @@ export interface Session {
   manualTitle?: string;
   oscTitle?: string;
   color?: string;
-  status: "running" | "exited";
+  status: "running" | "exited" | "stopped";
   exitCode?: number;
   lastOutputAt: number;
   agent: AgentInfo;
@@ -45,6 +46,8 @@ export interface TermLike {
   attach(parent: HTMLElement): void;
   fit(): void;
   focus(): void;
+  /** Serialised buffer (last `lines` lines, with escape codes), if supported. */
+  serialize?(lines: number): string;
 }
 
 export type TermFactory = (handlers: TermHandlers) => TermLike;
@@ -59,6 +62,13 @@ export interface SessionManagerDeps {
   env?: () => Record<string, string>;
   /** Quiet period before a never-hooked session is treated as finished. */
   idleMs?: () => number;
+  /** Command that resumes a Claude conversation. */
+  resumeCommand?: (claudeSessionId: string) => string;
+  /** Folder fallback when a restored session's cwd is gone. */
+  cwdExists?: (cwd: string) => boolean;
+  fallbackCwd?: () => string;
+  notify?: (msg: string) => void;
+  onClosed?: (id: string) => void;
 }
 
 export interface CreateOptions {
@@ -74,6 +84,8 @@ interface Runtime {
   gen: number;
   cmdSent: boolean;
   cmdSentAt: number;
+  /** Output arrived since scrollback was last saved. */
+  dirty: boolean;
   inputSeen: boolean;
   idleTimer?: ReturnType<typeof setTimeout>;
   quietTimer?: ReturnType<typeof setTimeout>;
@@ -214,8 +226,18 @@ export class SessionManager {
       id, kind: opts.kind, profileId: opts.profileId, cwd: opts.cwd, command: opts.command,
       status: "running", lastOutputAt: this.now(), agent: initialAgent(),
     };
-    const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true, cmdSentAt: 0, inputSeen: false };
-    rt.term = this.deps.makeTerm({
+    const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true, cmdSentAt: 0, inputSeen: false, dirty: false };
+    rt.term = this.deps.makeTerm(this.handlers(s, rt));
+    this.sessions.push(s);
+    this.rt.set(id, rt);
+    this.start(s, rt);
+    this.activeId = id;
+    this.emit();
+    return s;
+  }
+
+  private handlers(s: Session, rt: Runtime): TermHandlers {
+    return {
       onInput: (d) => {
         if (!rt.ptyId || s.status !== "running") return;
         rt.inputSeen = true;
@@ -225,21 +247,27 @@ export class SessionManager {
       onResize: (c, r) => { if (rt.ptyId && s.status === "running") this.deps.pty.resize(rt.ptyId, c, r); },
       onTitle: (t) => { s.oscTitle = t; this.emit(); },
       onBell: () => { if (s.status === "running") this.dispatch(s, { type: "bell" }); },
-    });
-    this.sessions.push(s);
-    this.rt.set(id, rt);
-    this.start(s, rt);
-    this.activeId = id;
-    this.emit();
-    return s;
+    };
   }
 
-  private start(s: Session, rt: Runtime): void {
+  private start(s: Session, rt: Runtime, keep?: { claudeSessionId?: boolean }): void {
     const p = this.profile(s.profileId);
     const gen = ++rt.gen;
     s.status = "running";
     delete s.exitCode;
+    const prevAgent = s.agent;
     s.agent = initialAgent();
+    if (keep) {
+      if (prevAgent.firstPrompt) s.agent.firstPrompt = prevAgent.firstPrompt;
+      if (keep.claudeSessionId && prevAgent.claudeSessionId) s.agent.claudeSessionId = prevAgent.claudeSessionId;
+    }
+    if (this.deps.cwdExists && !this.deps.cwdExists(s.cwd)) {
+      const root = this.deps.fallbackCwd?.();
+      if (root) {
+        this.deps.notify?.(`kyle-term: folder not found (${s.cwd}); starting in the vault root`);
+        s.cwd = root;
+      }
+    }
     rt.inputSeen = false;
     s.lastOutputAt = this.now();
     rt.cmdSent = !(s.kind === "claude" && s.command);
@@ -253,6 +281,7 @@ export class SessionManager {
         onData: (d) => {
           if (rt.gen !== gen) return;
           s.lastOutputAt = this.now();
+          rt.dirty = true;
           rt.term.write(d);
           this.armCommand(s, rt);
           this.armIdle(s, rt);
@@ -340,9 +369,65 @@ export class SessionManager {
     const rt = this.rt.get(id);
     if (!s || !rt) return;
     if (s.status === "running" && rt.ptyId) this.deps.pty.kill(rt.ptyId);
-    rt.term.reset();
-    delete s.oscTitle;
-    this.start(s, rt);
+    if (s.status === "stopped") {
+      this.start(s, rt, {}); // keep the greyed history; new output goes below it
+    } else {
+      rt.term.reset();
+      delete s.oscTitle;
+      this.start(s, rt);
+    }
+    this.emit();
+  }
+
+  canResume(s: Session): boolean {
+    return s.status === "stopped" && s.kind === "claude" && /^[\w-]+$/.test(s.agent.claudeSessionId ?? "") && !!this.deps.resumeCommand;
+  }
+
+  /** Stopped Claude session: start a shell in its folder and run `claude --resume <id>`. */
+  resume(id: string): void {
+    const s = this.get(id);
+    const rt = this.rt.get(id);
+    if (!s || !rt || !this.canResume(s)) return;
+    s.command = this.deps.resumeCommand!(s.agent.claudeSessionId!);
+    this.start(s, rt, { claudeSessionId: true });
+    this.emit();
+  }
+
+  /** Metadata for every session, in order. */
+  snapshot(): PersistedSession[] { return serializeSessions(this.sessions, this.now()); }
+
+  /** Scrollback text for a session, or undefined when unchanged since the last save / unsupported. */
+  takeScrollback(id: string, lines: number, force = false): string | undefined {
+    const rt = this.rt.get(id);
+    if (!rt || !rt.term.serialize) return undefined;
+    const s = this.get(id);
+    if (!rt.dirty && !(force && s?.status !== "stopped")) return undefined;
+    try {
+      const out = rt.term.serialize(lines);
+      rt.dirty = false;
+      return out;
+    } catch { return undefined; }
+  }
+
+  /** Bring sessions back as stopped rows, with their saved history greyed out above a divider. */
+  restore(saved: readonly PersistedSession[], scrollback: (id: string) => string | undefined): void {
+    for (const p of saved) {
+      if (this.get(p.id)) continue;
+      const s: Session = {
+        id: p.id, kind: p.kind, profileId: p.profileId, cwd: p.cwd, command: p.command,
+        manualTitle: p.manualTitle, oscTitle: p.oscTitle, color: p.color,
+        status: "stopped", lastOutputAt: p.lastOutputAt, agent: { ...initialAgent(), state: "exited" },
+      };
+      if (p.firstPrompt) s.agent.firstPrompt = p.firstPrompt;
+      if (p.claudeSessionId) s.agent.claudeSessionId = p.claudeSessionId;
+      const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true, cmdSentAt: 0, inputSeen: false, dirty: false };
+      rt.term = this.deps.makeTerm(this.handlers(s, rt));
+      const text = scrollback(p.id);
+      rt.term.write(`${text ? dimScrollback(text) : ""}${dividerLine(p.lastOutputAt || p.savedAt)}`);
+      this.sessions.push(s);
+      this.rt.set(p.id, rt);
+    }
+    if (!this.activeId && this.sessions[0]) this.activeId = this.sessions[0].id;
     this.emit();
   }
 
@@ -364,6 +449,7 @@ export class SessionManager {
     rt.term.dispose();
     this.rt.delete(id);
     this.sessions.splice(i, 1);
+    this.deps.onClosed?.(id);
     if (this.activeId === id) this.activeId = (this.sessions[i] ?? this.sessions[i - 1])?.id ?? null;
     this.emit();
   }

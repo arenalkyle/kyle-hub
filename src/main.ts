@@ -19,6 +19,10 @@ import {
   blurPx, buildXtermTheme, DEFAULT_APPEARANCE, mergeAppearance, obsidianPalette, resolvePalette, shouldUseWebgl, toHex, type Palette,
 } from "./appearance";
 import fs from "node:fs";
+import { orphanFiles, parsePersisted, PERSIST_VERSION, scrollbackFile, type PersistedSession } from "./persist";
+
+const PERSIST_DEBOUNCE_MS = 2000;
+const SCROLLBACK_SAVE_MS = 30_000;
 
 export default class KyleTermPlugin extends Plugin {
   override settings: KyleTermSettings = { ...DEFAULT_SETTINGS };
@@ -31,6 +35,8 @@ export default class KyleTermPlugin extends Plugin {
   private player: SoundPlayer | null = null;
   private statusEl: HTMLElement | null = null;
   private xterms = new Set<XtermSession>();
+  private savedSessions: PersistedSession[] = [];
+  private persistTimer?: ReturnType<typeof setTimeout>;
   private muteListeners = new Set<() => void>();
   private lastPlayed: { bySession: Record<string, number>; byEvent: Partial<Record<AlertEvent, number>> } = { bySession: {}, byEvent: {} };
 
@@ -117,9 +123,14 @@ export default class KyleTermPlugin extends Plugin {
     this.statusEl.style.display = "none";
     this.statusEl.onclick = () => void this.jumpToAttention();
     this.addSettingTab(new KyleTermSettingTab(this.app, this));
+    this.cleanOrphans(this.savedSessions.map((p) => p.id));
+    this.registerInterval(window.setInterval(() => this.saveScrollback(), SCROLLBACK_SAVE_MS));
   }
 
   override onunload(): void {
+    if (this.persistTimer) clearTimeout(this.persistTimer);
+    this.persistTimer = undefined;
+    this.flushSync();
     this.hookServer?.stop();
     this.hookServer = null;
     this.sessions?.dispose();
@@ -296,12 +307,21 @@ export default class KyleTermPlugin extends Plugin {
       profiles: () => this.profiles,
       env: () => this.hookEnv,
       idleMs: () => this.settings.idleSeconds * 1000,
+      resumeCommand: (id) => `${this.settings.claudeCommand || "claude"} --resume ${id}`,
+      cwdExists: (p) => fs.existsSync(p),
+      fallbackCwd: () => this.vaultRoot(),
+      notify: (m) => new Notice(m, 8000),
+      onClosed: (id) => this.deleteScrollback(id),
     });
     this.sessions.onStateChange((s, _prev, next) => {
       if (next === "needs-input" || next === "finished") this.alert(next, s);
     });
     this.sessions.onSubAgentDone((s) => this.alert("sub-agent-done", s));
     this.sessions.onChange(() => this.updateStatusBar());
+    const restored = this.savedSessions;
+    this.savedSessions = [];
+    this.sessions.restore(restored, (id) => this.readScrollback(id));
+    this.sessions.onChange(() => this.schedulePersist());
     return this.sessions;
   }
 
@@ -426,11 +446,82 @@ export default class KyleTermPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const saved = (await this.loadData()) as Partial<KyleTermSettings> | null;
+    const raw = (await this.loadData()) as (Partial<KyleTermSettings> & { sessions?: unknown; version?: unknown }) | null;
+    const { sessions: savedSessions, version: _v, ...saved } = raw ?? {};
+    void _v;
+    this.savedSessions = parsePersisted(savedSessions);
     this.settings = Object.assign({}, DEFAULT_SETTINGS, saved, { savedFolders: (saved?.savedFolders ?? []).map((f) => ({ ...f })), sounds: mergeSounds(saved?.sounds), appearance: mergeAppearance(saved?.appearance) });
   }
 
   async saveSettings(): Promise<void> {
-    await this.saveData(this.settings);
+    await this.saveData(this.dataBlob());
+  }
+
+  /** Settings plus session metadata, as stored in data.json. */
+  private dataBlob(): Record<string, unknown> {
+    return { ...this.settings, version: PERSIST_VERSION, sessions: this.sessions ? this.sessions.snapshot() : this.savedSessions };
+  }
+
+  private pluginDir(): string { return path.join(this.vaultRoot(), this.manifest.dir ?? ""); }
+  private sessionsDir(): string { return path.join(this.pluginDir(), "sessions"); }
+
+  private schedulePersist(): void {
+    if (this.persistTimer) return;
+    this.persistTimer = setTimeout(() => { this.persistTimer = undefined; void this.saveSettings(); }, PERSIST_DEBOUNCE_MS);
+  }
+
+  private readScrollback(id: string): string | undefined {
+    if (!this.settings.restoreScrollback) return undefined;
+    try { return fs.readFileSync(path.join(this.sessionsDir(), scrollbackFile(id)), "utf8"); } catch { return undefined; }
+  }
+
+  private deleteScrollback(id: string): void {
+    try { fs.rmSync(path.join(this.sessionsDir(), scrollbackFile(id)), { force: true }); } catch { /* ignore */ }
+  }
+
+  /** Delete scrollback files that belong to no known session. */
+  private cleanOrphans(keepIds: string[]): void {
+    try {
+      const dir = this.sessionsDir();
+      if (!fs.existsSync(dir)) return;
+      const keep = this.settings.restoreScrollback ? keepIds : [];
+      for (const f of orphanFiles(fs.readdirSync(dir), keep)) fs.rmSync(path.join(dir, f), { force: true });
+    } catch (e) {
+      console.error("[kyle-term] orphan cleanup failed", e);
+    }
+  }
+
+  /** Write scrollback for sessions whose output changed (sync, so it also works during unload). */
+  private saveScrollback(force = false): void {
+    const m = this.sessions;
+    if (!m || !this.settings.restoreScrollback) return;
+    try {
+      const dir = this.sessionsDir();
+      fs.mkdirSync(dir, { recursive: true });
+      for (const s of m.list()) {
+        const text = m.takeScrollback(s.id, this.settings.scrollbackLines, force);
+        if (text !== undefined) fs.writeFileSync(path.join(dir, scrollbackFile(s.id)), text);
+      }
+    } catch (e) {
+      console.error("[kyle-term] saving scrollback failed", e);
+    }
+  }
+
+  /** Final synchronous save for onunload: scrollback files and data.json. */
+  private flushSync(): void {
+    if (!this.sessions) return;
+    this.saveScrollback();
+    try {
+      fs.writeFileSync(path.join(this.pluginDir(), "data.json"), JSON.stringify(this.dataBlob(), null, 2));
+    } catch (e) {
+      console.error("[kyle-term] saving session data failed", e);
+    }
+  }
+
+  setRestoreScrollback(v: boolean): void {
+    this.settings.restoreScrollback = v;
+    if (v) this.saveScrollback(true);
+    else this.cleanOrphans([]);
+    void this.saveSettings();
   }
 }

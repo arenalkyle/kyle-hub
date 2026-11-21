@@ -199,15 +199,16 @@ export class KyleTermView extends ItemView {
     for (const s of mgr.list()) {
       const row = this.list.createDiv({ cls: "kt-row" });
       if (mgr.active?.id === s.id) row.addClass("is-active");
-      if (s.status === "exited") row.addClass("is-exited");
+      if (s.status !== "running") row.addClass("is-exited");
       row.draggable = true;
       const stripe = row.createDiv({ cls: "kt-stripe" });
       if (s.color) stripe.style.background = s.color;
       const main = row.createDiv({ cls: "kt-main" });
 
       const top = main.createDiv({ cls: "kt-top" });
-      const state = s.status === "exited" ? "exited" : s.agent.state;
-      top.createDiv({ cls: `kt-light kt-light-${state}`, attr: { "aria-label": STATE_LABEL[state], title: STATE_LABEL[state] } });
+      const state = s.status === "running" ? s.agent.state : "exited";
+      const stateLabel = s.status === "stopped" ? "Stopped" : STATE_LABEL[state];
+      top.createDiv({ cls: `kt-light kt-light-${state}`, attr: { "aria-label": stateLabel, title: stateLabel } });
       const title = top.createDiv({ cls: "kt-title", text: mgr.title(s) });
       if (s.manualTitle) setIcon(top.createDiv({ cls: "kt-pin", attr: { "aria-label": "Named manually" } }), "pin");
       const subs = s.agent.subAgents.filter((a) => a.status === "running" || now - (a.endedAt ?? now) < SUBAGENT_FADE_MS);
@@ -234,9 +235,13 @@ export class KyleTermView extends ItemView {
         }
       }
 
-      if (s.status === "exited") {
+      if (s.status !== "running") {
         const ex = main.createDiv({ cls: "kt-exit" });
-        ex.createSpan({ text: `exit ${s.exitCode ?? "?"}`, cls: "kt-exit-code" });
+        ex.createSpan({ text: s.status === "stopped" ? "stopped" : `exit ${s.exitCode ?? "?"}`, cls: "kt-exit-code" });
+        if (mgr.canResume(s)) {
+          const resume = ex.createEl("button", { text: "Resume", cls: "mod-cta" });
+          resume.onclick = (e) => { e.stopPropagation(); mgr.resume(s.id); };
+        }
         const restart = ex.createEl("button", { text: "Restart" });
         restart.onclick = (e) => { e.stopPropagation(); mgr.restart(s.id); };
         const close = ex.createEl("button", { text: "Close" });
@@ -312,6 +317,7 @@ export class KyleTermView extends ItemView {
         sub.showAtPosition({ x: e.clientX, y: e.clientY });
       }),
     );
+    if (mgr.canResume(s)) menu.addItem((i) => i.setTitle("Resume").setIcon("play").onClick(() => mgr.resume(s.id)));
     menu.addItem((i) => i.setTitle("Restart").setIcon("refresh-cw").onClick(() => mgr.restart(s.id)));
     menu.addItem((i) =>
       i.setTitle("Kill").setIcon("skull").setDisabled(s.status !== "running").onClick(() => {
