@@ -1,6 +1,6 @@
 import {
-  closestCorners, DndContext, DragOverlay, KeyboardSensor, PointerSensor, useSensor, useSensors,
-  type DragEndEvent, type DragOverEvent, type DragStartEvent,
+  closestCorners, DndContext, pointerWithin, DragOverlay, KeyboardSensor, PointerSensor, useSensor, useSensors,
+  type CollisionDetection, type DragEndEvent, type DragOverEvent, type DragStartEvent,
 } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Notice, TFile } from "obsidian";
@@ -33,6 +33,8 @@ export interface BoardViewProps {
   selectedId: string | null;
   collapsed: ReadonlySet<string>;
   onToggleGroup: (key: string) => void;
+  /** Hide a column (group key). */
+  onHideGroup?: (key: string) => void;
   /** Applies the moves optimistically and writes them via the store. */
   onMove: (moves: BoardMove[]) => void;
 }
@@ -53,7 +55,13 @@ function laneRank(display: DisplayState, leaf: string, statusOrder: ReadonlyMap<
   return leaf.startsWith("none:") || leaf === OTHER_GROUP_KEY ? 1e6 : 0;
 }
 
-export function BoardView({ groups, display, subCounts, issues, project, selectedId, collapsed, onToggleGroup, onMove }: BoardViewProps) {
+/** Follow the pointer (the overlay can sit offset from it); fall back to corners for keyboard drags and gaps. */
+const collision: CollisionDetection = (args) => {
+  const hits = pointerWithin(args);
+  return hits.length > 0 ? hits : closestCorners(args);
+};
+
+export function BoardView({ groups, display, subCounts, issues, project, selectedId, collapsed, onToggleGroup, onHideGroup, onMove }: BoardViewProps) {
   const plugin = usePlugin();
   const { settings } = plugin.data;
   const manual = display.orderBy === "manual";
@@ -178,7 +186,7 @@ export function BoardView({ groups, display, subCounts, issues, project, selecte
   const active = activeIssueId ? issueById.get(activeIssueId) : undefined;
 
   const header = (g: Group) => (
-    <ColumnHeader key={g.key} group={g} onAdd={() => plugin.openNewIssue({ project, ...presetFor([g]) })} />
+    <ColumnHeader key={g.key} group={g} onAdd={() => plugin.openNewIssue({ project, ...presetFor([g]) })} onHide={onHideGroup ? () => onHideGroup(g.key) : undefined} />
   );
   const cellView = (cell: BoardCell, scroll: boolean) => (
     <BoardCellView
@@ -204,7 +212,7 @@ export function BoardView({ groups, display, subCounts, issues, project, selecte
       )}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collision}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}

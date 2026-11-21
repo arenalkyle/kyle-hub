@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { DisplayState } from "../../core/display";
 import { setFilterValues, type Filter, type FilterField } from "../../core/filters";
+import type { Group } from "../../core/query";
 import { Icon } from "../components/icons";
 import { DisplayPopover } from "./DisplayPopover";
 import { FieldPicker, ValuePicker } from "./FilterMenu";
@@ -19,9 +20,11 @@ export interface HeaderProps {
   onFiltersChange: (next: Filter[]) => void;
   /** Increment to open the filter menu (the `F` shortcut). */
   filterSignal?: number;
+  /** All current groups, for the Hidden columns list. */
+  groups?: readonly Group[];
 }
 
-export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewIssue, display, onDisplayChange, onDisplayReset, filters, onFiltersChange, filterSignal = 0 }: HeaderProps) {
+export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewIssue, display, onDisplayChange, onDisplayReset, filters, onFiltersChange, filterSignal = 0, groups = [] }: HeaderProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [filterField, setFilterField] = useState<FilterField | null>(null);
@@ -85,6 +88,7 @@ export function Header({ title, count, sidebarCollapsed, onToggleSidebar, onNewI
         <DisplayPopover
           anchor={anchor}
           display={display}
+          groups={groups}
           onChange={onDisplayChange}
           onReset={onDisplayReset}
           onClose={() => setAnchor(null)}

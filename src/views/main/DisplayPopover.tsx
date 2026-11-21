@@ -4,12 +4,15 @@ import {
   COMPLETED_LABELS, GROUP_BY_LABELS, GROUP_BY_OPTIONS, ORDER_BY_LABELS, ORDER_BY_OPTIONS, PROP_KEYS, PROP_LABELS,
   type CompletedMode, type DisplayState, type Layout,
 } from "../../core/display";
+import { hiddenFor, toggleHidden } from "../../core/hidden";
+import type { Group } from "../../core/query";
 import { Icon } from "../components/icons";
 import { Picker } from "../components/Picker";
 
 export interface DisplayPopoverProps {
   anchor: HTMLElement | null;
   display: DisplayState;
+  groups?: readonly Group[];
   onChange: (next: DisplayState) => void;
   onReset: () => void;
   onClose: () => void;
@@ -69,7 +72,7 @@ function Switch(props: { label: string; checked: boolean; onChange: (v: boolean)
   );
 }
 
-export function DisplayPopover({ anchor, display, onChange, onReset, onClose }: DisplayPopoverProps) {
+export function DisplayPopover({ anchor, display, groups = [], onChange, onReset, onClose }: DisplayPopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const set = (patch: Partial<DisplayState>) => onChange({ ...display, ...patch });
@@ -136,6 +139,28 @@ export function DisplayPopover({ anchor, display, onChange, onReset, onClose }: 
       />
       <Switch label="Show empty groups" checked={display.showEmptyGroups} onChange={(showEmptyGroups) => set({ showEmptyGroups })} />
       <div className="kt-disp-sep" />
+      {display.groupBy !== "none" && groups.length > 0 && (
+        <>
+          <div className="kt-disp-heading">Hidden columns</div>
+          <div className="kt-disp-chips">
+            {groups.map((g) => {
+              const hidden = hiddenFor(display.hiddenGroups, display.groupBy).includes(g.key);
+              return (
+                <button
+                  key={g.key}
+                  type="button"
+                  className={`kt-disp-chip${hidden ? "" : " is-on"}`}
+                  title={hidden ? "Hidden - click to show" : "Shown - click to hide"}
+                  onClick={() => set({ hiddenGroups: toggleHidden(display.hiddenGroups, display.groupBy, g.key, !hidden) })}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="kt-disp-sep" />
+        </>
+      )}
       <div className="kt-disp-heading">Display properties</div>
       <div className="kt-disp-chips">
         {PROP_KEYS.map((k) => (

@@ -401,3 +401,7 @@
 .kt-ms-add { display: flex; flex-wrap: wrap; align-items: center; gap: var(--size-4-2); margin: var(--size-4-2) 0; }
 .kt-ms-add input { flex: 1; min-width: 140px; height: 28px; }
 .kt-project-issues { display: flex; flex-direction: column; height: min(70vh, 720px); min-height: 360px; margin: var(--size-4-4) calc(var(--size-4-6) * -1) calc(var(--size-4-6) * -1); border-top: 1px solid var(--background-modifier-border); }
+
+/* LOCK-31 */
+.kt-col-header .kt-col-hide { margin-left: 0; opacity: 0; }
+.kt-col-header:hover .kt-col-hide, .kt-col-hide:focus-visible { opacity: 1; }
