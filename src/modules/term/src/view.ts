@@ -3,6 +3,7 @@ import type TermHost from "./main";
 import type { Session, SessionManager } from "./session-manager";
 import { formatAge } from "./title";
 import { runningCount, SUBAGENT_FADE_MS, type AgentState } from "./agent-state";
+import { applyDrop, ids as layoutIds, nextExpand, remove as removeFromLayout, resolveZone, type ExpandLevel, type Layout, type Zone } from "./tile-layout";
 
 const STATE_LABEL: Record<AgentState, string> = {
   idle: "Idle",
@@ -46,11 +47,20 @@ export class TermView extends ItemView {
   private sidebar!: HTMLElement;
   private list!: HTMLElement;
   private area!: HTMLElement;
+  private queuePanel!: HTMLElement;
+  private unmountQueue: (() => void) | null = null;
   private wrap: HTMLElement | null = null;
-  private mountedId: string | null = null;
   private renamingId: string | null = null;
   private dragId: string | null = null;
   private subsClosed = new Set<string>();
+  /** Columns of stacked session ids. Not persisted; seeded from the active session. */
+  private layout: Layout = [];
+  private expanded: { id: string; level: 1 | 2 } | null = null;
+  private lastActive: string | null = null;
+  private tileSig = "";
+  private tiles: { id: string; el: HTMLElement; titleEl?: HTMLElement; titleText?: HTMLElement; expandBtn?: HTMLElement }[] = [];
+  private dropEl: HTMLElement | null = null;
+  private dropTarget: { id: string; zone: Zone } | null = null;
 
   constructor(leaf: WorkspaceLeaf, private plugin: TermHost) {
     super(leaf);
@@ -81,10 +91,17 @@ export class TermView extends ItemView {
     this.area = wrap.createDiv({ cls: "kh-term-term-area" });
     this.wrap = wrap;
     // Accept drops from the explorer (and plain text) onto the terminal.
-    this.area.addEventListener("dragover", (e) => { if (!this.dragId) e.preventDefault(); });
-    this.area.addEventListener("drop", (e) => {
-      if (this.dragId) return;
+    this.dropEl = wrap.createDiv({ cls: "kh-term-dropzone" });
+    this.area.addEventListener("dragover", (e) => {
       e.preventDefault();
+      if (this.dragId) this.showDrop(e);
+    });
+    this.area.addEventListener("dragleave", (e) => {
+      if (!this.area.contains(e.relatedTarget as Node | null)) this.hideDrop();
+    });
+    this.area.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (this.dragId) { this.commitDrop(); return; }
       e.stopPropagation();
       const s = this.mgr?.active;
       if (!s || s.status !== "running") return;
@@ -92,6 +109,7 @@ export class TermView extends ItemView {
       if (text) this.mgr?.sendText(s.id, text);
     }, true);
     this.applyBackground(this.plugin.bgVars(true));
+    this.buildQueuePanel(root);
 
     const header = this.sidebar.createDiv({ cls: "kh-term-header" });
     const newClaude = header.createEl("button", { text: "New Session", cls: "kh-term-btn-new mod-cta" });
@@ -138,12 +156,43 @@ export class TermView extends ItemView {
 
     this.applySidebar();
     this.unsub = mgr.onChange(() => this.refresh());
-    this.ro = new ResizeObserver(() => this.mgr?.active && this.mgr.term(this.mgr.active.id)?.fit());
+    this.ro = new ResizeObserver(() => this.fitTiles());
     this.ro.observe(this.area);
     this.registerInterval(window.setInterval(() => this.renderList(), 15000));
 
     if (mgr.list().length === 0) await this.plugin.newShell();
     else this.refresh();
+  }
+
+  /** Right-hand launch queue, same width as the session sidebar and collapsible. Content comes from the tickets module. */
+  private buildQueuePanel(root: HTMLElement): void {
+    this.queuePanel = root.createDiv({ cls: "kh-term-queue-panel" });
+    const header = this.queuePanel.createDiv({ cls: "kh-term-header kh-term-queue-header" });
+    header.createSpan({ text: "Queue", cls: "kh-term-queue-heading" });
+    const toggle = header.createEl("button", { cls: "kh-term-btn-collapse kh-term-queue-toggle" });
+    toggle.onclick = () => {
+      this.plugin.settings.queueCollapsed = !this.plugin.settings.queueCollapsed;
+      void this.plugin.saveSettings();
+      this.applyQueue();
+    };
+    const body = this.queuePanel.createDiv({ cls: "kh-term-queue-body" });
+    const svc = this.plugin.hub.services.get("queuePanel");
+    if (svc) this.unmountQueue = svc.mount(body);
+    else body.createDiv({ cls: "kh-term-message", text: "Tickets module disabled. Turn it on in the kyle-hub settings to see the queue." });
+    this.applyQueue();
+  }
+
+  private applyQueue(): void {
+    const s = this.plugin.settings;
+    this.queuePanel.toggleClass("kh-term-collapsed", s.queueCollapsed);
+    this.queuePanel.style.width = s.queueCollapsed ? "" : `${s.sidebarWidth}px`;
+    const btn = this.queuePanel.querySelector<HTMLElement>(".kh-term-queue-toggle");
+    if (btn) {
+      setIcon(btn, s.queueCollapsed ? "chevrons-left" : "chevrons-right");
+      btn.setAttribute("aria-label", s.queueCollapsed ? "Expand queue" : "Collapse queue");
+    }
+    const id = this.mgr?.active?.id;
+    if (id) window.setTimeout(() => this.mgr?.term(id)?.fit(), 0);
   }
 
   /** Set the background CSS variables; layers read them, so sliders are smooth. */
@@ -199,6 +248,8 @@ export class TermView extends ItemView {
   override async onClose(): Promise<void> {
     this.unsubRetro?.();
     this.unsubRetro = null;
+    this.unmountQueue?.();
+    this.unmountQueue = null;
     // Sessions belong to the plugin: just detach, never kill.
     this.unsub?.();
     this.unsub = null;
@@ -207,7 +258,13 @@ export class TermView extends ItemView {
     this.ro?.disconnect();
     this.ro = null;
     this.area?.empty();
-    this.mountedId = null;
+    this.tileSig = "";
+    this.tiles = [];
+    this.layout = [];
+    this.expanded = null;
+    this.lastActive = null;
+    this.dragId = null;
+    this.dropEl = null;
     this.mgr = null;
   }
 
@@ -215,6 +272,7 @@ export class TermView extends ItemView {
     const s = this.plugin.settings;
     this.sidebar.toggleClass("kh-term-collapsed", s.sidebarCollapsed);
     this.sidebar.style.width = s.sidebarCollapsed ? "" : `${s.sidebarWidth}px`;
+    if (this.queuePanel && !s.queueCollapsed) this.queuePanel.style.width = `${s.sidebarWidth}px`;
     const btn = this.sidebar.querySelector<HTMLElement>(".kh-term-btn-collapse");
     if (btn) setIcon(btn, s.sidebarCollapsed ? "chevrons-right" : "chevrons-left");
     const id = this.mgr?.active?.id;
@@ -224,18 +282,179 @@ export class TermView extends ItemView {
   private refresh(): void {
     if (!this.mgr) return;
     if (this.renamingId === null) this.renderList();
-    const active = this.mgr.active;
-    if (active?.id !== this.mountedId) {
-      this.area.empty();
-      this.mountedId = active?.id ?? null;
-      if (active) {
-        const t = this.mgr.term(active.id);
-        t?.attach(this.area);
-        window.setTimeout(() => { t?.fit(); t?.focus(); }, 0);
-      } else {
-        this.area.createDiv({ cls: "kh-term-message kh-term-empty", text: "No sessions. Use New Session or + to start one." });
+    const mgr = this.mgr;
+    this.reconcile();
+    const sig = `${JSON.stringify(this.layout)}|${this.expanded?.id ?? ""}:${this.expanded?.level ?? 0}`;
+    if (sig !== this.tileSig) {
+      this.tileSig = sig;
+      this.buildTiles();
+      window.setTimeout(() => { this.fitTiles(); const a = mgr.active; if (a) mgr.term(a.id)?.focus(); }, 0);
+    }
+    this.paintTiles();
+  }
+
+  /** Drops closed sessions, makes sure the active session is visible (replacing the previous active tile), seeds an empty layout. */
+  private reconcile(): void {
+    const mgr = this.mgr!;
+    const live = new Set(mgr.list().map((s) => s.id));
+    const active = mgr.active?.id;
+    const before = layoutIds(this.layout);
+    const closedActive = this.lastActive !== null && !live.has(this.lastActive);
+    let l: Layout = this.layout.map((c) => c.map((id) => (closedActive && active && id === this.lastActive && !before.includes(active) ? active : id)));
+    l = l.map((c) => c.filter((id) => live.has(id))).filter((c) => c.length > 0);
+    if (active && !layoutIds(l).includes(active)) {
+      if (l.length === 0) l = [[active]];
+      else {
+        const rep = this.lastActive && layoutIds(l).includes(this.lastActive) ? this.lastActive : l[0]![0]!;
+        l = l.map((c) => c.map((id) => (id === rep ? active : id)));
       }
     }
+    this.lastActive = active ?? null;
+    this.layout = l;
+    const ex = this.expanded;
+    if (ex && (ex.id !== active || !layoutIds(l).includes(ex.id) || layoutIds(l).length < 2)) this.expanded = null;
+  }
+
+  private buildTiles(): void {
+    const mgr = this.mgr!;
+    const ex = this.expanded;
+    this.area.empty();
+    const multi = layoutIds(this.layout).length > 1;
+    this.area.className = `kh-term-term-area kh-term-grid${multi ? "" : " is-solo"}`;
+    this.tiles = [];
+    if (this.layout.length === 0) {
+      this.area.createDiv({ cls: "kh-term-message kh-term-empty", text: "No sessions. Use New Session or + to start one." });
+      return;
+    }
+    for (const col of this.layout) {
+      const colEl = this.area.createDiv({ cls: "kh-term-col" });
+      const hasEx = !!ex && col.includes(ex.id);
+      if (ex?.level === 2 && !hasEx) colEl.addClass("is-hidden");
+      for (const id of col) {
+        const tile = colEl.createDiv({ cls: "kh-term-tile" });
+        if (hasEx && id !== ex!.id) tile.addClass("is-hidden");
+        let titleEl: HTMLElement | undefined;
+        let titleText: HTMLElement | undefined;
+        let expandBtn: HTMLElement | undefined;
+        if (multi) {
+          titleEl = tile.createDiv({ cls: "kh-term-tile-title" });
+          titleEl.draggable = true;
+          titleText = titleEl.createSpan({ cls: "kh-term-tile-name" });
+          expandBtn = titleEl.createEl("button", { cls: "kh-term-tile-btn" });
+          expandBtn.onclick = (e) => { e.stopPropagation(); this.toggleExpand(id); };
+          const x = titleEl.createEl("button", { cls: "kh-term-tile-btn", attr: { "aria-label": "Remove from view" } });
+          setIcon(x, "x");
+          x.onclick = (e) => { e.stopPropagation(); this.removeTile(id); };
+          for (const b of [expandBtn, x]) b.ondblclick = (e) => e.stopPropagation();
+          titleEl.ondblclick = () => this.toggleExpand(id);
+          titleEl.addEventListener("dragstart", (e) => {
+            this.dragId = id;
+            e.dataTransfer?.setData("text/plain", id);
+          });
+          titleEl.addEventListener("dragend", () => { this.dragId = null; this.hideDrop(); });
+        }
+        const body = tile.createDiv({ cls: "kh-term-tile-body" });
+        mgr.term(id)?.attach(body);
+        tile.addEventListener("pointerdown", () => {
+          mgr.setActive(id);
+          mgr.term(id)?.focus();
+        }, true);
+        this.tiles.push({ id, el: tile, titleEl, titleText, expandBtn });
+      }
+    }
+  }
+
+  /** Blue outline = agent needs you, green = finished and not yet viewed; the focused tile gets a faint edge. */
+  private paintTiles(): void {
+    const mgr = this.mgr;
+    if (!mgr) return;
+    const active = mgr.active?.id;
+    for (const t of this.tiles) {
+      const s = mgr.get(t.id);
+      if (!s) continue;
+      const state = s.status === "running" ? s.agent.state : "exited";
+      t.el.toggleClass("is-needs", state === "needs-input");
+      t.el.toggleClass("is-done", state === "finished");
+      t.el.toggleClass("is-focused", t.id === active);
+      t.titleText?.setText(mgr.title(s));
+      if (t.expandBtn) {
+        const open = this.expanded?.id === t.id;
+        setIcon(t.expandBtn, open ? "minimize-2" : "maximize-2");
+        t.expandBtn.setAttribute("aria-label", open ? "Restore" : "Expand (double-click header)");
+      }
+    }
+  }
+
+  private fitTiles(): void {
+    for (const t of this.tiles) this.mgr?.term(t.id)?.fit();
+  }
+
+  /** Normal -> fill its column (when stacked) -> fill everything -> normal. */
+  private toggleExpand(id: string): void {
+    const mgr = this.mgr;
+    if (!mgr) return;
+    mgr.setActive(id);
+    const cur: ExpandLevel = this.expanded?.id === id ? this.expanded.level : 0;
+    const n = nextExpand(this.layout, id, cur);
+    this.expanded = n === 0 ? null : { id, level: n };
+    this.refresh();
+  }
+
+  private removeTile(id: string): void {
+    const next = removeFromLayout(this.layout, id);
+    if (next.length === 0) return;
+    this.layout = next;
+    this.expanded = null;
+    const mgr = this.mgr;
+    if (mgr?.active?.id === id) mgr.setActive(layoutIds(next)[0]!);
+    this.refresh();
+  }
+
+  private tileAt(x: number, y: number): { id: string; rect: DOMRect } | undefined {
+    for (const t of this.tiles) {
+      const r = t.el.getBoundingClientRect();
+      if (r.width > 0 && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return { id: t.id, rect: r };
+    }
+    return undefined;
+  }
+
+  /** While a session is held over the terminal area: highlight where it would land (edge = split, middle = replace). */
+  private showDrop(e: DragEvent): void {
+    const dragged = this.dragId;
+    const t = dragged ? this.tileAt(e.clientX, e.clientY) : undefined;
+    if (!dragged || !t || t.id === dragged || !this.dropEl) { this.hideDrop(); return; }
+    const { rect: r } = t;
+    const fx = (e.clientX - r.left) / r.width;
+    const fy = (e.clientY - r.top) / r.height;
+    const want: Zone = fx < 0.22 ? "left" : fx > 0.78 ? "right" : fy > 0.7 ? "below" : fy < 0.3 ? "above" : "replace";
+    const zone = resolveZone(this.layout, dragged, t.id, want);
+    this.dropTarget = { id: t.id, zone };
+    const w = this.dropEl.parentElement!.getBoundingClientRect();
+    let { left, top, width, height } = r;
+    if (zone === "left") width /= 2;
+    else if (zone === "right") { left += width / 2; width /= 2; }
+    else if (zone === "above") height /= 2;
+    else if (zone === "below") { top += height / 2; height /= 2; }
+    Object.assign(this.dropEl.style, { display: "block", left: `${left - w.left}px`, top: `${top - w.top}px`, width: `${width}px`, height: `${height}px` });
+  }
+
+  private hideDrop(): void {
+    this.dropTarget = null;
+    if (this.dropEl) this.dropEl.style.display = "none";
+  }
+
+  private commitDrop(): void {
+    const dragged = this.dragId;
+    const target = this.dropTarget;
+    this.dragId = null;
+    this.hideDrop();
+    if (!dragged || !target) return;
+    const next = applyDrop(this.layout, dragged, target.id, target.zone);
+    if (!next) return;
+    this.layout = next;
+    this.expanded = null;
+    this.mgr?.setActive(dragged);
+    this.refresh();
   }
 
   private renderList(): void {
@@ -311,6 +530,7 @@ export class TermView extends ItemView {
       row.addEventListener("dragend", () => {
         this.dragId = null;
         this.list.querySelectorAll(".kh-term-drop").forEach((n) => n.removeClass("kh-term-drop"));
+        this.hideDrop();
       });
       row.addEventListener("dragover", (e) => {
         if (!this.dragId) return;

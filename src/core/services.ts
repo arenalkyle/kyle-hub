@@ -167,6 +167,13 @@ export interface Services {
   promote: PromoteService;
   usage: UsageService;
   launcher: LaunchService;
+  queuePanel: QueuePanelService;
+}
+
+/** Published by the tickets module: renders the launch queue (ticket-board rows, Todo/Triage tabs) into an element. */
+export interface QueuePanelService {
+  /** Returns an unmount function. */
+  mount(el: HTMLElement): () => void;
 }
 
 /** Published by the term module: starts a ticket run in a terminal session. */

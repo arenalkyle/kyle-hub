@@ -50,7 +50,7 @@ export async function loadCommandCenterData(r: CommandCenterReader): Promise<Com
     retro: await part(r.retro, (x) => x.status()),
     brain: await part(r.brain, (b) => b.health()),
     usage: await part(r.usage, (u) => u.snapshot()),
-    logs: await part(r.logs, async (l) => ({ runs: await l.runs({ limit: RECENT_RUNS }), spend: await l.spendByDay(SPEND_DAYS) })),
+    logs: await part(r.logs, async (l) => ({ runs: await l.runs({ limit: RECENT_RUNS, ticketedOnly: true }), spend: await l.spendByDay(SPEND_DAYS) })),
   };
 }
 

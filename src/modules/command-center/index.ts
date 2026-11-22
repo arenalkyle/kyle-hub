@@ -32,7 +32,7 @@ export const commandCenterModule: HubModule = {
     ctx.registerView(COMMAND_CENTER_VIEW_TYPE, (leaf) => new CommandCenterView(leaf, hub, () => readerFrom(hub.services, () => vaultProfileOf(hub.settings.module("core"))), focusTicket));
     const open = (): void => void openCommandCenter(hub);
     ctx.addRibbonIcon("layout-dashboard", "Open command center", open);
-    ctx.addNavItem({ id: "command-center", label: "Command center", icon: "layout-dashboard", viewType: COMMAND_CENTER_VIEW_TYPE, order: 0, open });
+    ctx.addNavItem({ id: "command-center", label: "Command Center", icon: "layout-dashboard", viewType: COMMAND_CENTER_VIEW_TYPE, order: 0, open });
     ctx.addCommand({ id: "command-center-open", name: "Open command center", callback: open });
   },
 };

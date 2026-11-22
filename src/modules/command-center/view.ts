@@ -42,13 +42,13 @@ export class CommandCenterView extends ItemView {
   }
 
   getViewType(): string { return COMMAND_CENTER_VIEW_TYPE; }
-  getDisplayText(): string { return "Command center"; }
+  getDisplayText(): string { return "Command Center"; }
   override getIcon(): string { return "layout-dashboard"; }
 
   override async onOpen(): Promise<void> {
     this.isOpen = true;
     this.contentEl.addClass("kh-command-center");
-    this.contentEl.createEl("h3", { text: "Command center", cls: "kh-command-center-title" });
+    this.contentEl.createEl("h3", { text: "Command Center", cls: "kh-command-center-title" });
     this.contentEl.createDiv({ text: "Loading…" });
     const bump = (): void => void this.refresh();
     for (const ev of BUS_EVENTS) this.offs.push(this.hub.events.on(ev, bump));
@@ -83,7 +83,7 @@ export class CommandCenterView extends ItemView {
       console.error("kyle-hub: command center refresh failed", e);
       if (!this.isOpen || seq !== this.seq) return;
       this.contentEl.empty();
-      this.contentEl.createEl("h3", { text: "Command center", cls: "kh-command-center-title" });
+      this.contentEl.createEl("h3", { text: "Command Center", cls: "kh-command-center-title" });
       this.contentEl.createDiv({ text: `Failed to load: ${e instanceof Error ? e.message : String(e)}` });
     }
   }
@@ -91,7 +91,7 @@ export class CommandCenterView extends ItemView {
   private paint(m: CommandCenterModel, inv: BrainInventory | undefined): void {
     const el = this.contentEl;
     el.empty();
-    el.createEl("h3", { text: "Command center", cls: "kh-command-center-title" });
+    el.createEl("h3", { text: "Command Center", cls: "kh-command-center-title" });
     const layout = el.createDiv({ cls: "kh-command-center-layout" });
     const left = layout.createDiv({ cls: "kh-command-center-pane" });
     const center = layout.createDiv({ cls: "kh-command-center-pane kh-command-center-pane-main" });

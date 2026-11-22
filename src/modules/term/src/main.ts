@@ -72,7 +72,7 @@ export default class TermHost {
   private muteListeners = new Set<() => void>();
   private lastPlayed: { bySession: Record<string, number>; byEvent: Partial<Record<AlertEvent, number>> } = { bySession: {}, byEvent: {} };
 
-  constructor(private hub: Hub, private ctx: ModuleContext) {
+  constructor(readonly hub: Hub, private ctx: ModuleContext) {
     this.app = hub.app;
     this.settings = ctx.settings.get<TermData>();
     normalizeTerm(this.settings);

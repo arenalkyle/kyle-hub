@@ -25,6 +25,7 @@ export interface TermSettings {
   scrollbackLines: number;
   sidebarWidth: number;
   sidebarCollapsed: boolean;
+  queueCollapsed: boolean;
   sounds: SoundSettings;
   appearance: AppearanceSettings;
 }
@@ -41,6 +42,7 @@ export const DEFAULT_SETTINGS: TermSettings = {
   scrollbackLines: 2000,
   sidebarWidth: 240,
   sidebarCollapsed: false,
+  queueCollapsed: false,
   sounds: DEFAULT_SOUNDS,
   appearance: DEFAULT_APPEARANCE,
 };

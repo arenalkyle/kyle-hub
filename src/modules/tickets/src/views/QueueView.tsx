@@ -1,20 +1,19 @@
-import { ItemView, Notice, type WorkspaceLeaf } from "obsidian";
-import { StrictMode, useCallback, useMemo, useState } from "react";
+import { Notice } from "obsidian";
+import { StrictMode, useCallback, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { defaultDisplay } from "../../../../core/domain/display";
 import { categoryOf } from "../../../../core/domain/fields";
-import type { Issue, Priority } from "../../../../core/domain/types";
+import { parentProgress, type ParentProgress } from "../../../../core/domain/progress";
+import type { Issue, Priority, Settings } from "../../../../core/domain/types";
 import type KyleTicketsPlugin from "../main";
 import { useIssues, useSettings } from "../store/hooks";
 import { PluginContext, usePlugin } from "./PluginContext";
+import { Avatar } from "./components/Avatar";
+import { AttentionChip, DueChip, LabelChip, ProjectChip, shortDate } from "./components/chips";
+import { PriorityIcon, StatusIcon } from "./components/icons";
 import { PriorityPicker } from "./components/pickers/PriorityPicker";
 import { StatusPicker } from "./components/pickers/StatusPicker";
-import { IssueRow } from "./main/IssueRow";
-
-export const VIEW_TYPE_QUEUE = "kh-tickets-queue";
 
 type Tab = "triage" | "todo";
-const PROPS = defaultDisplay().properties;
 
 /** Launch queue: the same rows as the ticket board, split into Todo / Triage, each with a Launch button. */
 function QueueApp() {
@@ -36,6 +35,7 @@ function QueueApp() {
     return { todo: [...by("unstarted"), ...by("backlog")].sort(readyFirst), triage: by("triage") };
   }, [issues, settings.statuses, ready]);
   const list = tab === "todo" ? todo : triage;
+  const progress = useMemo(() => new Map(parentProgress(issues, settings.statuses).map((p) => [p.parent.id, p])), [issues, settings.statuses]);
 
   const open = useCallback((i: Issue, newTab: boolean) => plugin.hub.services.get("tickets")?.open?.(i.id, newTab), [plugin]);
   const update = (patch: { status?: string; priority?: Priority }) => {
@@ -46,9 +46,10 @@ function QueueApp() {
   return (
     <div className="kh-tickets-queue">
       <div className="kh-tickets-queue-tabs" role="tablist">
-        {([["todo", "Todo", todo.length], ["triage", "Triage", triage.length]] as const).map(([k, label, n]) => (
+        {([["triage", "Triage", triage.length], ["todo", "Todo", todo.length]] as const).map(([k, label, n]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={`kh-tickets-queue-tab${tab === k ? " is-active" : ""}`} onClick={() => setTab(k)}>
-            {label} <span className="kh-tickets-group-count">{n}</span>
+            <span>{label}</span>
+            <span className="kh-tickets-queue-count">{n}</span>
           </button>
         ))}
       </div>
@@ -58,23 +59,81 @@ function QueueApp() {
           const sid = running.get(issue.id);
           const isReady = ready.has(issue.id);
           return (
-            <div key={issue.id} className="kh-tickets-item kh-tickets-queue-item">
-              <IssueRow
-                issue={issue}
-                settings={settings}
-                properties={PROPS}
-                onOpen={open}
-                onStatus={(i, anchor) => setPicker({ kind: "status", id: i.id, anchor })}
-                onPriority={(i, anchor) => setPicker({ kind: "priority", id: i.id, anchor })}
-                extra={<LaunchButton id={issue.id} ready={isReady} sessionId={sid} onDone={() => tick((n) => n + 1)} />}
-              />
-            </div>
+            <QueueCard
+              key={issue.id}
+              issue={issue}
+              settings={settings}
+              progress={progress.get(issue.id)}
+              onOpen={open}
+              onStatus={(i, anchor) => setPicker({ kind: "status", id: i.id, anchor })}
+              onPriority={(i, anchor) => setPicker({ kind: "priority", id: i.id, anchor })}
+              launch={<LaunchButton id={issue.id} ready={isReady} sessionId={sid} onDone={() => tick((n) => n + 1)} />}
+            />
           );
         })}
       </div>
       {picker && picked && picker.kind === "status" && <StatusPicker anchor={picker.anchor} value={picked.status} onChange={(status) => update({ status })} onClose={() => setPicker(null)} />}
       {picker && picked && picker.kind === "priority" && <PriorityPicker anchor={picker.anchor} value={picked.priority} onChange={(priority) => update({ priority })} onClose={() => setPicker(null)} />}
     </div>
+  );
+}
+
+/** Linear-style board card: id + assignee on top, status icon + bold title, chip row (priority, progress, labels), created date. */
+function QueueCard({ issue, settings, progress, launch, onOpen, onStatus, onPriority }: {
+  issue: Issue;
+  settings: Settings;
+  progress?: ParentProgress;
+  launch: ReactNode;
+  onOpen: (issue: Issue, newTab: boolean) => void;
+  onStatus: (issue: Issue, anchor: HTMLElement) => void;
+  onPriority: (issue: Issue, anchor: HTMLElement) => void;
+}) {
+  const def = settings.statuses.find((s) => s.name === issue.status);
+  const stop = (fn: (anchor: HTMLElement) => void) => (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    fn(e.currentTarget);
+  };
+  return (
+    <div className="kh-tickets-qcard" data-kh-tickets-id={issue.id} onClick={(e) => onOpen(issue, e.ctrlKey || e.metaKey)}>
+      <div className="kh-tickets-qcard-top">
+        <span className="kh-tickets-qcard-id">{issue.id}</span>
+        {issue.assignee && <Avatar name={issue.assignee} className="kh-tickets-qcard-avatar" />}
+      </div>
+      <div className="kh-tickets-qcard-main">
+        <button type="button" className="kh-tickets-row-btn" title={issue.status} onClick={stop((a) => onStatus(issue, a))}>
+          <StatusIcon category={def?.category ?? "backlog"} color={def?.color} />
+        </button>
+        <span className="kh-tickets-qcard-title">{issue.title}</span>
+      </div>
+      <div className="kh-tickets-qcard-chips">
+        <button type="button" className="kh-tickets-chip kh-tickets-qcard-chipbtn" title="Priority" onClick={stop((a) => onPriority(issue, a))}>
+          <PriorityIcon priority={issue.priority} />
+        </button>
+        {progress && (
+          <span className="kh-tickets-chip" title={`${progress.done} of ${progress.total} sub-issues done`}>
+            <ProgressRing percent={progress.percent} />
+            <span className="kh-tickets-chip-text">{progress.done}/{progress.total}</span>
+          </span>
+        )}
+        <AttentionChip id={issue.id} />
+        {issue.tags.map((t) => <LabelChip key={t} label={t} color={settings.labelColors[t]} />)}
+        {issue.project && <ProjectChip project={issue.project} />}
+        {issue.due && <DueChip due={issue.due} />}
+        {launch}
+      </div>
+      {issue.created && <div className="kh-tickets-qcard-created">Created {shortDate(issue.created)}</div>}
+    </div>
+  );
+}
+
+function ProgressRing({ percent }: { percent: number }) {
+  const r = 5.5;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+      <circle cx="7" cy="7" r={r} fill="none" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1.5" />
+      <circle cx="7" cy="7" r={r} fill="none" stroke="var(--interactive-accent)" strokeWidth="1.5" strokeDasharray={`${(c * percent) / 100} ${c}`} transform="rotate(-90 7 7)" />
+    </svg>
   );
 }
 
@@ -119,31 +178,16 @@ function LaunchButton({ id, ready, sessionId, onDone }: { id: string; ready: boo
   );
 }
 
-export class QueueView extends ItemView {
-  private root: Root | null = null;
-
-  constructor(leaf: WorkspaceLeaf, private readonly plugin: KyleTicketsPlugin) {
-    super(leaf);
-  }
-
-  override getViewType(): string { return VIEW_TYPE_QUEUE; }
-  override getDisplayText(): string { return "Queue"; }
-  override getIcon(): string { return "list-checks"; }
-
-  override async onOpen(): Promise<void> {
-    this.contentEl.addClass("kh-tickets-root");
-    this.root = createRoot(this.contentEl);
-    this.root.render(
-      <StrictMode>
-        <PluginContext.Provider value={this.plugin}>
-          <QueueApp />
-        </PluginContext.Provider>
-      </StrictMode>,
-    );
-  }
-
-  override async onClose(): Promise<void> {
-    this.root?.unmount();
-    this.root = null;
-  }
+/** Renders the queue into `el` (the terminal view's right panel); returns an unmount function. */
+export function mountQueue(plugin: KyleTicketsPlugin, el: HTMLElement): () => void {
+  el.addClass("kh-tickets-root");
+  const root: Root = createRoot(el);
+  root.render(
+    <StrictMode>
+      <PluginContext.Provider value={plugin}>
+        <QueueApp />
+      </PluginContext.Provider>
+    </StrictMode>,
+  );
+  return () => root.unmount();
 }

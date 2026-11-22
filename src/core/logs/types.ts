@@ -78,6 +78,8 @@ export interface RunQuery {
   accountId?: string;
   /** Only runs of this profile (the vault profile for the dashboard and retro). */
   profile?: Profile;
+  /** Only runs launched for a ticket (carry a ticketId); hides unprompted sessions. */
+  ticketedOnly?: boolean;
   limit?: number;
 }
 

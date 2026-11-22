@@ -33,4 +33,5 @@ One Obsidian plugin (tickets, terminals, logs, retros, brain) built from modules
 - `hooks/kyle-hook.js` must never block or fail Claude Code.
 - Ticket file parsing stays round-trip safe: preserve unknown frontmatter keys and body content. Only `IssueStore` writes ticket files from the plugin; the CLI writes via `core/domain`.
 - Style with Obsidian CSS variables; CSS prefixes are `kh-<module>-` (`kh-tickets-`, `kh-term-`).
-- Work one sub-phase (one Linear ticket) at a time; build, test and lint must pass before handing off. Commit locally with conventional messages; push only on approval.
+- Work one sub-phase (one Linear ticket) at a time; build, test and lint must pass before handing off. Commit with conventional messages.
+- **Always deploy and push after every build**: once build, test and lint pass, run `npm run deploy`, commit, and `git push` to `origin/main` without asking (standing instruction from the user). Report the deploy and push in your reply.

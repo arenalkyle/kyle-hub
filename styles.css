@@ -504,6 +504,25 @@
 .kh-term-term-area { position: relative; height: 100%; width: 100%; overflow: hidden; }
 .kh-term-term .xterm-viewport { background-color: transparent !important; }
 
+/* Tiled layouts: up to 4 columns of 1-2 stacked sessions. Outline blue = needs you, green = finished. */
+.kh-term-grid { display: flex; gap: 6px; padding: 6px; box-sizing: border-box; }
+.kh-term-grid.is-solo { display: block; padding: 0; }
+.kh-term-col { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.kh-term-tile { flex: 1 1 0; position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; border: 2px solid var(--background-modifier-border); border-radius: 6px; }
+.kh-term-grid.is-solo .kh-term-tile { height: 100%; border-width: 0; border-radius: 0; }
+.kh-term-grid.is-solo .kh-term-tile.is-needs, .kh-term-grid.is-solo .kh-term-tile.is-done { border-width: 2px; }
+.kh-term-grid .is-hidden { display: none; }
+.kh-term-tile.is-focused { border-color: var(--text-faint); }
+.kh-term-tile.is-needs { border-color: #4c8dff; box-shadow: 0 0 0 1px #4c8dff, 0 0 10px rgba(76, 141, 255, 0.55); }
+.kh-term-tile.is-done { border-color: #3fb950; box-shadow: 0 0 0 1px #3fb950, 0 0 10px rgba(63, 185, 80, 0.45); }
+.kh-term-tile-title { flex: none; display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; font-size: var(--font-ui-smaller); color: var(--text-muted); background: var(--background-secondary); cursor: grab; user-select: none; }
+.kh-term-tile-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kh-term-tile-btn { flex: none; padding: 2px; height: auto; background: transparent; box-shadow: none; color: var(--text-muted); }
+.kh-term-tile-btn:hover { color: var(--text-normal); }
+.kh-term-tile-btn svg { width: 14px; height: 14px; }
+.kh-term-tile-body { flex: 1; min-height: 0; position: relative; }
+.kh-term-dropzone { position: absolute; display: none; pointer-events: none; z-index: 20; box-sizing: border-box; background: color-mix(in srgb, var(--interactive-accent) 25%, transparent); border: 2px dashed var(--interactive-accent); border-radius: 6px; }
+
 .kh-term-header { display: flex; gap: 4px; padding: 6px; align-items: center; }
 .kh-term-sidebar.kh-term-collapsed .kh-term-header { padding: 6px 2px; justify-content: center; }
 .kh-term-btn-new { flex: 1; }
@@ -670,20 +689,43 @@
 .kh-accounts .setting-item-control input[type="text"] { width: 130px; }
 
 /* Header nav on kyle-hub views */
-.kh-nav { display: flex; gap: 4px; align-items: center; margin: 0 auto; }
-.kh-nav-item { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; background: transparent; box-shadow: none; color: var(--text-muted); font-size: var(--font-ui-small); }
+.kh-nav { display: flex; gap: 6px; align-items: center; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1; }
+.view-header:has(> .kh-nav) { position: relative; }
+.kh-nav-item { display: flex; align-items: center; gap: 6px; height: 32px; min-width: 130px; justify-content: center; padding: 0 18px; background: transparent; box-shadow: none; color: var(--text-muted); font-size: var(--font-ui-medium); }
 .kh-nav-item:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
 .kh-nav-item.is-active { background: var(--background-modifier-active-hover); color: var(--text-normal); }
 .kh-nav-icon { display: flex; }
-.kh-nav-icon svg { width: 14px; height: 14px; }
+.kh-nav-icon svg { width: 18px; height: 18px; }
 
 /* Queue view (tickets module) */
 .kh-tickets-queue { display: flex; flex-direction: column; height: 100%; }
-.kh-tickets-queue-tabs { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--background-modifier-border); }
-.kh-tickets-queue-tab { background: transparent; box-shadow: none; color: var(--text-muted); }
+.kh-tickets-queue-tabs { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--background-modifier-border); }
+.kh-tickets-queue-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--background-modifier-hover); box-shadow: none; color: var(--text-muted); }
+.kh-tickets-queue-count { min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--background-modifier-border); color: var(--text-normal); font-size: var(--font-ui-smaller); line-height: 18px; text-align: center; }
 .kh-tickets-queue-tab.is-active { background: var(--background-modifier-active-hover); color: var(--text-normal); }
 .kh-tickets-queue-list { flex: 1; overflow-y: auto; }
 .kh-tickets-queue-item { position: relative; height: 36px; }
 .kh-tickets-queue-empty { padding: 16px; color: var(--text-muted); }
 .kh-tickets-queue-btn { height: 22px; padding: 0 8px; font-size: var(--font-ui-smaller); }
 .kh-tickets-queue-btn.is-running { background: var(--interactive-accent); color: var(--text-on-accent); }
+
+/* Queue panel inside the terminal view (right side, mirrors the session sidebar) */
+.kh-term-queue-panel { display: flex; flex-direction: column; flex: none; min-width: 0; border-left: 1px solid var(--background-modifier-border); background: var(--background-secondary); }
+.kh-term-queue-panel.kh-term-collapsed { width: 32px; }
+.kh-term-queue-panel.kh-term-collapsed .kh-term-queue-body, .kh-term-queue-panel.kh-term-collapsed .kh-term-queue-heading { display: none; }
+.kh-term-queue-panel.kh-term-collapsed .kh-term-header { padding: 6px 2px; justify-content: center; }
+.kh-term-queue-heading { flex: 1; font-weight: var(--font-semibold); }
+.kh-term-queue-body { flex: 1; min-height: 0; overflow: hidden; }
+.kh-tickets-queue-item { height: auto; }
+.kh-tickets-queue-list { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.kh-tickets-qcard { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 8px; cursor: pointer; }
+.kh-tickets-qcard:hover { background: var(--background-modifier-hover); }
+.kh-tickets-qcard-top { display: flex; align-items: center; justify-content: space-between; min-height: 20px; }
+.kh-tickets-qcard-id { color: var(--text-muted); font-size: var(--font-ui-small); font-variant-numeric: tabular-nums; }
+.kh-tickets-qcard-avatar { width: 20px; height: 20px; }
+.kh-tickets-qcard-main { display: flex; align-items: flex-start; gap: 6px; }
+.kh-tickets-qcard-main .kh-tickets-row-btn { margin-top: 1px; flex: none; }
+.kh-tickets-qcard-title { font-weight: var(--font-semibold); line-height: 1.35; overflow-wrap: anywhere; }
+.kh-tickets-qcard-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.kh-tickets-qcard-chipbtn { background: transparent; box-shadow: none; cursor: pointer; }
+.kh-tickets-qcard-created { color: var(--text-muted); font-size: var(--font-ui-smaller); }

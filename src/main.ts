@@ -31,7 +31,7 @@ const MODULE_LABELS: Record<ModuleId, string> = {
   tickets: "Tickets",
   term: "Terminals",
   brain: "Brain",
-  commandCenter: "Command center",
+  commandCenter: "Command Center",
   usage: "Usage tracker",
 };
 
