@@ -12,10 +12,10 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
   - Tiled terminals (up to 4 columns x 2 stacked): drag to split, expand, state outlines. Splitting doesn't duplicate Claude's screen (bundled ConPTY, [term ADR-0003](src/modules/term/docs/ADR/0003-bundled-conpty.md)), the wheel scrolls Claude, bright white is readable. Each new session gets a unique colour tag, shown on its sidebar stripe and pane header.
   - kyle-hub's Claude hooks are installed globally (9 events, incl. SessionEnd); pending move to the vault file (see above).
   - Old kyle-tickets and kyle-term plugins are disabled in the vault.
-  - Health: build passes, 926 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2339 KB (minified, three.js included) (limit 3072 KB).
+  - Health: build passes, 940 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2344 KB (minified, three.js included) (limit 3072 KB).
 - **In progress**: verification in the real vault. The latest build is deployed but not yet confirmed there (Obsidian was closed at the last check); the terminal fixes were tested in throwaway vaults only. All 109 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
 - **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
-- **Command Center v2** (LOCK-61): 10.1 layout, 11.1 vault-scoped capture, 11.2 history capture (transcript `search` records, `human_open` spool) and 12.1 Brain Vitals card + FPS setting done (hook installer now targets `<vault>/.claude/settings.local.json`; re-run "Install hooks" in Obsidian to move it out of global settings). 13.1 3D brain (three.js + bloom, `brainView` service; production build now minified) and 13.2 Claude sessions/sub-agents on the brain done; not yet seen in a live Obsidian (2,000-note FPS cap, look). 14.1 grading + `kh gaps` done (per-vault `.kyle-hub/gaps/latest.json`, run by `kh maintain`; weights in `.kyle-hub/grading.json`). Next: 14.2 Retro gap detectors (LOCK-71). Spec in [docs/PHASES.md](docs/PHASES.md) Phases 10–16.
+- **Command Center v2** (LOCK-61): 10.1 layout, 11.1 vault-scoped capture, 11.2 history capture (transcript `search` records, `human_open` spool) and 12.1 Brain Vitals card + FPS setting done (hook installer now targets `<vault>/.claude/settings.local.json`; re-run "Install hooks" in Obsidian to move it out of global settings). 13.1 3D brain (three.js + bloom, `brainView` service; production build now minified) and 13.2 Claude sessions/sub-agents on the brain done; not yet seen in a live Obsidian (2,000-note FPS cap, look). 14.1 grading + `kh gaps` done (per-vault `.kyle-hub/gaps/latest.json`, run by `kh maintain`; weights in `.kyle-hub/grading.json`). 14.2 Retro gap proposals done (split note/folder, write note, review note; Retro card shows waiting count). Next: 15.1 Gaps on the Brain tab (LOCK-72). Spec in [docs/PHASES.md](docs/PHASES.md) Phases 10–16.
 - **Next**
   1. Open Obsidian and run the "Terminal tiling" manual checks.
   2. Add repos to the repo map in kyle-hub settings, then check Queue launch and clear kyle-hub's brain findings.
@@ -46,6 +46,6 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
 | 11 Capture | 11.1 · 11.2 | LOCK-63 · LOCK-65 | S · H | Done |
 | 12 Vitals | 12.1 | LOCK-66 | H | Done |
 | 13 Brain 3D | 13.1 · 13.2 | LOCK-67 · LOCK-70 | S · S | Done |
-| 14 Gaps | 14.1 · 14.2 | LOCK-68 · LOCK-71 | S · H | Done · Backlog |
+| 14 Gaps | 14.1 · 14.2 | LOCK-68 · LOCK-71 | S · H | Done |
 | 15 Gaps UI | 15.1 · 15.2 | LOCK-72 · LOCK-73 | H · H | Backlog |
 | 16 Templates | 16.1 · 16.2 | LOCK-64 · LOCK-69 | H · S | Backlog |
