@@ -156,3 +156,38 @@ describe("human_open spool (LOCK-65)", () => {
     ]);
   });
 });
+
+describe("LogService vault activity readers (LOCK-66)", () => {
+  const NOW = new Date("2026-03-01T11:00:00.000Z");
+  const SINCE = "2026-03-01T10:00:00.000Z";
+  const svc = (sub: string) => new FileLogService({ dataRoot: dataRoot(sub), projectsDir: path.join(root, "claude", "projects"), prices: PRICES, now: () => NOW });
+
+  it("reads hook access records with their session links, skipping non-access hook events", async () => {
+    const hooks = path.join(root, "data", "home", "hooks");
+    fs.mkdirSync(hooks, { recursive: true });
+    fs.writeFileSync(
+      path.join(hooks, "2026-03-01.jsonl"),
+      [
+        JSON.stringify({ t: "2026-03-01T10:30:00.000Z", sessionId: "main", name: "PostToolUse", access: { kind: "read", path: "Brain/a.md" } }),
+        JSON.stringify({ t: "2026-03-01T10:31:00.000Z", sessionId: "sub", parentSessionId: "main", name: "PostToolUse", access: { kind: "search", root: "." } }),
+        JSON.stringify({ t: "2026-03-01T10:32:00.000Z", sessionId: "main", name: "Stop" }),
+        JSON.stringify({ t: "2026-03-01T09:00:00.000Z", sessionId: "main", name: "PostToolUse", access: { kind: "write", path: "old.md" } }),
+      ].join("\n") + "\n",
+    );
+    const out = await svc("data").accessSince(SINCE, "home");
+    expect(out).toEqual([
+      { t: "2026-03-01T10:30:00.000Z", kind: "read", sessionId: "main", path: "Brain/a.md" },
+      { t: "2026-03-01T10:31:00.000Z", kind: "search", sessionId: "sub", parentSessionId: "main" },
+    ]);
+  });
+
+  it("reads human opens for the given profile, and every profile when none is given", async () => {
+    const human = (p: Profile) => path.join(root, "data", p, "human");
+    fs.mkdirSync(human("home"), { recursive: true });
+    fs.mkdirSync(human("work"), { recursive: true });
+    fs.writeFileSync(path.join(human("home"), "2026-03-01.jsonl"), `${JSON.stringify({ type: "human_open", t: "2026-03-01T10:05:00.000Z", path: "h.md" })}\n`);
+    fs.writeFileSync(path.join(human("work"), "2026-03-01.jsonl"), `${JSON.stringify({ type: "human_open", t: "2026-03-01T10:06:00.000Z", path: "w.md" })}\n`);
+    expect((await svc("data").humanOpensSince(SINCE, "work")).map((h) => h.path)).toEqual(["w.md"]);
+    expect((await svc("data").humanOpensSince(SINCE)).map((h) => h.path).sort()).toEqual(["h.md", "w.md"]);
+  });
+});

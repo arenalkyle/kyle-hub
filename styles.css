@@ -723,3 +723,9 @@
 .kh-tickets-qcard-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .kh-tickets-qcard-chipbtn { background: transparent; box-shadow: none; cursor: pointer; }
 .kh-tickets-qcard-created { color: var(--text-muted); font-size: var(--font-ui-smaller); }
+
+/* Brain Vitals (kh-command-center-vitals-, LOCK-66) */
+.kh-command-center-vitals-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.kh-command-center-unit { font-size: var(--font-ui-smaller); padding: 2px 8px; }
+.kh-command-center-vitals { display: grid; gap: 10px; margin-top: 12px; }
+.kh-command-center-vital-human { color: var(--text-faint); font-size: var(--font-ui-smaller); }

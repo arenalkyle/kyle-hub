@@ -1,6 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Issue, StatusDef } from "../../core/domain/types";
-import { buildCommandCenterModel, loadCommandCenterData, sparklinePath, spendTotals, type CommandCenterReader } from "./model";
+import {
+  activeAgentCount,
+  activeSeries,
+  buildCommandCenterModel,
+  bucketCounts,
+  formatRate,
+  humanOpenCount,
+  loadCommandCenterData,
+  mergeVitalsSamples,
+  noteReadCount,
+  normalizeRateUnit,
+  sparklinePath,
+  spendTotals,
+  vitalsSamples,
+  type CommandCenterReader,
+  type VitalsSample,
+} from "./model";
 
 const NOW = new Date(2026, 10, 21, 12, 0, 0);
 const STATUSES = [
@@ -132,5 +148,76 @@ describe("sparklinePath", () => {
     expect(sparklinePath([], 300, 48)).toBe("");
     expect(sparklinePath([5], 300, 48)).toBe("M0 0");
     expect(sparklinePath([0, 0], 300, 48)).toBe("M0 48 L300 48");
+  });
+});
+
+describe("brain vitals", () => {
+  const NOW_MS = NOW.getTime();
+  const MIN = 60_000;
+  const at = (minutesAgo: number, over: Partial<VitalsSample> = {}): VitalsSample => ({ at: NOW_MS - minutesAgo * MIN, kind: "read", path: "a.md", sessionId: "s1", ...over });
+
+  it("counts agent reads of notes only, and human opens apart", () => {
+    const s = [at(1), at(2, { path: "img.png" }), at(3, { kind: "write" }), at(4, { kind: "human", path: "b.md", sessionId: undefined })];
+    expect(noteReadCount(s)).toBe(1);
+    expect(humanOpenCount(s)).toBe(1);
+  });
+
+  it("formats per hour as the count and per minute as the count over the 60-minute window", () => {
+    expect(formatRate(120, "hour")).toBe("120 / h");
+    expect(formatRate(120, "minute")).toBe("2.0 / min");
+    expect(formatRate(1, "minute")).toBe("0.0 / min");
+  });
+
+  it("normalizes the rate unit, defaulting to per hour", () => {
+    expect(normalizeRateUnit("minute")).toBe("minute");
+    expect(normalizeRateUnit("hour")).toBe("hour");
+    expect(normalizeRateUnit(undefined)).toBe("hour");
+    expect(normalizeRateUnit("day")).toBe("hour");
+  });
+
+  it("merges history with live events, drops duplicates, invalid times and samples outside the hour", () => {
+    const history = [at(5), at(70)];
+    const live = [at(5), at(0, { kind: "search", path: undefined })];
+    const merged = mergeVitalsSamples(history, live, NOW_MS);
+    expect(merged).toHaveLength(2);
+    expect(merged.every((x) => x.at > NOW_MS - 60 * MIN)).toBe(true);
+    expect(mergeVitalsSamples([{ at: Number.NaN, kind: "read" }], [], NOW_MS)).toEqual([]);
+  });
+
+  it("buckets counts per minute, oldest first, and skips samples past the window", () => {
+    const s = [at(0, { kind: "write" }), at(0.5, { kind: "write" }), at(59, { kind: "write" }), at(61, { kind: "write" })];
+    const b = bucketCounts(s, NOW_MS, (x) => x.kind === "write");
+    expect(b).toHaveLength(60);
+    expect(b[59]).toBe(2);
+    expect(b[0]).toBe(1);
+    expect(b.reduce((a, n) => a + n, 0)).toBe(3);
+  });
+
+  it("counts distinct agents active in the last five minutes and per-minute series", () => {
+    const s = [at(1, { sessionId: "a" }), at(2, { sessionId: "a" }), at(3, { sessionId: "b" }), at(9, { sessionId: "c" }), at(1, { kind: "human", sessionId: undefined })];
+    expect(activeAgentCount(s, NOW_MS)).toBe(2);
+    const series = activeSeries(s, NOW_MS);
+    expect(series.reduce((a, n) => a + n, 0)).toBe(4);
+    expect(series[58]).toBe(1);
+  });
+
+  it("turns spool records into samples", () => {
+    const out = vitalsSamples(
+      [{ t: "2026-11-21T11:59:00.000Z", kind: "search", sessionId: "s", path: "x" }],
+      [{ t: "2026-11-21T11:58:00.000Z", path: "n.md" }],
+    );
+    expect(out).toEqual([
+      { at: Date.parse("2026-11-21T11:59:00.000Z"), kind: "search", sessionId: "s", path: "x" },
+      { at: Date.parse("2026-11-21T11:58:00.000Z"), kind: "human", path: "n.md" },
+    ]);
+  });
+
+  it("loads vitals for the hour before now, and degrades when logs are off", async () => {
+    const accessSince = vi.fn(async () => [{ t: "2026-11-21T11:30:00.000Z", kind: "read" as const, sessionId: "s", path: "a.md" }]);
+    const humanOpensSince = vi.fn(async () => []);
+    const d = await loadCommandCenterData({ logs: { runs: async () => [], spendByDay: async () => [], accessSince, humanOpensSince } } as unknown as CommandCenterReader, NOW);
+    expect(accessSince).toHaveBeenCalledWith(new Date(NOW_MS - 60 * MIN).toISOString());
+    expect(d.vitals).toMatchObject({ state: "ok", value: [{ kind: "read", path: "a.md" }] });
+    expect((await loadCommandCenterData({}, NOW)).vitals.state).toBe("disabled");
   });
 });

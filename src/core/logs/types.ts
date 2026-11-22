@@ -118,6 +118,28 @@ export interface LogService {
   spendByDay(days: number, profile?: Profile): Promise<SpendDay[]>;
   /** Usage events of runs on `accountId` (any account when omitted) at or after `since` (ISO); reads derived records only. */
   usageEvents(since: string, accountId?: string): Promise<UsageEvent[]>;
+  /** Vault accesses hooks recorded at or after `since` (ISO), from the hook spool of `profile` (every profile when omitted). Paths only, never contents. */
+  accessSince(since: string, profile?: Profile): Promise<AccessRecord[]>;
+  /** Human note opens at or after `since` (ISO), from the human spool of `profile` (every profile when omitted). */
+  humanOpensSince(since: string, profile?: Profile): Promise<HumanOpenEntry[]>;
+}
+
+/** A vault access a hook recorded (LOCK-63), read back from the hook spool. */
+export interface AccessRecord {
+  t: string;
+  kind: "read" | "write" | "search";
+  /** Sub-agent id when the access came from a sub-agent, else the session id. */
+  sessionId: string;
+  parentSessionId?: string;
+  /** Vault-relative path when the access has one. */
+  path?: string;
+}
+
+/** A human note open read back from the human spool (LOCK-65). */
+export interface HumanOpenEntry {
+  t: string;
+  /** Vault-relative note path. */
+  path: string;
 }
 
 /** Derived record: one JSON object per line in runs/<runId>.jsonl. */

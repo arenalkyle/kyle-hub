@@ -5,9 +5,10 @@ import readline from "node:readline";
 import { dataDir } from "../paths";
 import { BUILTIN_RULES, makeRedactor, redact } from "../redact";
 import { parseTranscriptLine, type ParseState } from "./parse";
+import { readSpoolSince } from "./spool";
 import { countSince as countIndexSince, mergeIndex, queryRuns, readIndex, spendByDay as spendIndexByDay, summarizeRun, writeIndexAtomic } from "./runIndex";
 import { DEFAULT_RETENTION, sweepProfile, type RetentionPolicy, type SweepResult } from "./retention";
-import { PROFILES, type DerivedRecord, type HookEvent, type HumanOpenEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry, type RunIndexEntry, type RunMeta, type RunQuery, type SpendDay, type UsageEvent } from "./types";
+import { PROFILES, type AccessRecord, type DerivedRecord, type HookEvent, type HumanOpenEntry, type HumanOpenEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry, type RunIndexEntry, type RunMeta, type RunQuery, type SpendDay, type UsageEvent } from "./types";
 
 const STATE_VERSION = 1;
 const HEAD_BYTES = 64 * 1024;
@@ -330,6 +331,34 @@ export class FileLogService implements LogService {
   }
 
   /** Removes (or with `dryRun`, only lists) data past retention in every profile. */
+  async accessSince(since: string, profile?: Profile): Promise<AccessRecord[]> {
+    const out: AccessRecord[] = [];
+    for (const p of profile ? [profile] : PROFILES) {
+      for (const r of readSpoolSince(path.join(this.dirFor(p), "hooks"), since, this.now())) {
+        const a = r.access as { kind?: unknown; path?: unknown } | undefined;
+        if (!a || (a.kind !== "read" && a.kind !== "write" && a.kind !== "search") || typeof r.sessionId !== "string") continue;
+        out.push({
+          t: r.t as string,
+          kind: a.kind,
+          sessionId: r.sessionId,
+          ...(typeof r.parentSessionId === "string" ? { parentSessionId: r.parentSessionId } : {}),
+          ...(typeof a.path === "string" ? { path: a.path } : {}),
+        });
+      }
+    }
+    return out;
+  }
+
+  async humanOpensSince(since: string, profile?: Profile): Promise<HumanOpenEntry[]> {
+    const out: HumanOpenEntry[] = [];
+    for (const p of profile ? [profile] : PROFILES) {
+      for (const r of readSpoolSince(path.join(this.dirFor(p), "human"), since, this.now())) {
+        if (r.type === "human_open" && typeof r.path === "string") out.push({ t: r.t as string, path: r.path });
+      }
+    }
+    return out;
+  }
+
   async sweep(opts: { dryRun?: boolean } = {}): Promise<SweepResult[]> {
     const policy: RetentionPolicy = { ...DEFAULT_RETENTION, ...this.opts.retention };
     const out: SweepResult[] = [];

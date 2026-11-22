@@ -1,3 +1,4 @@
+import type { FpsChoice } from "./domain/fps";
 import type { UsageWindowName } from "./domain/usage";
 import type { AttentionReason } from "./services";
 
@@ -34,6 +35,10 @@ export interface HubEvents {
   /** A Claude agent read, wrote or searched the vault (paths vault-relative; never contents). `sessionId` is the sub-agent id when `parentSessionId` is set. */
   "brain:access": BrainAccessEvent;
   "brain:health-changed": { scope: "repo" | "vault"; key: string; score: number; previous?: number };
+  /** The user opened a vault note (`t` ISO, vault-relative `path`); emitted with the human spool record (LOCK-66). */
+  "brain:human-open": { t: string; path: string };
+  /** The shared animation FPS setting changed (LOCK-66); read it with `normalizeFps`. */
+  "display:fps-changed": { fps: FpsChoice };
 }
 
 type Handler<K extends keyof HubEvents> = (payload: HubEvents[K]) => void;

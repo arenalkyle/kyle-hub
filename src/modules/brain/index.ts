@@ -28,7 +28,9 @@ export const brainModule: HubModule = {
     // The human's own note opens feed the vitals human line (LOCK-65); written through the logs service.
     ctx.registerEvent(hub.app.workspace.on("file-open", (f) => {
       if (!(f instanceof TFile) || f.extension !== "md") return;
-      hub.services.get("logs")?.appendHumanOpen({ profile: vaultProfileOf(hub.settings.module("core")), path: f.path });
+      const t = new Date().toISOString();
+      hub.services.get("logs")?.appendHumanOpen({ profile: vaultProfileOf(hub.settings.module("core")), path: f.path, t });
+      hub.events.emit("brain:human-open", { t, path: f.path });
     }));
     const repos = (): Record<string, RepoEntry> => (hub.settings.module("core").repos ?? {}) as Record<string, RepoEntry>;
     const ignoreSymbols = (key: string): string[] => {

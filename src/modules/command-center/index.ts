@@ -1,4 +1,6 @@
-import type { Hub, HubModule, ServiceRegistry } from "../../core";
+import type { Hub, HubModule, ModuleSettingsDef, ServiceRegistry } from "../../core";
+import { DEFAULT_FPS, FPS_CHOICES, normalizeFps } from "../../core/domain/fps";
+import { Setting } from "obsidian";
 import { scopeLogs } from "../../core/logs/scoped";
 import { vaultProfileOf } from "../../core/profile";
 import type { CommandCenterReader } from "./model";
@@ -23,6 +25,13 @@ async function openCommandCenter(hub: Hub): Promise<void> {
   void ws.revealLeaf(leaf);
 }
 
+/** `rateUnit` is the Brain Vitals header choice; `fps` is shared with the 3D brain (LOCK-67). */
+export const commandCenterSettings: ModuleSettingsDef = {
+  id: "commandCenter",
+  defaults: { rateUnit: "hour", fps: DEFAULT_FPS },
+  enabledByDefault: false,
+};
+
 export const commandCenterModule: HubModule = {
   id: "commandCenter",
   load(hub, ctx) {
@@ -34,5 +43,22 @@ export const commandCenterModule: HubModule = {
     ctx.addRibbonIcon("layout-dashboard", "Open command center", open);
     ctx.addNavItem({ id: "command-center", label: "Command Center", icon: "layout-dashboard", viewType: COMMAND_CENTER_VIEW_TYPE, order: 0, open });
     ctx.addCommand({ id: "command-center-open", name: "Open command center", callback: open });
+    ctx.addSettingsSection({
+      render(el) {
+        new Setting(el)
+          .setName("Brain FPS")
+          .setDesc("Shared with the 3D brain. Takes effect without a reload.")
+          .addDropdown((d) =>
+            d
+              .addOptions(Object.fromEntries(FPS_CHOICES.map((f) => [String(f), String(f)])))
+              .setValue(String(normalizeFps(ctx.settings.get<{ fps?: unknown }>().fps)))
+              .onChange(async (v) => {
+                const fps = normalizeFps(Number(v));
+                await ctx.settings.update({ fps });
+                hub.events.emit("display:fps-changed", { fps });
+              }),
+          );
+      },
+    });
   },
 };

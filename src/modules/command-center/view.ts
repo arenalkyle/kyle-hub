@@ -1,8 +1,27 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
-import type { Hub } from "../../core";
+import type { BrainAccessEvent, Hub } from "../../core";
 import type { BrainInventory } from "../../core/brain/inventory";
 import { METRICS, SensorSampler, sparkPoints } from "./sensors";
-import { buildCommandCenterModel, loadCommandCenterData, SPARKLINE_HEIGHT, SPARKLINE_WIDTH, type CommandCenterModel, type CommandCenterReader, type Part, type Tile } from "./model";
+import {
+  activeAgentCount,
+  activeSeries,
+  buildCommandCenterModel,
+  bucketCounts,
+  formatRate,
+  humanOpenCount,
+  loadCommandCenterData,
+  mergeVitalsSamples,
+  noteReadCount,
+  normalizeRateUnit,
+  SPARKLINE_HEIGHT,
+  SPARKLINE_WIDTH,
+  sparklinePath,
+  type CommandCenterModel,
+  type CommandCenterReader,
+  type Part,
+  type Tile,
+  type VitalsSample,
+} from "./model";
 
 export const COMMAND_CENTER_VIEW_TYPE = "kh-command-center-view";
 const REFRESH_MS = 60_000;
@@ -30,6 +49,10 @@ export class CommandCenterView extends ItemView {
   private isOpen = false;
   private seq = 0;
   private sysEl: HTMLElement | null = null;
+  private brainEl: HTMLElement | null = null;
+  private brainState: { bt?: Tile; inv?: BrainInventory } = {};
+  /** Vault samples in the last hour: refreshed history merged with live `brain:access` / `brain:human-open` events. */
+  private live: VitalsSample[] = [];
   private sensors = new SensorSampler(SENSOR_HISTORY, () => this.paintSystem());
 
   constructor(
@@ -52,6 +75,8 @@ export class CommandCenterView extends ItemView {
     this.contentEl.createDiv({ text: "Loading…" });
     const bump = (): void => void this.refresh();
     for (const ev of BUS_EVENTS) this.offs.push(this.hub.events.on(ev, bump));
+    this.offs.push(this.hub.events.on("brain:access", (e) => this.onAccess(e)));
+    this.offs.push(this.hub.events.on("brain:human-open", (e) => this.addLive({ at: Date.parse(e.t), kind: "human", path: e.path })));
     this.timer = window.setInterval(bump, REFRESH_MS);
     this.sensors.start();
     await this.refresh();
@@ -70,8 +95,9 @@ export class CommandCenterView extends ItemView {
     const seq = ++this.seq;
     const now = new Date();
     try {
-      const data = await loadCommandCenterData(this.reader());
+      const data = await loadCommandCenterData(this.reader(), now);
       if (!this.isOpen || seq !== this.seq) return;
+      if (data.vitals.state === "ok") this.live = mergeVitalsSamples(this.live, data.vitals.value, now.getTime());
       let inv: BrainInventory | undefined;
       try {
         inv = this.reader().brain?.inventory();
@@ -158,21 +184,79 @@ export class CommandCenterView extends ItemView {
         spend.appendChild(svg);
       }
     }
-    // Right: brain and system
-    const brain = right.createDiv({ cls: "kh-command-center-card" });
-    brain.createEl("h4", { text: "Brain" });
-    const bt = tile("brain");
-    if (bt) brain.createDiv({ cls: "kh-command-center-brain-score", text: bt.state === "ok" ? `${bt.value} / 100` : bt.value });
+    // Right: brain vitals and system
+    this.brainEl = right.createDiv({ cls: "kh-command-center-card kh-command-center-vitals-card" });
+    this.brainState = { bt: tile("brain"), inv };
+    this.paintBrain();
+    this.sysEl = right.createDiv({ cls: "kh-command-center-card kh-command-center-system" });
+    this.paintSystem();
+  }
+
+  private onAccess(e: BrainAccessEvent): void {
+    this.addLive({ at: Date.parse(e.t), kind: e.kind, sessionId: e.sessionId, ...(e.path !== undefined ? { path: e.path } : {}) });
+  }
+
+  private addLive(s: VitalsSample): void {
+    if (!this.isOpen) return;
+    this.live = mergeVitalsSamples(this.live, [s], Date.now());
+    this.paintBrain();
+  }
+
+  /** Brain Vitals card: health score, counts, then rates and sparklines over the last hour. Repaints alone on live events. */
+  private paintBrain(): void {
+    const box = this.brainEl;
+    if (!box || !box.isConnected) return;
+    box.empty();
+    const head = box.createDiv({ cls: "kh-command-center-vitals-head" });
+    head.createEl("h4", { text: "Brain Vitals" });
+    const { bt, inv } = this.brainState;
+    if (!bt || bt.state === "disabled") return void box.createDiv({ cls: "kh-command-center-empty", text: "module disabled" });
+    const unit = normalizeRateUnit(this.hub.settings.module("commandCenter").rateUnit);
+    const toggle = head.createEl("button", { cls: "kh-command-center-unit", text: unit === "minute" ? "per min" : "per hour", attr: { title: "Switch the notes-read rate unit" } });
+    toggle.addEventListener("click", () => {
+      this.hub.settings.module("commandCenter").rateUnit = unit === "minute" ? "hour" : "minute";
+      void this.hub.save();
+      this.paintBrain();
+    });
+    box.createDiv({ cls: "kh-command-center-brain-score", text: bt.state === "ok" ? `${bt.value} / 100` : bt.value });
     if (inv) {
-      const counts = brain.createDiv({ cls: "kh-command-center-counts" });
+      const counts = box.createDiv({ cls: "kh-command-center-counts" });
       for (const [label, n] of [["Docs", inv.docs], ["Scripts", inv.scripts], ["Skills", inv.skills], ["Agents", inv.agents]] as const) {
         const c = counts.createDiv({ cls: "kh-command-center-count" });
         c.createDiv({ cls: "kh-command-center-count-n", text: String(n) });
         c.createDiv({ cls: "kh-command-center-empty", text: label });
       }
     }
-    this.sysEl = right.createDiv({ cls: "kh-command-center-card kh-command-center-system" });
-    this.paintSystem();
+    const now = Date.now();
+    this.live = mergeVitalsSamples(this.live, [], now);
+    const s = this.live;
+    const list = box.createDiv({ cls: "kh-command-center-vitals" });
+    this.vital(list, "Notes read", formatRate(noteReadCount(s), unit), undefined, `You: ${formatRate(humanOpenCount(s), unit)}`);
+    const count = (kind: VitalsSample["kind"]): number => s.filter((x) => x.kind === kind).length;
+    this.vital(list, "Writes (1 h)", String(count("write")), bucketCounts(s, now, (x) => x.kind === "write"));
+    this.vital(list, "Searches (1 h)", String(count("search")), bucketCounts(s, now, (x) => x.kind === "search"));
+    this.vital(list, "Active agents (5 min)", String(activeAgentCount(s, now)), activeSeries(s, now));
+  }
+
+  private vital(parent: HTMLElement, label: string, value: string, series?: number[], human?: string): void {
+    const row = parent.createDiv({ cls: "kh-command-center-vital" });
+    const head = row.createDiv({ cls: "kh-command-center-metric-head" });
+    head.createSpan({ text: label });
+    head.createSpan({ cls: "kh-command-center-metric-value", text: value });
+    if (human) row.createDiv({ cls: "kh-command-center-vital-human", text: human });
+    if (!series) return;
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", `0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`);
+    svg.setAttribute("class", "kh-command-center-sparkline");
+    svg.setAttribute("preserveAspectRatio", "none");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", sparklinePath(series, SPARKLINE_WIDTH, SPARKLINE_HEIGHT));
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "var(--interactive-accent)");
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("vector-effect", "non-scaling-stroke");
+    svg.appendChild(path);
+    row.appendChild(svg);
   }
 
   private paintSystem(): void {

@@ -2,7 +2,7 @@ import type { AttentionInfo, AttentionService, BrainService, LogService, RetroSe
 import { formatCountdown, type AccountUsage } from "../../core/domain/usage";
 import type { BrainHealth } from "../../core/brain/service";
 import type { Issue, StatusDef } from "../../core/domain/types";
-import type { RunIndexEntry, SpendDay } from "../../core/logs/types";
+import type { AccessRecord, HumanOpenEntry, RunIndexEntry, SpendDay } from "../../core/logs/types";
 import { triageIssues } from "../../core/domain/triage";
 
 /** Read-only slice of the services. Write methods are absent from these types, so the view cannot call them. */
@@ -12,7 +12,7 @@ export interface CommandCenterReader {
   attention?: Pick<AttentionService, "list">;
   retro?: Pick<RetroService, "status">;
   brain?: Pick<BrainService, "health" | "inventory">;
-  logs?: Pick<LogService, "runs" | "spendByDay">;
+  logs?: Pick<LogService, "runs" | "spendByDay" | "accessSince" | "humanOpensSince">;
   usage?: Pick<UsageService, "snapshot">;
 }
 
@@ -27,6 +27,7 @@ export interface CommandCenterData {
   brain: Part<BrainHealth>;
   logs: Part<{ runs: RunIndexEntry[]; spend: SpendDay[] }>;
   usage: Part<AccountUsage[]>;
+  vitals: Part<VitalsSample[]>;
 }
 
 export const SPEND_DAYS = 30;
@@ -42,7 +43,8 @@ async function part<S, T>(svc: S | undefined, read: (s: S) => T | Promise<T>): P
 }
 
 /** Reads every enabled service once. Only read methods are called. */
-export async function loadCommandCenterData(r: CommandCenterReader): Promise<CommandCenterData> {
+export async function loadCommandCenterData(r: CommandCenterReader, now: Date = new Date()): Promise<CommandCenterData> {
+  const since = new Date(now.getTime() - VITALS_WINDOW_MS).toISOString();
   return {
     tickets: await part(r.tickets, (t) => ({ issues: t.list(), statuses: t.statuses(), queue: t.queue() })),
     sessions: await part(r.sessions, (s) => s.list()),
@@ -51,6 +53,7 @@ export async function loadCommandCenterData(r: CommandCenterReader): Promise<Com
     brain: await part(r.brain, (b) => b.health()),
     usage: await part(r.usage, (u) => u.snapshot()),
     logs: await part(r.logs, async (l) => ({ runs: await l.runs({ limit: RECENT_RUNS, ticketedOnly: true }), spend: await l.spendByDay(SPEND_DAYS) })),
+    vitals: await part(r.logs, async (l) => vitalsSamples(await l.accessSince(since), await l.humanOpensSince(since))),
   };
 }
 
@@ -236,4 +239,89 @@ function usageRow(u: AccountUsage, now: number): UsageRow {
     ];
   }
   return row;
+}
+
+// Vitals (LOCK-66). Samples are agent vault accesses (read/write/search, with sessionId) and human note opens ("human").
+// Every vital looks back one hour; the rate unit only changes how that hour is shown.
+
+export const VITALS_WINDOW_MS = 60 * 60_000;
+export const VITALS_BUCKET_MS = 60_000;
+/** An agent counts as active when it touched the vault within this long. */
+export const ACTIVE_IDLE_MS = 5 * 60_000;
+export const VITALS_BUCKETS = 60;
+
+export type RateUnit = "minute" | "hour";
+export const normalizeRateUnit = (v: unknown): RateUnit => (v === "minute" ? "minute" : "hour");
+
+export interface VitalsSample {
+  /** Epoch ms. */
+  at: number;
+  kind: "read" | "write" | "search" | "human";
+  path?: string;
+  sessionId?: string;
+}
+
+/** Spool records to samples; unparsable times become NaN and are dropped by `mergeVitalsSamples`. */
+export function vitalsSamples(access: readonly AccessRecord[], human: readonly HumanOpenEntry[]): VitalsSample[] {
+  return [
+    ...access.map((a): VitalsSample => ({ at: Date.parse(a.t), kind: a.kind, sessionId: a.sessionId, ...(a.path !== undefined ? { path: a.path } : {}) })),
+    ...human.map((h): VitalsSample => ({ at: Date.parse(h.t), kind: "human", path: h.path })),
+  ];
+}
+
+/** Union of two sample lists, deduplicated, restricted to the window ending at `now`. */
+export function mergeVitalsSamples(a: readonly VitalsSample[], b: readonly VitalsSample[], now: number): VitalsSample[] {
+  const seen = new Map<string, VitalsSample>();
+  for (const s of [...a, ...b]) {
+    if (!(s.at > now - VITALS_WINDOW_MS && s.at <= now)) continue;
+    seen.set(`${s.at}|${s.kind}|${s.sessionId ?? ""}|${s.path ?? ""}`, s);
+  }
+  return [...seen.values()];
+}
+
+/** Agent reads of notes (`.md`) in the window. */
+export function noteReadCount(samples: readonly VitalsSample[]): number {
+  return samples.filter((s) => s.kind === "read" && s.path?.endsWith(".md")).length;
+}
+
+export function humanOpenCount(samples: readonly VitalsSample[]): number {
+  return samples.filter((s) => s.kind === "human").length;
+}
+
+/** Per-hour value is the count over the hour; per-minute is that count averaged over the 60-minute window. */
+export function rateValue(count: number, unit: RateUnit): number {
+  return unit === "minute" ? count / (VITALS_WINDOW_MS / 60_000) : count;
+}
+
+export function formatRate(count: number, unit: RateUnit): string {
+  return unit === "minute" ? `${rateValue(count, unit).toFixed(1)} / min` : `${rateValue(count, unit)} / h`;
+}
+
+/** Counts per one-minute bucket, oldest first, over the window ending at `now`. */
+export function bucketCounts(samples: readonly VitalsSample[], now: number, pred: (s: VitalsSample) => boolean): number[] {
+  const out = new Array<number>(VITALS_BUCKETS).fill(0);
+  for (const s of samples) {
+    if (!pred(s) || !(s.at > now - VITALS_WINDOW_MS && s.at <= now)) continue;
+    const idx = VITALS_BUCKETS - 1 - Math.floor((now - s.at) / VITALS_BUCKET_MS);
+    if (idx >= 0 && idx < VITALS_BUCKETS) out[idx]! += 1;
+  }
+  return out;
+}
+
+/** Distinct agent sessions per one-minute bucket, oldest first. */
+export function activeSeries(samples: readonly VitalsSample[], now: number): number[] {
+  const sets = Array.from({ length: VITALS_BUCKETS }, () => new Set<string>());
+  for (const s of samples) {
+    if (s.kind === "human" || s.sessionId === undefined || !(s.at > now - VITALS_WINDOW_MS && s.at <= now)) continue;
+    const idx = VITALS_BUCKETS - 1 - Math.floor((now - s.at) / VITALS_BUCKET_MS);
+    if (idx >= 0 && idx < VITALS_BUCKETS) sets[idx]!.add(s.sessionId);
+  }
+  return sets.map((x) => x.size);
+}
+
+/** Distinct agent sessions that touched the vault within `ACTIVE_IDLE_MS` of `now`. */
+export function activeAgentCount(samples: readonly VitalsSample[], now: number): number {
+  const ids = new Set<string>();
+  for (const s of samples) if (s.kind !== "human" && s.sessionId !== undefined && s.at > now - ACTIVE_IDLE_MS && s.at <= now) ids.add(s.sessionId);
+  return ids.size;
 }

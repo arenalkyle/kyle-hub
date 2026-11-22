@@ -12,6 +12,8 @@ const src = {
     yield { type: "x", t: "t" };
   },
   spendByDay: async (_d: number, p?: string) => [{ day: "d", costUsd: all.filter((e) => !p || e.profile === p).length }],
+  accessSince: async (_since: string, p?: string) => [{ t: "2026-11-01T00:00:00Z", kind: "read" as const, sessionId: p ?? "all" }],
+  humanOpensSince: async (_since: string, p?: string) => [{ t: "2026-11-01T00:00:00Z", path: `${p ?? "all"}.md` }],
 };
 
 describe("scopeLogs", () => {
@@ -19,6 +21,8 @@ describe("scopeLogs", () => {
     const w = scopeLogs(src, "work");
     expect((await w.runs()).map((r) => r.runId)).toEqual(["w"]);
     expect((await w.spendByDay(7))[0]!.costUsd).toBe(1);
+    expect((await w.accessSince("2026-11-01T00:00:00Z")).map((a) => a.sessionId)).toEqual(["work"]);
+    expect((await w.humanOpensSince("2026-11-01T00:00:00Z")).map((h) => h.path)).toEqual(["work.md"]);
     const own: DerivedRecord[] = [];
     for await (const r of w.records("w")) own.push(r);
     expect(own).toHaveLength(1);
