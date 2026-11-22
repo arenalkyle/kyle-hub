@@ -649,7 +649,6 @@
 .kh-command-center-chart-area { fill: var(--interactive-accent); opacity: 0.15; }
 @media (max-width: 1000px) { .kh-command-center-layout { grid-template-columns: 1fr; } }
 .kh-command-center-card { background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 12px 14px; margin: 0; }
-.kh-command-center-card .kh-usage-tile { margin: 0; }
 .kh-command-center-list { margin: 0; padding: 0; list-style: none; }
 .kh-command-center-list li { padding: 5px 0; border-top: 1px solid var(--background-modifier-border); font-size: var(--font-ui-small); }
 .kh-command-center-list li:first-child { border-top: none; }
@@ -663,7 +662,7 @@
 .kh-command-center-badge.is-failed, .kh-command-center-badge.is-error { background: var(--text-error); color: var(--text-on-accent); }
 .kh-command-center-empty { color: var(--text-faint); font-size: var(--font-ui-small); }
 .kh-command-center-spend-total { font-size: 1.6em; font-weight: 600; }
-.kh-command-center-sparkline { width: 100%; height: 40px; display: block; margin-top: 8px; }
+.kh-command-center-sparkline { width: 100%; height: 56px; display: block; margin-top: 8px; }
 
 /* Promote modal (kh-brain-promote-) */
 .kh-brain-promote-diff { max-height: 360px; overflow: auto; font-family: var(--font-monospace); font-size: var(--font-smallest); padding: 8px; background: var(--background-secondary); border-radius: 4px; }
@@ -675,13 +674,6 @@
 .kh-usage-chip { font-size: var(--font-ui-smaller); }
 .kh-usage-chip-hidden { display: none; }
 .kh-usage-picker-line { font-size: var(--font-ui-smaller); color: var(--text-muted); }
-.kh-usage-tile { margin: 8px 0; }
-.kh-usage-row { margin-bottom: 8px; }
-.kh-usage-label { font-weight: var(--font-semibold); }
-.kh-usage-bar-label, .kh-usage-dollars { font-size: var(--font-ui-smaller); color: var(--text-muted); }
-.kh-usage-track { height: 6px; border-radius: 3px; background: var(--background-modifier-border); overflow: hidden; }
-.kh-usage-fill { height: 100%; background: var(--interactive-accent); }
-.kh-usage-fill-warn { background: var(--text-error); }
 
 /* Settings: Claude accounts and Repo map rows wrap instead of overflowing */
 .kh-accounts .setting-item { flex-wrap: wrap; gap: 8px; }
