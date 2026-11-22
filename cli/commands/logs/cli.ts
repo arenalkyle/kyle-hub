@@ -20,6 +20,8 @@ interface LogConfig {
   prices: PriceTable;
   retention: Partial<RetentionPolicy>;
   accounts: { id: string; configDir: string }[];
+  /** First configured vault: scopes transcript search records. */
+  vault?: string;
 }
 
 /** Reads `core.repos` and `core.logs` from the first configured vault's plugin data.json (read-only). */
@@ -27,6 +29,7 @@ export function readLogConfig(env: Record<string, string | undefined>): LogConfi
   const empty: LogConfig = { repoMap: [], denylist: [], prices: {}, retention: {}, accounts: [] };
   const vault = (env.KYLE_HUB_VAULTS ?? env.KYLE_TICKETS_VAULTS ?? "").split(";").map((s) => s.trim()).find((s) => s.length > 0);
   if (!vault) return empty;
+  empty.vault = vault;
   let data: unknown;
   try {
     data = JSON.parse(fs.readFileSync(path.join(vault, ".obsidian", "plugins", "kyle-hub", "data.json"), "utf8"));
@@ -55,7 +58,7 @@ export function readLogConfig(env: Record<string, string | undefined>): LogConfi
     if (typeof logs[k] === "number") retention[k] = logs[k] as number;
   }
   const accounts = accountsOf(core).list.map((a) => ({ id: a.id, configDir: a.configDir }));
-  return { repoMap, denylist, prices, retention, accounts };
+  return { repoMap, denylist, prices, retention, accounts, vault };
 }
 
 /** A service over the configured log roots (`%LOCALAPPDATA%\kyle-hub\<profile>\` unless the env overrides it). */
@@ -67,6 +70,7 @@ export function serviceFor(io: Io): FileLogService {
     prices: cfg.prices,
     retention: cfg.retention,
     accounts: cfg.accounts,
+    ...(cfg.vault ? { vaultRoot: cfg.vault } : {}),
     projectsDir: defaultProjectsDir(io.env),
     dataRoot: (p: Profile) => dataDir(p, { env: io.env, homedir: os.homedir }),
   });

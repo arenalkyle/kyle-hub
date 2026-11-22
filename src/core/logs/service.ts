@@ -335,7 +335,7 @@ export class FileLogService implements LogService {
     const out: AccessRecord[] = [];
     for (const p of profile ? [profile] : PROFILES) {
       for (const r of readSpoolSince(path.join(this.dirFor(p), "hooks"), since, this.now())) {
-        const a = r.access as { kind?: unknown; path?: unknown } | undefined;
+        const a = r.access as { kind?: unknown; path?: unknown; before?: unknown; after?: unknown } | undefined;
         if (!a || (a.kind !== "read" && a.kind !== "write" && a.kind !== "search") || typeof r.sessionId !== "string") continue;
         out.push({
           t: r.t as string,
@@ -343,6 +343,8 @@ export class FileLogService implements LogService {
           sessionId: r.sessionId,
           ...(typeof r.parentSessionId === "string" ? { parentSessionId: r.parentSessionId } : {}),
           ...(typeof a.path === "string" ? { path: a.path } : {}),
+          ...(typeof a.before === "string" ? { before: a.before } : {}),
+          ...(typeof a.after === "string" ? { after: a.after } : {}),
         });
       }
     }

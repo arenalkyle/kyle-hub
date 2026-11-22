@@ -1,5 +1,6 @@
 import { runImport } from "./commands/import/linear";
 import { runLogs } from "./commands/logs/cli";
+import { runGaps } from "./commands/gaps/cli";
 import { runBrain } from "./commands/brain/cli";
 import { runStatusDraft } from "./commands/brain/status";
 import { runAccount } from "./commands/account/cli";
@@ -21,6 +22,7 @@ const MAIN = [
   "  status draft --repo <key> [--dir <tickets folder>]   STATUS.md skeleton to stdout (writes nothing)",
   "  promote <file> --to <homeVault> [--dry-run]   scrub a work lesson into <homeVault>/Brain/lessons (--dry-run writes nothing)",
   "  account <list|add|login|use|remove> [...]   Claude accounts, one CLAUDE_CONFIG_DIR each (kh account --help)",
+  "  gaps [--json]                      grade vault notes, empty searches, missing notes (writes .kyle-hub/gaps/latest.json)",
   "  usage [--account <id>] [--json]    session (5 h) and week usage per account (estimates; run kh logs ingest first)",
   "  maintain                           ingest -> sweep -> tickets expire (run by the scheduled task)",
   "  schedule <install|uninstall|status> [--yes]   Task Scheduler task kyle-hub-maintain (no admin)",
@@ -45,6 +47,14 @@ export async function runKh(argv: string[], io: Io, transport?: LinearTransport)
   if (cmd === "logs") {
     try {
       return await runLogs(argv.slice(1), io);
+    } catch (e) {
+      io.err(`kh: ${(e as Error).message}`);
+      return e instanceof KtError ? e.code : EXIT.remote;
+    }
+  }
+  if (cmd === "gaps") {
+    try {
+      return await runGaps(argv.slice(1), io);
     } catch (e) {
       io.err(`kh: ${(e as Error).message}`);
       return e instanceof KtError ? e.code : EXIT.remote;

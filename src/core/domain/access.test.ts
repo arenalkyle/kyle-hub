@@ -22,8 +22,12 @@ describe("accessFromHook", () => {
   it("records read and write paths only, never contents", () => {
     const r = accessFromHook("PostToolUse", post("Read", { file_path: `${V}\\Brain\\x.md` }, { content: "SECRET BODY" }), V);
     expect(r).toEqual({ kind: "read", path: "Brain/x.md" });
-    expect(accessFromHook("PostToolUse", post("Edit", { file_path: `${V}\\n.md`, new_string: "SECRET" }), V)).toEqual({ kind: "write", path: "n.md" });
+    expect(accessFromHook("PostToolUse", post("Edit", { file_path: `${V}\\n.md`, new_string: "SECRET" }), V)).toMatchObject({ kind: "write", path: "n.md" });
     expect(JSON.stringify(r)).not.toContain("SECRET");
+    const w = accessFromHook("PostToolUse", post("Edit", { file_path: `${V}\\n.md`, old_string: "a", new_string: "SECRET" }), V);
+    expect(w?.before).toMatch(/^[0-9a-f]{12}$/);
+    expect(w?.after).toMatch(/^[0-9a-f]{12}$/);
+    expect(JSON.stringify(w)).not.toContain("SECRET");
   });
   it("drops events outside the vault and non-PostToolUse events", () => {
     expect(accessFromHook("PostToolUse", post("Read", { file_path: "C:\\Repos\\a.ts" }, "x", "C:\\Repos"), V)).toBeNull();

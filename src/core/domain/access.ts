@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 /** Vault access derived from a Claude Code hook payload. Pure; never carries file contents. */
 export type AccessKind = "read" | "write" | "search";
 
@@ -9,7 +11,12 @@ export interface VaultAccess {
   /** Vault-relative search root (`.` for the vault root). */
   root?: string;
   hits?: number;
+  /** Short content hashes of a write (never contents): `before` = replaced text (Edit), `after` = new text. Lets Gaps spot undone edits. */
+  before?: string;
+  after?: string;
 }
+
+const shortHash = (text: string): string => createHash("sha1").update(text).digest("hex").slice(0, 12);
 
 const KINDS: Record<string, AccessKind> = { Read: "read", Write: "write", Edit: "write", MultiEdit: "write", NotebookEdit: "write", Grep: "search", Glob: "search" };
 
@@ -94,5 +101,8 @@ export function accessFromHook(event: string, payload: Record<string, unknown>, 
   if (!file) return null;
   const rel = toVaultRelative(vaultRoot, file, cwd);
   if (rel === undefined) return null;
-  return { kind, path: rel };
+  const before = typeof input.old_string === "string" ? shortHash(input.old_string) : undefined;
+  const newText = typeof input.new_string === "string" ? input.new_string : typeof input.content === "string" ? input.content : undefined;
+  const after = kind === "write" && newText !== undefined ? shortHash(newText) : undefined;
+  return { kind, path: rel, ...(before ? { before } : {}), ...(after ? { after } : {}) };
 }

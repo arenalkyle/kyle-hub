@@ -6,6 +6,7 @@ import { defaultSchtasks, runDoctorChecks, type SchtasksRunner } from "../../../
 import { buildSchtasksArgs, buildTaskXml, formatCommand, TASK_NAME } from "../../../src/core/ops/schedule";
 import { EXIT, KtError, discoverFolder, run as runTickets, type Io } from "../tickets/cli";
 import { serviceFor } from "../logs/cli";
+import { computeAndWriteGaps } from "../gaps/cli";
 import { readHubData, runBrainCheck } from "../brain/cli";
 
 export interface OpsDeps {
@@ -44,6 +45,12 @@ export async function runMaintain(io: Io): Promise<number> {
   io.out(`ingest: runs updated ${res.runsUpdated}, records ${res.records}, skipped ${res.skipped}`);
   const sweep = await svc.sweep({});
   io.out(`sweep: removed ${sweep.reduce((n, r) => n + r.items.length, 0)} item(s)`);
+  try {
+    const { report } = await computeAndWriteGaps(io);
+    io.out(`gaps: ${report.summary.notes} notes graded, ${report.summary.byGrade.F} F`);
+  } catch (e) {
+    io.out(`gaps skipped: ${(e as Error).message}`);
+  }
   let folder: string | undefined;
   try {
     folder = discoverFolder(undefined, io);

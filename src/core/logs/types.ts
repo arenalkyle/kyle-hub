@@ -31,7 +31,7 @@ export interface HookEvent {
   parentSessionId?: string;
   agentType?: string;
   /** Vault access (LOCK-63): vault-relative path, search pattern and root, hit count; never contents. */
-  access?: { kind: "read" | "write" | "search"; path?: string; pattern?: string; root?: string; hits?: number };
+  access?: { kind: "read" | "write" | "search"; path?: string; pattern?: string; root?: string; hits?: number; before?: string; after?: string };
 }
 
 export interface IngestOptions {
@@ -133,6 +133,9 @@ export interface AccessRecord {
   parentSessionId?: string;
   /** Vault-relative path when the access has one. */
   path?: string;
+  /** Write content hashes (see `VaultAccess`); only on writes. */
+  before?: string;
+  after?: string;
 }
 
 /** A human note open read back from the human spool (LOCK-65). */
