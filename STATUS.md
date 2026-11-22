@@ -4,7 +4,7 @@ _Last updated: 2026-11-22_
 
 Plan: [docs/PLAN.md](docs/PLAN.md) · Phases: [docs/PHASES.md](docs/PHASES.md) · ADRs: [docs/adr/](docs/adr/) · Glossary: [GLOSSARY.md](GLOSSARY.md) · Manual checks: [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md)
 
-Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
+Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1–9) · [LOCK-61](https://linear.app/divinity/issue/LOCK-61) Command Center v2 (Phases 10–16)
 
 - **Done**
   - Phases 1–9 (LOCK-43…60) built and pushed; all 18 tickets are Done in Linear.
@@ -15,6 +15,7 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
   - Health: build passes, 830 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2792 KB (limit 3072 KB).
 - **In progress**: verification in the real vault. The latest build is deployed but not yet confirmed there (Obsidian was closed at the last check); the terminal fixes were tested in throwaway vaults only. All 109 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
 - **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
+- **Planned**: Command Center v2 (LOCK-61): layout, vault-scoped capture, vitals, 3D brain, gaps grading, editable templates. 12 tickets in Backlog; start with 10.1 (LOCK-62). Spec in [docs/PHASES.md](docs/PHASES.md) Phases 10–16.
 - **Next**
   1. Open Obsidian and run the "Terminal tiling" manual checks.
   2. Add repos to the repo map in kyle-hub settings, then check Queue launch and clear kyle-hub's brain findings.
@@ -41,3 +42,10 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 | 7 Brain | 7.1 · 7.2 | LOCK-55 · LOCK-56 | H · H | Done |
 | 8 Command center + profiles | 8.1 · 8.2 | LOCK-57 · LOCK-58 | H · S | Done |
 | 9 Accounts + usage | 9.1 · 9.2 | LOCK-59 · LOCK-60 | S · S | Done |
+| 10 Layout | 10.1 | LOCK-62 | H | Backlog |
+| 11 Capture | 11.1 · 11.2 | LOCK-63 · LOCK-65 | S · H | Backlog |
+| 12 Vitals | 12.1 | LOCK-66 | H | Backlog |
+| 13 Brain 3D | 13.1 · 13.2 | LOCK-67 · LOCK-70 | S · S | Backlog |
+| 14 Gaps | 14.1 · 14.2 | LOCK-68 · LOCK-71 | S · H | Backlog |
+| 15 Gaps UI | 15.1 · 15.2 | LOCK-72 · LOCK-73 | H · H | Backlog |
+| 16 Templates | 16.1 · 16.2 | LOCK-64 · LOCK-69 | H · S | Backlog |

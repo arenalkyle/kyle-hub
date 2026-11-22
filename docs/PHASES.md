@@ -111,3 +111,33 @@ Accounts + usage (Phase 9) come last: they need the ingest index (4), the launch
 - Usage events (`usage:threshold`) comment on running tickets once per window.
 - CLI: `kh usage [--account id] [--json]`.
 - AC: window/week boundary fixtures (block rollover, week roll-off, DST); enterprise renders $ not %; officialReading off ⇒ zero network/file access beyond transcripts; dashboard renders with module off; CDP smoke.
+
+## Phase 10–16 — Command Center v2 (parent LOCK-61)
+
+Brain view, vitals and gaps. Almost all deterministic: scripts compute every number; a model only runs when a Retro proposal is accepted. Hivemynd (installed in the vault) is visual reference only; no code copied, no dependency on its bridge. Tickets carry full acceptance criteria; this is the summary.
+
+**10.1 Layout (H, LOCK-62)**: outer columns at half width, Spend shrinks to a strip, Usage tile removed, Retro moves to the left column, header tabs `Command Center | Tickets | Terminal | Brain` (Brain view placeholder).
+
+**11.1 Vault-scoped capture (S, LOCK-63)**: kyle-hook installed in `<vault>/.claude/settings.local.json` and removed from global settings (status lights then work for vault sessions only). Spool keeps vault-relative path, search pattern/root and hit count; never contents. Live `brain:access` bus event. Sub-agents linked to their parent session.
+
+**11.2 History capture (H, LOCK-65)**: transcript `search` records (Grep/Glob pattern, root, hits, duration; unknown hits for old sessions). Obsidian `file-open` recorded as `human_open`.
+
+**12.1 Brain Vitals (H, LOCK-66)**: right-column card merged with the health score. Notes read per min / per hour (switchable), agent and human lines, writes, searches, active agents. One FPS setting (10/20/30/60, default 30) shared with the brain; pauses when hidden.
+
+**13.1 3D brain (S, LOCK-67)**: three.js. Notes = nodes, links = edges. User zoom/rotate/pan, no auto-rotate. Glow, nebula, heat. Shared by the Command Center and the Brain tab. Must fit `check-size` (only ~280 KB headroom at 2026-11-22; ask before raising the limit).
+
+**13.2 Agents on the brain (S, LOCK-70)**: one point per vault Claude session, named and coloured from its terminal pane (hash fallback). Sub-agents a lighter shade, `parent › agent-type`, tethered. Fly-to-note trails; fade after 2 min idle. Claude only.
+
+**14.1 Grading + `kh gaps` (S, LOCK-68)**: pure grading in `core/domain`, 0–100 with A ≥ 90 / B 80 / C 70 / D 60 / F. Inputs: age, re-reads, undone edits, oversized-and-unkept (> 500 words, 30 days), nearby empty searches. Weights in `<vault>/.kyle-hub/grading.json` (committed). Also: empty searches by agent time, missing notes, search-time share, folders to split. Output `<vault>/.kyle-hub/gaps/latest.json` (git-ignored); run by `kh maintain`.
+
+**14.2 Retro gap detectors (H, LOCK-71)**: worst gaps become Retro proposals (split note, write note for empty search, review note, split folder). Retro card shows waiting count.
+
+**15.1 Gaps on the Brain tab (H, LOCK-72)**: worst-first list, cutoff 70 with slider, reasons, click opens note and highlights it on the brain.
+
+**15.2 Terminal sidebar Gaps tab (H, LOCK-73)**: Queue panel renamed; Gaps tab beside Triage and Todo.
+
+**16.1 Editable templates (H, LOCK-64)**: `<vault>/.kyle-hub/templates/` (committed) overrides shipped defaults; Templates settings tab with editor and Reset; shared loader for plugin and `kh`. Agents may edit the files.
+
+**16.2 Default templates (S, LOCK-69)**: Linear ticket out, Linear ticket in, repo note, daily reminder, skill proposal, script proposal. Short, specific notes with `reviewed` frontmatter.
+
+Order: 10 → 11 → (12, 13, 14) → 15; 16 is independent.
