@@ -29,6 +29,13 @@ describe("appearance", () => {
     expect(ob.ansi).toHaveLength(16);
     expect(resolvePalette({ ...DEFAULT_APPEARANCE, theme: "obsidian" }, ob)).toBe(ob);
   });
+  it.each([
+    ["dark", "#1c1c1c", "#dadada"],
+    ["light", "#ffffff", "#222222"],
+  ])("keeps bright white readable on a %s Obsidian theme", (_mode, base00, base100) => {
+    const vars: Record<string, string> = { "--background-primary": base00, "--color-base-00": base00, "--color-base-100": base100 };
+    expect(obsidianPalette((v) => vars[v] ?? "").ansi[15]).toBe(base100);
+  });
   it("has 4 complete presets", () => {
     expect(PRESETS.map((x) => x.id)).toEqual(["dracula", "one-dark", "solarized-dark", "solarized-light"]);
     for (const x of PRESETS) expect(x.palette.ansi).toHaveLength(16);

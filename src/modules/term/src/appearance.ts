@@ -203,7 +203,8 @@ export function obsidianPalette(read: (cssVar: string) => string): Palette {
   const normal = OBSIDIAN_ANSI_VARS.map(([v, fb]) => g(v, fb));
   const ansi = [...normal, ...normal];
   ansi[8] = g("--color-base-50", "#666666");
-  ansi[15] = g("--color-base-00", "#ffffff");
+  // The base scale runs from background (00) to text (100) in both light and dark themes.
+  ansi[15] = g("--color-base-100", "#ffffff");
   return {
     background: g("--background-primary", "#1e1e1e"),
     foreground: g("--text-normal", "#dcddde"),
