@@ -587,6 +587,10 @@
 .kh-tickets-attention { background: var(--background-modifier-error); color: var(--text-on-accent); border: none; cursor: pointer; }
 .kh-term-queue-running { align-self: flex-start; color: var(--text-success); }
 .kh-term-queue-launch { align-self: flex-start; }
+.kh-term-queue-section { margin: 12px 0 6px; color: var(--text-muted); text-transform: uppercase; font-size: var(--font-ui-smaller); }
+.kh-term-queue-parent { padding: 6px 8px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+.kh-term-queue-bar { height: 4px; border-radius: 2px; background: var(--background-modifier-border); overflow: hidden; }
+.kh-term-queue-bar-fill { height: 100%; background: var(--interactive-accent); }
 
 .kh-term-retro { display: flex; flex-direction: column; gap: 2px; padding: 0 6px 6px; font-size: var(--font-ui-smaller); color: var(--text-muted); }
 .kh-term-sidebar.kh-term-collapsed .kh-term-retro { display: none; }

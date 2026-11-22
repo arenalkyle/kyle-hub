@@ -1,6 +1,7 @@
 import { ItemView, Notice, type WorkspaceLeaf } from "obsidian";
 import type { Issue } from "../../../core/domain/types";
-import { effectiveType } from "../../../core/domain/fields";
+import { categoryOf, effectiveType } from "../../../core/domain/fields";
+import { parentProgress, type ParentProgress } from "../../../core/domain/progress";
 import type { Hub } from "../../../core";
 import type { Launcher } from "../launch/launch";
 
@@ -64,20 +65,62 @@ export class QueueView extends ItemView {
     }
     const items = tickets.queue();
     const running = this.launcher()?.runningTickets() ?? new Map<string, string>();
+    const statuses = tickets.statuses();
+    const all = tickets.list();
+
+    const progress = parentProgress(all, statuses);
+    if (progress.length > 0) {
+      this.section(el, "Parents");
+      for (const p of progress) this.parentRow(el, p);
+    }
+
     // Running tickets are already started, so they are no longer in `queue()`; list them first.
     const live = [...running.keys()].flatMap((id) => (tickets.get(id) ? [tickets.get(id)!] : []));
+    const queued = new Set(items.map((t) => t.id));
+    this.section(el, "Ready for agent");
     if (items.length === 0 && live.length === 0) {
       el.createDiv({
         cls: "kh-term-queue-empty",
-        text: "Nothing queued. A ticket appears here when it has the agent-ready label (accept it in Triage with r), is not started, and every blocker is done.",
+        text: "Nothing ready. A ticket appears here when it has the agent-ready label (accept it in Triage with r), is not started, and every blocker is done.",
       });
-      return;
     }
-    for (const t of live) this.row(el, t, running.get(t.id));
-    for (const t of items) this.row(el, t, running.get(t.id));
+    for (const t of live) this.row(el, t, true, running.get(t.id));
+    for (const t of items) this.row(el, t, true, running.get(t.id));
+
+    const rest = (cat: string) =>
+      all.filter((t) => !queued.has(t.id) && !running.has(t.id) && categoryOf(t.status, statuses) === cat);
+    const todo = [...rest("unstarted"), ...rest("backlog")];
+    const triage = rest("triage");
+    if (todo.length > 0) {
+      this.section(el, "Todo");
+      for (const t of todo) this.row(el, t, false);
+    }
+    if (triage.length > 0) {
+      this.section(el, "Triage");
+      for (const t of triage) this.row(el, t, false);
+    }
   }
 
-  private row(parent: HTMLElement, t: Issue, sessionId?: string): void {
+  private section(parent: HTMLElement, text: string): void {
+    parent.createEl("h5", { cls: "kh-term-queue-section", text });
+  }
+
+  private parentRow(parent: HTMLElement, p: ParentProgress): void {
+    const row = parent.createDiv({ cls: "kh-term-queue-parent", attr: { "data-kh-parent-id": p.parent.id } });
+    const top = row.createDiv({ cls: "kh-term-queue-top" });
+    top.createSpan({ cls: "kh-term-queue-id", text: p.parent.id });
+    top.createSpan({ cls: "kh-term-queue-name", text: `${p.parent.title} · ${p.percent}%` });
+    const bar = row.createDiv({ cls: "kh-term-queue-bar" });
+    bar.createDiv({ cls: "kh-term-queue-bar-fill" }).style.width = `${p.percent}%`;
+    row.createDiv({
+      cls: "kh-term-queue-meta",
+      text: p.current ? `${p.done}/${p.total} done · ${p.current.title}` : `${p.done}/${p.total} done`,
+    });
+    row.onclick = (e) => this.hub.services.get("tickets")?.open?.(p.parent.id, e.ctrlKey || e.metaKey);
+  }
+
+  /** `ready` rows launch on one click; others (todo/triage lack the agent-ready human gate) need a second click to confirm. */
+  private row(parent: HTMLElement, t: Issue, ready: boolean, sessionId?: string): void {
     const tickets = this.hub.services.get("tickets");
     const row = parent.createDiv({ cls: "kh-term-queue-item", attr: { "data-kh-queue-id": t.id } });
     const top = row.createDiv({ cls: "kh-term-queue-top" });
@@ -103,12 +146,20 @@ export class QueueView extends ItemView {
       row.onclick = () => void this.focus(sessionId);
       return;
     }
-    const btn = row.createEl("button", { cls: "mod-cta kh-term-queue-launch", text: "Launch" });
+    const label = ready ? "Launch" : "Launch (not agent-ready)";
+    const btn = row.createEl("button", { cls: ready ? "mod-cta kh-term-queue-launch" : "kh-term-queue-launch", text: label, attr: { title: "Shift-click to choose the account" } });
+    let armed = false;
     btn.onclick = async (e) => {
       e.stopPropagation();
+      if (!ready && !armed) {
+        armed = true;
+        btn.setText("Click again to confirm");
+        window.setTimeout(() => { armed = false; btn.setText(label); }, 4000);
+        return;
+      }
       btn.disabled = true;
       try {
-        const r = await this.launcher()?.launch(t.id);
+        const r = await this.launcher()?.launch(t.id, { pick: e.shiftKey });
         if (!r) new Notice("kyle-hub: terminal sessions are unavailable.");
         else if (!r.ok) new Notice(`kyle-hub: ${r.message}`);
         else await this.focus(r.sessionId);

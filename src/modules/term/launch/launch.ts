@@ -118,7 +118,8 @@ export class Launcher {
     return out;
   }
 
-  async launch(id: string): Promise<LaunchResult> {
+  /** `opts.pick: false` skips the account picker and uses the resolved default account (one-click dispatch). */
+  async launch(id: string, opts: { pick?: boolean } = {}): Promise<LaunchResult> {
     const d = this.deps;
     const ticket = d.tickets.get(id);
     if (!ticket) return fail("unknown-ticket", `Ticket ${id} not found.`);
@@ -146,7 +147,7 @@ export class Launcher {
     if (!resolved.ok) return fail(resolved.reason, resolved.message);
     let account = resolved.account;
     let accountOverride = false;
-    if (acc.list.length > 1 && d.pickAccount) {
+    if (opts.pick !== false && acc.list.length > 1 && d.pickAccount) {
       const chosen = await d.pickAccount(acc.list, account?.id);
       if (chosen === undefined) return fail("cancelled", "No account chosen.");
       const picked = acc.list.find((a) => a.id === chosen);
