@@ -549,30 +549,39 @@ export default class TermHost {
   }
 
   /**
-   * Install writes `<vault>/.claude/settings.local.json` and removes our entries from `~/.claude/settings.json`;
-   * uninstall removes from both. Each file's diff is shown in a modal and written only on accept.
+   * Install writes `<vault>/.claude/settings.local.json`, then removes our entries from `~/.claude/settings.json`;
+   * uninstall removes from both. Steps run one after another, each diff shown in a modal and written only on accept;
+   * a cancelled or failed step stops the chain, so the global entries are never removed before the vault install lands.
    */
   private hooks(mode: "install" | "uninstall"): void {
     const vaultFile = path.join(this.vaultRoot(), ".claude", "settings.local.json");
     const globalFile = path.join(os.homedir(), ".claude", "settings.json");
-    const steps: Array<{ file: string; mode: "install" | "uninstall" }> = mode === "install"
-      ? [{ file: vaultFile, mode: "install" }, { file: globalFile, mode: "uninstall" }]
-      : [{ file: vaultFile, mode: "uninstall" }, { file: globalFile, mode: "uninstall" }];
-    let any = false;
-    for (const step of steps) {
+    const vault = { file: vaultFile, label: "vault .claude/settings.local.json" };
+    const global = { file: globalFile, label: "global ~/.claude/settings.json" };
+    const steps: Array<{ file: string; label: string; mode: "install" | "uninstall" }> = mode === "install"
+      ? [{ ...vault, mode: "install" }, { ...global, mode: "uninstall" }]
+      : [{ ...vault, mode: "uninstall" }, { ...global, mode: "uninstall" }];
+    let changedAny = false;
+    const run = (i: number): void => {
+      const step = steps[i];
+      if (!step) {
+        if (!changedAny) new Notice(`kyle-hub: ${mode === "install" ? "Hooks already installed in the vault; none in global settings." : "No kyle-hub or kyle-term hooks found."}`, 6000);
+        return;
+      }
       const loaded = loadSettingsFile(step.file);
-      if (!loaded.ok) { new Notice(`kyle-hub: ${loaded.message}`, 12000); continue; }
+      if (!loaded.ok) return void new Notice(`kyle-hub: ${loaded.message}`, 12000);
       const plan = step.mode === "install" ? planHookInstall(loaded.current, this.hookScript()) : planHookUninstall(loaded.current);
-      if (!plan.changed) continue;
-      any = true;
+      if (!plan.changed) return run(i + 1);
+      changedAny = true;
       const before = loaded.raw === null ? "" : JSON.stringify(loaded.current, null, 2);
       const after = JSON.stringify(plan.next, null, 2);
-      new HookDiffModal(this.app, { mode: step.mode, file: step.file, before, after }, () => {
+      new HookDiffModal(this.app, { mode: step.mode, file: step.file, label: step.label, before, after }, () => {
         const r = writeSettingsFile(step.file, loaded.raw, plan.next, step.mode);
-        new Notice(`kyle-hub: ${r.message}`, r.ok ? 6000 : 12000);
+        new Notice(`kyle-hub (${step.label}): ${r.message}`, r.ok ? 6000 : 12000);
+        if (r.ok) run(i + 1);
       }).open();
-    }
-    if (!any) new Notice(`kyle-hub: ${mode === "install" ? "Hooks already installed in the vault; none in global settings." : "No kyle-hub or kyle-term hooks found."}`, 6000);
+    };
+    run(0);
   }
 
   /** The deployed hook script (`.obsidian/plugins/kyle-hub/hooks/kyle-hook.js`). */

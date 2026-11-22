@@ -27,13 +27,18 @@ function writable(dir: string): boolean {
 }
 
 /** Reads the real environment (settings.json, the task, log dirs) and runs every doctor check. */
-export function runDoctorChecks(env: Record<string, string | undefined>, homedir: string, schtasks: SchtasksRunner = defaultSchtasks): Check[] {
+export function runDoctorChecks(env: Record<string, string | undefined>, homedir: string, schtasks: SchtasksRunner = defaultSchtasks, vaults?: readonly string[]): Check[] {
   const settingsFile = path.join(homedir, ".claude", "settings.json");
   const settingsText = fs.existsSync(settingsFile) ? fs.readFileSync(settingsFile, "utf8") : undefined;
+  const vaultList = vaults ?? (env.KYLE_HUB_VAULTS ?? env.KYLE_TICKETS_VAULTS ?? "").split(";").map((v) => v.trim()).filter((v) => v.length > 0);
+  const vaultTexts = vaultList.map((v) => {
+    const f = path.join(v, ".claude", "settings.local.json");
+    return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : undefined;
+  });
   const task = schtasks(buildSchtasksArgs("query"));
   const dirs = PROFILES.map((p) => {
     const d = dataDir(p, { env, homedir: () => homedir });
     return { path: d, writable: writable(d) };
   });
-  return [checkCleanupPeriod(settingsText), checkHooks(settingsText), checkScheduledTask(task.status === 0), checkLogDirs(dirs)];
+  return [checkCleanupPeriod(settingsText), checkHooks(settingsText, vaultTexts), checkScheduledTask(task.status === 0), checkLogDirs(dirs)];
 }

@@ -39,13 +39,20 @@ export function checkCleanupPeriod(settingsText: string | undefined): Check {
   return { id, status: "ok", message: `cleanupPeriodDays is ${value}` };
 }
 
-/** Looks for the kyle-hook command in any hook entry of `settings.json`. */
-export function checkHooks(settingsText: string | undefined): Check {
+/**
+ * kyle-hook belongs in each vault's `.claude/settings.local.json` (LOCK-63). `vaultTexts` holds the raw file of every
+ * known vault (undefined when missing). ok = registered in a vault and gone from global settings; warn otherwise.
+ */
+export function checkHooks(globalText: string | undefined, vaultTexts: ReadonlyArray<string | undefined> = []): Check {
   const id = "hooks";
-  const installed = settingsText !== undefined && settingsText.includes("kyle-hook");
-  return installed
-    ? { id, status: "ok", message: "kyle-hook is registered in settings.json" }
-    : { id, status: "warn", message: "kyle-hook is not registered in ~/.claude/settings.json; run the hook installer from the term settings" };
+  const inGlobal = globalText !== undefined && globalText.includes("kyle-hook");
+  const inVault = vaultTexts.some((t) => t !== undefined && t.includes("kyle-hook"));
+  if (inGlobal) {
+    return { id, status: "warn", message: "kyle-hook is still in ~/.claude/settings.json (stale); run the hook installer from the term settings to move it into the vault" };
+  }
+  return inVault
+    ? { id, status: "ok", message: "kyle-hook is registered in the vault's .claude/settings.local.json" }
+    : { id, status: "warn", message: "kyle-hook is not registered in the vault's .claude/settings.local.json; run the hook installer from the term settings" };
 }
 
 export function checkScheduledTask(exists: boolean): Check {

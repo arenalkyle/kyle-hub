@@ -60,8 +60,13 @@ describe("cleanupPeriodDays check", () => {
     expect(checkCleanupPeriod(JSON.stringify({ cleanupPeriodDays: 30 }))).toMatchObject({ status: "ok" });
   });
   it("detects the kyle-hook command", () => {
-    expect(checkHooks('{"hooks":{"Stop":[{"command":"node kyle-hook.js"}]}}').status).toBe("ok");
+    const hook = '{"hooks":{"Stop":[{"command":"node kyle-hook.js"}]}}';
+    expect(checkHooks("{}", [hook]).status).toBe("ok");
+    expect(checkHooks(undefined, [hook]).status).toBe("ok");
+    expect(checkHooks("{}", [undefined]).status).toBe("warn");
     expect(checkHooks("{}").status).toBe("warn");
+    expect(checkHooks(hook, [hook]).message).toContain("stale");
+    expect(checkHooks(hook).status).toBe("warn");
   });
 });
 
@@ -119,9 +124,24 @@ describe("kh doctor", () => {
     expect(lines.some((l) => l.startsWith("[ok] logDirs"))).toBe(true);
   });
 
-  it("is green for a fixture with cleanupPeriodDays 30, hook and task", () => {
-    fs.writeFileSync(path.join(home, ".claude", "settings.json"), JSON.stringify({ cleanupPeriodDays: 30, hooks: { Stop: [{ command: "kyle-hook.js" }] } }));
-    runDoctor(io(), deps(0));
+  const vaultHook = (): string => {
+    const vault = path.join(tmp, "vault");
+    fs.mkdirSync(path.join(vault, ".claude"), { recursive: true });
+    fs.writeFileSync(path.join(vault, ".claude", "settings.local.json"), JSON.stringify({ hooks: { Stop: [{ command: "kyle-hook.js" }] } }));
+    return vault;
+  };
+
+  it("is green for cleanupPeriodDays 30, the hook in the vault file, and the task", () => {
+    fs.writeFileSync(path.join(home, ".claude", "settings.json"), JSON.stringify({ cleanupPeriodDays: 30 }));
+    const o = { ...io(), env: { LOCALAPPDATA: path.join(tmp, "local"), KYLE_HUB_VAULTS: vaultHook() } };
+    runDoctor(o, deps(0));
     expect(lines.filter((l) => l.startsWith("[ok]"))).toHaveLength(4);
+  });
+
+  it("warns that the hook is stale while it is still in global settings", () => {
+    fs.writeFileSync(path.join(home, ".claude", "settings.json"), JSON.stringify({ cleanupPeriodDays: 30, hooks: { Stop: [{ command: "kyle-hook.js" }] } }));
+    const o = { ...io(), env: { LOCALAPPDATA: path.join(tmp, "local"), KYLE_HUB_VAULTS: vaultHook() } };
+    runDoctor(o, deps(0));
+    expect(lines.some((l) => l.startsWith("[warn] hooks") && l.includes("stale"))).toBe(true);
   });
 });

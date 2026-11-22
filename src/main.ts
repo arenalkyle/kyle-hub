@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { mkdirSync } from "node:fs";
-import { Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { FileSystemAdapter, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { runDoctorChecks } from "./core/ops/environment";
 import { logServiceFromSettings, type CoreSettingsLike } from "./core/logs/hubService";
 import {
@@ -153,7 +153,7 @@ class HubSettingTab extends PluginSettingTab {
       .addButton((b) =>
         b.setButtonText("Run doctor").onClick(() => {
           doctorOut.empty();
-          for (const c of runDoctorChecks(process.env, homedir())) doctorOut.createEl("p", { text: `[${c.status}] ${c.id}: ${c.message}` });
+          for (const c of runDoctorChecks(process.env, homedir(), undefined, this.app.vault.adapter instanceof FileSystemAdapter ? [this.app.vault.adapter.getBasePath()] : undefined)) doctorOut.createEl("p", { text: `[${c.status}] ${c.id}: ${c.message}` });
         }),
       );
   }
