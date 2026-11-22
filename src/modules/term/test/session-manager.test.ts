@@ -122,6 +122,38 @@ describe("terminal reports", () => {
   const initial = initialAgent().state;
 });
 
+describe("colour tags", () => {
+  it("gives every new session, shell or Claude, its own colour", () => {
+    const all = [shell(), m.create({ kind: "claude", profileId: "powershell", cwd: "x", command: "claude" }), shell()];
+    expect(all.every((s) => s.color)).toBe(true);
+    expect(new Set(all.map((s) => s.color)).size).toBe(3);
+  });
+
+  it("keeps the colour through a restart", () => {
+    const s = shell();
+    const before = s.color;
+    m.restart(s.id);
+    expect(s.color).toBe(before);
+  });
+
+  it("frees the colour on close", () => {
+    const a = shell();
+    shell();
+    m.close(a.id);
+    expect(shell().color).toBe(a.color);
+  });
+
+  it("avoids restored colours and leaves untagged restored sessions alone", () => {
+    const first = shell();
+    const taken = first.color;
+    m.close(first.id);
+    const base = { kind: "shell" as const, profileId: "powershell", cwd: "x", lastOutputAt: 0, savedAt: 0 };
+    m.restore([{ ...base, id: "tagged", color: taken }, { ...base, id: "untagged" }], () => undefined);
+    expect(shell().color).not.toBe(taken);
+    expect(m.get("untagged")!.color).toBeUndefined();
+  });
+});
+
 describe("create", () => {
   it("spawns with profile, cwd and term size, and becomes active", () => {
     const s = shell();

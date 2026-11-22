@@ -166,3 +166,4 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Reload Obsidian, open two Claude sessions, drag the first onto the left edge of the second: one banner per pane, prompt at the bottom of both.
 - [ ] Stack, expand and restore panes with a long conversation open: no repeated content; the mouse wheel and PgUp/PgDn scroll Claude, including in a pane without focus.
 - [ ] Drag-select + Ctrl+C copies and right-click pastes once.
+- [ ] Open several sessions: each gets its own colour on the sidebar stripe and, when split, on its pane header; right-click → Colour tag still overrides it.

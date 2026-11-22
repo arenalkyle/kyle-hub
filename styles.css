@@ -516,6 +516,8 @@
 .kh-term-tile.is-needs { border-color: #4c8dff; box-shadow: 0 0 0 1px #4c8dff, 0 0 10px rgba(76, 141, 255, 0.55); }
 .kh-term-tile.is-done { border-color: #3fb950; box-shadow: 0 0 0 1px #3fb950, 0 0 10px rgba(63, 185, 80, 0.45); }
 .kh-term-tile-title { flex: none; display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; font-size: var(--font-ui-smaller); color: var(--text-muted); background: var(--background-secondary); cursor: grab; user-select: none; }
+/* The session's colour tag: same stripe as its sidebar row, plus a tint. The tile border is left to the state outlines. */
+.kh-term-tile-title.has-tag { color: var(--text-normal); background: color-mix(in srgb, var(--kh-term-tag) 30%, var(--background-secondary)); box-shadow: inset 4px 0 0 var(--kh-term-tag); }
 .kh-term-tile-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kh-term-tile-btn { flex: none; padding: 2px; height: auto; background: transparent; box-shadow: none; color: var(--text-muted); }
 .kh-term-tile-btn:hover { color: var(--text-normal); }

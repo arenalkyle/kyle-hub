@@ -9,11 +9,11 @@ Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 - **Done**
   - Phases 1–9 (LOCK-43…60) built and pushed; all 18 tickets are Done in Linear.
   - Queue sidebar: Triage/Todo tabs, parent progress, launch button, Shift for account picker.
-  - Tiled terminals (up to 4 columns x 2 stacked): drag to split, expand, state outlines. Splitting doesn't duplicate Claude's screen (bundled ConPTY, [term ADR-0003](src/modules/term/docs/ADR/0003-bundled-conpty.md)), the wheel scrolls Claude, bright white is readable.
+  - Tiled terminals (up to 4 columns x 2 stacked): drag to split, expand, state outlines. Splitting doesn't duplicate Claude's screen (bundled ConPTY, [term ADR-0003](src/modules/term/docs/ADR/0003-bundled-conpty.md)), the wheel scrolls Claude, bright white is readable. Each new session gets a unique colour tag, shown on its sidebar stripe and pane header.
   - kyle-hub's Claude hooks are installed (9 events, incl. SessionEnd).
   - Old kyle-tickets and kyle-term plugins are disabled in the vault.
-  - Health: build passes, 821 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2790 KB (limit 3072 KB).
-- **In progress**: verification in the real vault. The latest build is deployed but not yet confirmed there (Obsidian was closed at the last check); the terminal fixes were tested in throwaway vaults only. All 108 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
+  - Health: build passes, 830 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2792 KB (limit 3072 KB).
+- **In progress**: verification in the real vault. The latest build is deployed but not yet confirmed there (Obsidian was closed at the last check); the terminal fixes were tested in throwaway vaults only. All 109 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
 - **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
 - **Next**
   1. Open Obsidian and run the "Terminal tiling" manual checks.

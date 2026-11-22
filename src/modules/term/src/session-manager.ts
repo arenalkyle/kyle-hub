@@ -2,6 +2,7 @@ import type { ShellProfile } from "./shells";
 import { resolveTitle } from "./title";
 import { initialAgent, reduceAgent, SUBAGENT_FADE_MS, type AgentEvent, type AgentInfo, type AgentState } from "./agent-state";
 import { WHEEL_REPORT } from "./alt-screen";
+import { nextColor } from "./colors";
 import { dimScrollback, dividerLine, serializeSessions, type PersistedSession } from "./persist";
 import type { SessionListener, SpawnOptions } from "./pty-manager";
 
@@ -253,6 +254,7 @@ export class SessionManager {
     const s: Session = {
       id, kind: opts.kind, profileId: opts.profileId, cwd: opts.cwd, command: opts.command,
       status: "running", lastOutputAt: this.now(), agent: initialAgent(),
+      color: nextColor(this.sessions.map((o) => o.color)),
     };
     if (opts.title?.trim()) s.manualTitle = opts.title.trim();
     const rt: Runtime = { term: undefined as unknown as TermLike, ptyId: null, gen: 0, cmdSent: true, cmdSentAt: 0, inputSeen: false, dirty: false, extraEnv: opts.env };

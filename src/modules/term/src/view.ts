@@ -1,4 +1,5 @@
 import { ItemView, Menu, Modal, Notice, setIcon, type WorkspaceLeaf } from "obsidian";
+import { COLORS } from "./colors";
 import type TermHost from "./main";
 import type { Session, SessionManager } from "./session-manager";
 import { formatAge } from "./title";
@@ -14,15 +15,6 @@ const STATE_LABEL: Record<AgentState, string> = {
 };
 
 export const VIEW_TYPE = "kh-term-view";
-
-const COLORS: Record<string, string> = {
-  Red: "#e5534b",
-  Orange: "#e08a2c",
-  Yellow: "#d4b106",
-  Green: "#3fb950",
-  Blue: "#4c8dff",
-  Purple: "#a371f7",
-};
 
 class ConfirmModal extends Modal {
   constructor(app: TermHost["app"], private message: string, private onYes: () => void) {
@@ -377,6 +369,8 @@ export class TermView extends ItemView {
       t.el.toggleClass("is-done", state === "finished");
       t.el.toggleClass("is-focused", t.id === active);
       t.titleText?.setText(mgr.title(s));
+      t.titleEl?.toggleClass("has-tag", !!s.color);
+      t.titleEl?.style.setProperty("--kh-term-tag", s.color ?? null);
       if (t.expandBtn) {
         const open = this.expanded?.id === t.id;
         setIcon(t.expandBtn, open ? "minimize-2" : "maximize-2");
