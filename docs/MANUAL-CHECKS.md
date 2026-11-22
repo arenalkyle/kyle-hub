@@ -160,3 +160,9 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] With 2+ accounts, launch a ticket: each picker row shows its usage line.
 - [ ] Optional: turn on "official reading" (`claude -p "/usage"` parsed per account; unverified guess, falls back to the estimate). `kh usage` reads the estimate only.
 - [ ] Note: the usage module runs `logs.ingest()` at most every 2 minutes so the chip isn't stale.
+
+## Terminal tiling (term ADR-0003)
+
+- [ ] Reload Obsidian, open two Claude sessions, drag the first onto the left edge of the second: one banner per pane, prompt at the bottom of both.
+- [ ] Stack, expand and restore panes with a long conversation open: no repeated content; PgUp/PgDn scroll Claude.
+- [ ] Drag-select + Ctrl+C copies and right-click pastes once.

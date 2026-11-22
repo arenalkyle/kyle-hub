@@ -33,6 +33,7 @@ describe.skipIf(!available)("pty helper (integration)", () => {
             setTimeout(() => child.stdin.write(encode({ t: "write", id: "t1", data: "echo kyle-term-ok\r" })), 1500);
           } else if (m.t === "data") {
             out += m.data;
+            if (m.data.includes("\x1b[c")) child.stdin.write(encode({ t: "write", id: "t1", data: "\x1b[?1;2c" }));
             // the typed command is echoed too; wait for the command output as well
             if ((out.match(/kyle-term-ok/g) ?? []).length >= 2) { clearTimeout(timer); resolve(); }
           } else if (m.t === "error") {
@@ -52,4 +53,41 @@ describe.skipIf(!available)("pty helper (integration)", () => {
       expect(wasExited).toBe(true);
     }
   });
+
+  // Windows 10's in-box ConPTY swallows this switch, so xterm reflowed Claude's full-screen UI into duplicate banners.
+  it.runIf(isWin)("passes the alternate-screen switch through", async () => {
+    const child = spawn("node", [helper], { cwd: root, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    const closed = new Promise((resolve) => child.once("exit", resolve));
+    const dec = new LineDecoder<FromHelper>();
+    let out = "";
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("timeout waiting for the child to exit")), 15000);
+        child.stdout.setEncoding("utf8");
+        child.stdout.on("data", (c: string) => {
+          for (const m of dec.push(c)) {
+            if (m.t === "ready") {
+              child.stdin.write(encode({
+                t: "spawn", id: "alt", shell: process.execPath,
+                args: ["-e", "process.stdout.write(String.fromCharCode(27)+'[?1049h');setTimeout(()=>{},500)"],
+                cwd: root, cols: 100, rows: 30, env: process.env as Record<string, string>,
+              }));
+            } else if (m.t === "data") {
+              out += m.data;
+              // ConPTY waits for the terminal's device-attributes answer.
+              if (m.data.includes("\x1b[c")) child.stdin.write(encode({ t: "write", id: "alt", data: "\x1b[?1;2c" }));
+            } else if (m.t === "exit") {
+              clearTimeout(timer); resolve();
+            } else if (m.t === "error") {
+              clearTimeout(timer); reject(new Error(m.message));
+            }
+          }
+        });
+      });
+      expect(out).toContain("\x1b[?1049h");
+    } finally {
+      child.stdin.end();
+      await closed;
+    }
+  }, 20000);
 });

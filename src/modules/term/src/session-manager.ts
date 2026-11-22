@@ -105,6 +105,10 @@ const QUIET_MS = 400;
 const FALLBACK_MS = 5000;
 const ACTIVITY_THROTTLE_MS = 300;
 const TITLE_MAX = 60;
+const FOCUS_IN = "\x1b[I";
+/** What xterm sends by itself: device attributes, cursor/status/mode reports, focus, colour-scheme, OSC and DCS replies. */
+// eslint-disable-next-line no-control-regex
+const TERMINAL_REPORT = /^\x1b(?:\[[?>][\d;]*c|\[\??\d+;\d+R|\[0n|\[\??[\d;]+\$y|\[[IO]|\[\?997;[12]n|\][^\x07\x1b]*(?:\x07|\x1b\\)|P[^\x1b]*\x1b\\)$/;
 
 export type StateListener = (s: Session, prev: AgentState, next: AgentState) => void;
 
@@ -260,8 +264,9 @@ export class SessionManager {
     return {
       onInput: (d) => {
         if (!rt.ptyId || s.status !== "running") return;
-        rt.inputSeen = true;
-        if (!s.agent.hasHookEvents) this.dispatch(s, { type: "viewed" });
+        const typed = !TERMINAL_REPORT.test(d);
+        if (typed) rt.inputSeen = true;
+        if (!s.agent.hasHookEvents && (typed || d === FOCUS_IN)) this.dispatch(s, { type: "viewed" });
         this.deps.pty.write(rt.ptyId, d);
       },
       onResize: (c, r) => { if (rt.ptyId && s.status === "running") this.deps.pty.resize(rt.ptyId, c, r); },

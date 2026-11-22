@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionManager, type PtyLike, type TermHandlers, type TermLike } from "../src/session-manager";
 import type { SessionListener, SpawnOptions } from "../src/pty-manager";
 import type { ShellProfile } from "../src/shells";
+import { initialAgent } from "../src/agent-state";
 
 const profiles: ShellProfile[] = [
   { id: "powershell", name: "PowerShell 5.1", shell: "powershell.exe", args: ["-NoLogo"] },
@@ -61,6 +62,27 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 const shell = () => m.create({ kind: "shell", profileId: "powershell", cwd: "C:\\v" });
+
+describe("terminal reports", () => {
+  const reports = ["\x1b[?1;2c", "\x1b[>0;276;0c", "\x1b[11;3R", "\x1b[O", "\x1b[I", "\x1b[?2026;2$y", "\x1b]11;rgb:1e1e/1e1e/1e1e\x1b\\"];
+
+  it.each(reports)("forwards %j without treating it as typing", (report) => {
+    const s = shell();
+    terms[0]!.h.onInput(report);
+    pty.listeners.get([...pty.listeners.keys()][0]!)!.onData("output");
+    expect(pty.written.map((w) => w.data)).toContain(report);
+    expect(s.agent.state).toBe(initial);
+  });
+
+  it("still treats a key as typing", () => {
+    const s = shell();
+    terms[0]!.h.onInput("x");
+    pty.listeners.get([...pty.listeners.keys()][0]!)!.onData("output");
+    expect(s.agent.state).not.toBe(initial);
+  });
+
+  const initial = initialAgent().state;
+});
 
 describe("create", () => {
   it("spawns with profile, cwd and term size, and becomes active", () => {

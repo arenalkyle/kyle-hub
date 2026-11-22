@@ -30,6 +30,8 @@ function handle(m) {
           rows: m.rows || 24,
           cwd: m.cwd,
           env: m.env || process.env,
+          // Windows 10's in-box ConPTY hides the alternate screen and repaints on resize, duplicating TUIs (term ADR-0003).
+          useConptyDll: true,
         });
         sessions.set(m.id, p);
         p.onData((data) => out({ t: "data", id: m.id, data }));
