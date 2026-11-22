@@ -52,7 +52,8 @@ export default class KyleHubPlugin extends Plugin {
     parts.settings.register({ id: "commandCenter", defaults: {}, enabledByDefault: false });
     parts.settings.load(await this.loadData());
     this.hub = { app: this.app, ...parts, save: () => this.saveData(parts.settings.all) };
-    parts.services.register("logs", logServiceFromSettings(parts.settings.module("core") as CoreSettingsLike));
+    const vaultRoot = (this.app.vault.adapter as { getBasePath?: () => string }).getBasePath?.();
+    parts.services.register("logs", logServiceFromSettings(parts.settings.module("core") as CoreSettingsLike, undefined, vaultRoot));
     this.loaded = await loadModules(this.hub, MODULES, (id) => this.contextFor(id));
     this.addSettingTab(new HubSettingTab(this));
     const paint = (): void => renderNav(this.app, this.nav);

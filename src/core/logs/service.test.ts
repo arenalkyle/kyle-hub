@@ -142,3 +142,17 @@ describe("readNewLines", () => {
     expect(await readNewLines(f, 9)).toEqual({ lines: [], consumed: 0 });
   });
 });
+
+describe("human_open spool (LOCK-65)", () => {
+  it("appends human_open lines to the profile's human spool by day", () => {
+    const svc = service("data");
+    svc.appendHumanOpen({ profile: "work", path: "Brain/a.md", t: "2026-11-22T09:00:00.000Z" });
+    svc.appendHumanOpen({ profile: "work", path: "Tickets/b.md", t: "2026-11-22T09:01:00.000Z" });
+    const file = path.join(root, "data", "work", "human", "2026-11-22.jsonl");
+    const lines = fs.readFileSync(file, "utf8").trim().split("\n").map((l) => JSON.parse(l) as Record<string, unknown>);
+    expect(lines).toEqual([
+      { type: "human_open", t: "2026-11-22T09:00:00.000Z", path: "Brain/a.md" },
+      { type: "human_open", t: "2026-11-22T09:01:00.000Z", path: "Tickets/b.md" },
+    ]);
+  });
+});

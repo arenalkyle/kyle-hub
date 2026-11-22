@@ -11,7 +11,7 @@ export interface CoreSettingsLike {
 const isProfile = (v: unknown): v is Profile => typeof v === "string" && (PROFILES as readonly string[]).includes(v);
 
 /** Builds the hub's LogService from core settings; `dataRoot` overrides the default `%LOCALAPPDATA%` location (tests). */
-export function logServiceFromSettings(core: CoreSettingsLike, dataRoot?: LogServiceOptions["dataRoot"]): FileLogService {
+export function logServiceFromSettings(core: CoreSettingsLike, dataRoot?: LogServiceOptions["dataRoot"], vaultRoot?: string): FileLogService {
   const repoMap: RepoMapEntry[] = Object.entries(core.repos ?? {}).flatMap(([name, v]) =>
     typeof v.path === "string" && isProfile(v.profile) ? [{ name, path: v.path, profile: v.profile }] : [],
   );
@@ -23,6 +23,7 @@ export function logServiceFromSettings(core: CoreSettingsLike, dataRoot?: LogSer
   return new FileLogService({
     accounts: () => accountsOf(core).list.map((a) => ({ id: a.id, configDir: a.configDir })),
     repoMap,
+    vaultRoot,
     denylist,
     prices,
     dataRoot,

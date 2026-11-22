@@ -46,10 +46,19 @@ export function toVaultRelative(vaultRoot: string, p: string, cwd?: string): str
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown): string | undefined => (typeof v === "string" && v !== "" ? v : undefined);
 
+/** Vault-relative search root of a Grep/Glob call (`path` arg, else the session cwd); undefined when outside the vault. */
+export function searchRoot(vaultRoot: string, rootArg: string | undefined, cwd: string | undefined): string | undefined {
+  return rootArg ? toVaultRelative(vaultRoot, rootArg, cwd) : cwd ? toVaultRelative(vaultRoot, cwd) : undefined;
+}
+
 /** Number of hits in a Grep/Glob `tool_response`: `numFiles`, a file list, or lines of a short string. */
 export function countHits(response: unknown): number | undefined {
   if (Array.isArray(response)) return response.length;
   if (typeof response === "string") {
+    const text = response.trim();
+    if (/^No (files|matches) found/i.test(text)) return 0;
+    const header = /^Found (\d+) /.exec(text);
+    if (header) return Number(header[1]);
     // The hook caps strings at 500 chars; a capped string cannot be counted.
     if (response.length >= 500) return undefined;
     return response.split(/\r?\n/).filter((l) => l.trim() !== "").length;
@@ -75,7 +84,7 @@ export function accessFromHook(event: string, payload: Record<string, unknown>, 
   const cwd = str(payload.cwd);
   if (kind === "search") {
     const rootArg = str(input.path);
-    const root = rootArg ? toVaultRelative(vaultRoot, rootArg, cwd) : cwd ? toVaultRelative(vaultRoot, cwd) : undefined;
+    const root = searchRoot(vaultRoot, rootArg, cwd);
     if (root === undefined) return null;
     const pattern = str(input.pattern);
     const hits = countHits(payload.tool_response);

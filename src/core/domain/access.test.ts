@@ -49,3 +49,11 @@ describe("countHits", () => {
     expect(countHits(undefined)).toBeUndefined();
   });
 });
+
+describe("countHits text results (LOCK-65)", () => {
+  it("reads Grep/Glob text headers and empty-result messages", () => {
+    expect(countHits("No files found")).toBe(0);
+    expect(countHits("No matches found")).toBe(0);
+    expect(countHits("Found 12 files\na\nb")).toBe(12);
+  });
+});

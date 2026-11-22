@@ -7,7 +7,7 @@ import { BUILTIN_RULES, makeRedactor, redact } from "../redact";
 import { parseTranscriptLine, type ParseState } from "./parse";
 import { countSince as countIndexSince, mergeIndex, queryRuns, readIndex, spendByDay as spendIndexByDay, summarizeRun, writeIndexAtomic } from "./runIndex";
 import { DEFAULT_RETENTION, sweepProfile, type RetentionPolicy, type SweepResult } from "./retention";
-import { PROFILES, type DerivedRecord, type HookEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry, type RunIndexEntry, type RunMeta, type RunQuery, type SpendDay, type UsageEvent } from "./types";
+import { PROFILES, type DerivedRecord, type HookEvent, type HumanOpenEvent, type IngestOptions, type IngestResult, type LogService, type PriceTable, type Profile, type RepoMapEntry, type RunIndexEntry, type RunMeta, type RunQuery, type SpendDay, type UsageEvent } from "./types";
 
 const STATE_VERSION = 1;
 const HEAD_BYTES = 64 * 1024;
@@ -46,6 +46,8 @@ export interface LogServiceOptions {
   /** Extra Claude accounts: each `<configDir>/projects` is ingested and its records tagged with the account id. */
   accounts?: readonly { id: string; configDir: string }[] | (() => readonly { id: string; configDir: string }[]);
   repoMap?: readonly RepoMapEntry[];
+  /** Vault root: transcript Grep/Glob records are scoped to it (search records need it). */
+  vaultRoot?: string;
   denylist?: readonly string[];
   prices?: PriceTable;
   now?: () => Date;
@@ -356,6 +358,19 @@ export class FileLogService implements LogService {
     }
   }
 
+  /** Appends a `human_open` record to the profile's `human/<day>.jsonl` spool; never throws. */
+  appendHumanOpen(event: HumanOpenEvent): void {
+    try {
+      if (!event.path) return;
+      const t = event.t ?? this.now().toISOString();
+      const dir = path.join(this.dirFor(event.profile), "human");
+      fs.mkdirSync(dir, { recursive: true });
+      fs.appendFileSync(path.join(dir, `${t.slice(0, 10)}.jsonl`), `${JSON.stringify({ type: "human_open", t, path: event.path })}\n`);
+    } catch {
+      // swallowed on purpose: a failing log write must never break the editor
+    }
+  }
+
   private ensureSession(state: State, batch: Batch, sid: string, cwd: string | undefined, profile: Profile, t: string, accountId?: string): SessionEntry {
     const existing = state.sessions[sid];
     if (existing) {
@@ -441,7 +456,7 @@ export class FileLogService implements LogService {
       }
       const sid = isObj(obj) && typeof obj.sessionId === "string" ? obj.sessionId : fallbackSid;
       const cwd = (isObj(obj) && typeof obj.cwd === "string" ? obj.cwd : undefined) ?? entry.cwd;
-      const recs = parseTranscriptLine(obj, { sessionId: sid, cwd, profile, prices: this.opts.prices, state: entry.parse });
+      const recs = parseTranscriptLine(obj, { sessionId: sid, cwd, profile, prices: this.opts.prices, state: entry.parse, vaultRoot: this.opts.vaultRoot });
       if (recs === undefined) {
         result.skipped++;
         continue;

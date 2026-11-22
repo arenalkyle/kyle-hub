@@ -107,6 +107,8 @@ export interface UsageEvent {
 export interface LogService {
   ingest(opts?: IngestOptions): Promise<IngestResult>;
   appendHookEvent(event: HookEvent): void;
+  /** Appends a `human_open` record to the profile's human spool; never throws. */
+  appendHumanOpen(event: HumanOpenEvent): void;
   /** Records `outcome` / `summaryCommented` on a run and refreshes its index entry; no-op when the run is unknown. */
   annotateRun(runId: string, meta: RunMeta): Promise<void>;
   runs(q?: RunQuery): Promise<RunIndexEntry[]>;
@@ -124,4 +126,30 @@ export interface DerivedRecord {
   runId?: string;
   t: string;
   [key: string]: unknown;
+}
+
+/** Transcript Grep/Glob call inside the vault (LOCK-65). `hits` is omitted when unknown (never 0 by default). */
+export interface SearchRecord extends DerivedRecord {
+  type: "search";
+  tool: "Grep" | "Glob";
+  /** Redacted, length-capped pattern. */
+  pattern?: string;
+  /** Vault-relative search root (`.` for the vault root). */
+  root: string;
+  hits?: number;
+  durationMs?: number;
+}
+
+/** The user opened a note in Obsidian (LOCK-65). Kept apart from runs; the vitals human line reads these. */
+export interface HumanOpenRecord extends DerivedRecord {
+  type: "human_open";
+  /** Vault-relative note path. */
+  path: string;
+}
+
+export interface HumanOpenEvent {
+  profile: Profile;
+  /** Vault-relative note path. */
+  path: string;
+  t?: string;
 }

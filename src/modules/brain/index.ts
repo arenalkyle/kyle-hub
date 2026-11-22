@@ -25,6 +25,11 @@ export const brainModule: HubModule = {
   load(hub, ctx) {
     ctx.registerView(BRAIN_VIEW_TYPE, (leaf) => new BrainView(leaf));
     ctx.addNavItem({ id: "brain", label: "Brain", icon: "brain", viewType: BRAIN_VIEW_TYPE, order: 30, open: () => void openBrain(hub) });
+    // The human's own note opens feed the vitals human line (LOCK-65); written through the logs service.
+    ctx.registerEvent(hub.app.workspace.on("file-open", (f) => {
+      if (!(f instanceof TFile) || f.extension !== "md") return;
+      hub.services.get("logs")?.appendHumanOpen({ profile: vaultProfileOf(hub.settings.module("core")), path: f.path });
+    }));
     const repos = (): Record<string, RepoEntry> => (hub.settings.module("core").repos ?? {}) as Record<string, RepoEntry>;
     const ignoreSymbols = (key: string): string[] => {
       const map = (hub.settings.module("brain").ignoreSymbols ?? {}) as Record<string, string[]>;

@@ -1,12 +1,19 @@
+import { countHits, searchRoot } from "../domain/access";
+import { BUILTIN_RULES, redact } from "../redact";
 import { isShellTool, isWriteTool, normalizeCommand, normalizeSig, pathRel } from "./normalize";
 import type { DerivedRecord, PriceTable, Profile } from "./types";
 
 type Obj = Record<string, unknown>;
 
+const SEARCH_TOOLS = new Set(["Grep", "Glob"]);
+const MAX_PATTERN = 200;
+
 export interface PendingCall {
   tool: string;
   cmdNorm?: string;
   t: string;
+  /** Grep/Glob inside the vault: vault-relative root and normalised pattern. */
+  search?: { root: string; pattern?: string };
 }
 
 /** Per-transcript parser memory, persisted in state.json so ingest can resume mid-session. */
@@ -20,6 +27,8 @@ export interface ParseState {
 export interface ParseCtx {
   sessionId: string;
   cwd?: string;
+  /** Vault root; Grep/Glob outside it produce no search record. Absent = no search records. */
+  vaultRoot?: string;
   profile: Profile;
   prices?: PriceTable;
   state: ParseState;
@@ -58,6 +67,21 @@ function usageRecord(t: string, model: string, usage: Obj, ctx: ParseCtx): Deriv
   return rec;
 }
 
+/** Scope and normalised pattern of a Grep/Glob call; undefined when the search root is outside the vault. */
+function searchInfo(input: Obj, ctx: ParseCtx): PendingCall["search"] {
+  const root = searchRoot(ctx.vaultRoot ?? "", str(input.path), ctx.cwd);
+  if (root === undefined) return undefined;
+  const pattern = str(input.pattern);
+  return { root, ...(pattern ? { pattern: redact(pattern, BUILTIN_RULES).slice(0, MAX_PATTERN) } : {}) };
+}
+
+/** Hit count of a tool_result, or undefined when the result carries no countable text (old or odd shapes). */
+function resultHits(content: unknown): number | undefined {
+  const text = typeof content === "string" ? content : Array.isArray(content) ? textOf(content) : undefined;
+  if (text === undefined || text.trim() === "") return undefined;
+  return countHits(text);
+}
+
 function onAssistant(o: Obj, t: string, ctx: ParseCtx): DerivedRecord[] {
   const m = isObj(o.message) ? o.message : undefined;
   if (!m) return [];
@@ -79,7 +103,8 @@ function onAssistant(o: Obj, t: string, ctx: ParseCtx): DerivedRecord[] {
     const input = isObj(b.input) ? b.input : {};
     const id = str(b.id);
     const cmdNorm = isShellTool(tool) && str(input.command) ? normalizeCommand(str(input.command) ?? "") : undefined;
-    if (id) ctx.state.pending[id] = cmdNorm !== undefined ? { tool, cmdNorm, t } : { tool, t };
+    const search = SEARCH_TOOLS.has(tool) && ctx.vaultRoot ? searchInfo(input, ctx) : undefined;
+    if (id) ctx.state.pending[id] = { tool, t, ...(cmdNorm !== undefined ? { cmdNorm } : {}), ...(search ? { search } : {}) };
     ctx.state.lastTool = tool;
     const file = str(input.file_path) ?? str(input.notebook_path);
     const rel = file ? pathRel(file, ctx.cwd) : undefined;
@@ -108,6 +133,15 @@ function onUser(o: Obj, t: string, ctx: ParseCtx): DerivedRecord[] {
     const dur = Date.parse(t) - Date.parse(p.t);
     if (Number.isFinite(dur) && dur >= 0) rec.durationMs = dur;
     out.push(rec);
+    if (p.search && ok) {
+      // Only the count survives; the result text is dropped with this scope.
+      const hits = resultHits(r.content);
+      const s: DerivedRecord = { type: "search", t, tool: p.tool, root: p.search.root };
+      if (p.search.pattern !== undefined) s.pattern = p.search.pattern;
+      if (hits !== undefined) s.hits = hits;
+      if (rec.durationMs !== undefined) s.durationMs = rec.durationMs;
+      out.push(s);
+    }
     if (!ok) out.push({ type: "error", t, tool: p.tool, sigText: normalizeSig(text) });
     const denied = PERMISSION_DENIED.exec(text);
     if (denied) out.push({ type: "permission_denied", t, tool: p.tool, pattern: p.cmdNorm ?? p.tool });
