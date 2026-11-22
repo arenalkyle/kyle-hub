@@ -383,6 +383,7 @@ export default class TermHost {
       },
       runner: () => claudeRunner(this.settings.claudeCommand || "claude"),
       vaultProfile: () => vaultProfileOf(this.hub.settings.module("core")),
+      vaultRoot: () => this.vaultRoot(),
     }));
   }
 

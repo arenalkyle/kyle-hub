@@ -123,6 +123,8 @@ export interface RetroStatus {
   lastRetroAt?: string;
   sessionsSince: number;
   nudgeAt: number;
+  /** Gap proposals (LOCK-71) in triage, waiting for a decision. */
+  gapProposals?: number;
 }
 
 export interface RetroSummary {

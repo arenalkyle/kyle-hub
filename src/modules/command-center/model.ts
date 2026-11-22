@@ -172,7 +172,10 @@ export function buildCommandCenterModel(d: CommandCenterData, now: Date): Comman
     tile("brain", "Brain health", d.brain, () => ({ value: String(d.brain.state === "ok" ? d.brain.value.vault.score : 0), detail: "vault" })),
     tile("retro", "Retro nudge", d.retro, () => {
       const r = d.retro.state === "ok" ? d.retro.value : undefined;
-      return { value: `${r?.sessionsSince ?? 0} sessions since last retro`, detail: `last retro: ${r?.lastRetroAt ?? "never"}` };
+      return {
+        value: `${r?.sessionsSince ?? 0} sessions since last retro`,
+        detail: `last retro: ${r?.lastRetroAt ?? "never"} · ${r?.gapProposals ?? 0} gap proposals waiting`,
+      };
     }),
   ];
 

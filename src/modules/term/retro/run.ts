@@ -2,7 +2,9 @@ import type { TicketService } from "../../../core/services";
 import { effectiveType } from "../../../core/domain/fields";
 import { dataDir } from "../../../core/paths";
 import type { Profile } from "../../../core/logs/types";
+import type { GapsReport } from "../../../core/domain/gaps";
 import { detect, gatherInput } from "./detect";
+import { detectGapProposals, gapMemory } from "./detectors/gaps";
 import { checkRecurrence } from "./recurrence";
 import { commitRetro, readRetroState, retroFile, updateRetroState } from "./state";
 import type { RetroSettings } from "./settings";
@@ -21,6 +23,8 @@ export interface RetroDeps {
   profiles: readonly Profile[];
   /** Directory holding `<profile>/retro.json`'s parent: `dataDir(profile)` by default. */
   stateFile?: (profile: Profile) => string;
+  /** The vault's gaps report (`latest.json`); undefined = no gap proposals. */
+  readGaps?: () => GapsReport | undefined;
   now?: () => Date;
 }
 
@@ -105,6 +109,18 @@ export async function performRetro(deps: RetroDeps): Promise<RetroResult> {
       }
     }
     commitRetro(file, detected, ids, now());
+  }
+
+  if (deps.readGaps) {
+    const picks = detectGapProposals(deps.readGaps(), gapMemory(tickets.list(), tickets.statuses()));
+    for (const p of picks) {
+      try {
+        const issue = await tickets.create({ title: p.title, type: "finding", description: p.body }, actor);
+        result.created.push({ id: issue.id, title: issue.title, type: "finding" });
+      } catch (e) {
+        result.skipped.push(`${p.signature}: ${(e as Error).message}`);
+      }
+    }
   }
   return result;
 }

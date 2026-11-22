@@ -10,6 +10,8 @@ import { convertToProposal, draftRule, MAX_EXCERPTS, type LlmRunner } from "./ll
 import { performRetro } from "./run";
 import { resolveRetroSettings, type RetroSettings } from "./settings";
 import { readRetroState, retroFile, sessionsSinceRetro } from "./state";
+import { readGapsReport } from "./gapReport";
+import { countWaitingGapProposals } from "./detectors/gaps";
 import type { TemplateContext } from "./templates";
 import { parseSignature } from "./ticketMeta";
 import type { LogReader } from "./types";
@@ -25,6 +27,8 @@ export interface RetroServiceDeps {
   /** Built only when `allowDraftRule` is on. */
   runner: () => LlmRunner;
   stateFile?: (profile: Profile) => string;
+  /** Absolute vault root; its `.kyle-hub/gaps/latest.json` feeds the gap proposals. */
+  vaultRoot?: () => string | undefined;
   /** The vault profile: retro reads and writes only this profile's logs (ADR-0008). Default `home`. */
   vaultProfile?: () => Profile;
   now?: () => Date;
@@ -61,7 +65,9 @@ export function createRetroService(deps: RetroServiceDeps): RetroService {
         const runs = (await logs.runs({ since: s.watermark })).filter((r) => r.profile === profile);
         since += sessionsSinceRetro(runs, s.watermark);
       }
-      return { ...(last !== undefined ? { lastRetroAt: last } : {}), sessionsSince: since, nudgeAt: settings().nudgeAt };
+      const t = deps.tickets();
+      const gapProposals = t === undefined ? 0 : countWaitingGapProposals(t.list(), t.statuses());
+      return { ...(last !== undefined ? { lastRetroAt: last } : {}), sessionsSince: since, nudgeAt: settings().nudgeAt, gapProposals };
     },
 
     async perform() {
@@ -73,6 +79,10 @@ export function createRetroService(deps: RetroServiceDeps): RetroService {
         ctx: deps.ctx,
         profiles: [vaultProfile()],
         stateFile: deps.stateFile,
+        readGaps: () => {
+          const root = deps.vaultRoot?.();
+          return root === undefined ? undefined : readGapsReport(root);
+        },
         now,
       });
       notify();
