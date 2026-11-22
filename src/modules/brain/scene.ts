@@ -16,11 +16,13 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import type { BrainHandle } from "../../core";
+import type { BrainAccessEvent, BrainHandle } from "../../core";
+import type { IdentityLookup } from "../../core/domain/brainAgents";
 import { buildGraph, type BrainGraph } from "../../core/domain/brainGraph";
 import { countReads, heatOf, type ReadAccess, type ReadCounts } from "../../core/domain/brainHeat";
 import { forceLayout } from "../../core/domain/forceLayout";
 import { DEFAULT_FPS } from "../../core/domain/fps";
+import { AgentLayer } from "./agents";
 
 export interface BrainOptions {
   bloom: number;
@@ -44,6 +46,12 @@ export interface BrainSource {
   onGraphChange(cb: () => void): () => void;
   /** An agent read or wrote a note (heat may have changed). */
   onHeatDirty(cb: () => void): () => void;
+  /** Live `brain:access` events (reads, writes and searches by sessions and sub-agents). */
+  onAccess(cb: (e: BrainAccessEvent) => void): () => void;
+  /** Terminal session start / end. */
+  onSession(cb: (kind: "started" | "ended", sessionId: string) => void): () => void;
+  /** Pane title, colour and folder for a session id; undefined for sessions with no terminal pane. */
+  identity: IdentityLookup;
 }
 
 const TEAL = new Color(0.1, 0.78, 0.72);
@@ -157,6 +165,11 @@ export class BrainScene implements BrainHandle {
   private rebuildTimer = 0;
   private heatTimer = 0;
   private empty: HTMLElement;
+  private readonly agentLayer: AgentLayer;
+  private pathIndex = new Map<string, number>();
+  private pos: Float32Array = new Float32Array(0);
+  private radius = 30;
+  private tip: HTMLElement;
 
   constructor(private readonly host: HTMLElement, private readonly src: BrainSource) {
     this.win = host.win ?? window;
@@ -192,6 +205,35 @@ export class BrainScene implements BrainHandle {
     this.nebulaMat.uniforms.uTime = this.nodeMat.uniforms.uTime!;
     this.nebula = this.buildNebula();
     this.scene.add(this.nebula);
+    this.agentLayer = new AgentLayer(this.scene, {
+      notePos: (p) => {
+        const i = this.pathIndex.get(p);
+        return i === undefined ? undefined : [this.pos[i * 3]!, this.pos[i * 3 + 1]!, this.pos[i * 3 + 2]!];
+      },
+      radius: () => this.radius,
+      identity: (id) => src.identity(id),
+    });
+    this.tip = host.createDiv({ cls: "kh-brain-tip" });
+    this.tip.hide();
+    const onMove = (ev: PointerEvent): void => {
+      const r = canvas.getBoundingClientRect();
+      const hit = this.agentLayer.pick(ev.clientX - r.left, ev.clientY - r.top, this.camera, r.width, r.height);
+      if (!hit) return this.tip.hide();
+      this.tip.empty();
+      this.tip.createDiv({ cls: "kh-brain-tip-name", text: hit.name });
+      this.tip.createDiv({ cls: "kh-brain-tip-note", text: hit.note ?? "no note yet" });
+      this.tip.setCssProps({ left: `${hit.x + 12}px`, top: `${hit.y + 12}px` });
+      this.tip.show();
+    };
+    const onLeave = (): void => this.tip.hide();
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerleave", onLeave);
+    this.cleanups.push(() => {
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerleave", onLeave);
+    });
+    this.cleanups.push(src.onAccess((e) => this.agentLayer.access(e)));
+    this.cleanups.push(src.onSession((k, id) => this.agentLayer.session(k, id)));
 
     const size = new Vector2(Math.max(host.clientWidth, 1), Math.max(host.clientHeight, 1));
     this.composer = new EffectComposer(this.renderer);
@@ -263,6 +305,8 @@ export class BrainScene implements BrainHandle {
     this.controls.dispose();
     this.disposeGraphObjects();
     this.nebula.geometry.dispose();
+    this.agentLayer.dispose();
+    this.tip.remove();
     this.nebulaMat.dispose();
     this.nodeMat.dispose();
     this.lineMat.dispose();
@@ -309,6 +353,7 @@ export class BrainScene implements BrainHandle {
     this.nodeMat.uniforms.uSizeMul!.value = o.nodeSize;
     this.nodeMat.uniforms.uTime!.value = t;
     this.controls.update();
+    this.agentLayer.frame(t);
     this.composer.render();
   }
 
@@ -322,6 +367,7 @@ export class BrainScene implements BrainHandle {
     this.camera.updateProjectionMatrix();
     const scale = this.renderer.domElement.height / (2 * Math.tan((this.camera.fov * Math.PI) / 360));
     for (const m of [this.nodeMat, this.nebulaMat]) m.uniforms.uScale!.value = scale;
+    this.agentLayer.setScale(scale);
   }
 
   // --- graph ---
@@ -358,6 +404,11 @@ export class BrainScene implements BrainHandle {
     const n = graph.paths.length;
     if (n === 0) return;
     const pos = layoutFor(graph, this.src.layoutCache);
+    this.pos = pos;
+    this.pathIndex = new Map(graph.paths.map((p, i) => [p, i] as const));
+    let rad = 1;
+    for (let i = 0; i < pos.length; i += 3) rad = Math.max(rad, Math.hypot(pos[i]!, pos[i + 1]!, pos[i + 2]!));
+    this.radius = rad;
     this.src.saveLayout();
 
     const g = new BufferGeometry();

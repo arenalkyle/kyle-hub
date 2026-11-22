@@ -60,6 +60,8 @@ export interface SessionInfo {
   state: SessionState;
   /** Claude conversation id, once a hook reported it. */
   claudeSessionId?: string;
+  /** Pane colour tag (hex), as chosen automatically or from the context menu. */
+  color?: string;
 }
 
 export interface SpawnSessionOptions {

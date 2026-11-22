@@ -23,6 +23,7 @@ export function toInfo(m: SessionManager, s: Session): SessionInfo {
     cwd: s.cwd,
     state: s.agent.state,
   };
+  if (s.color) info.color = s.color;
   if (s.agent.claudeSessionId) info.claudeSessionId = s.agent.claudeSessionId;
   return info;
 }

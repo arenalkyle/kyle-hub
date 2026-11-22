@@ -79,5 +79,14 @@ export function createBrainSource(hub: Hub, ctx: ModuleContext): BrainSource {
     onFps: (cb) => hub.events.on("display:fps-changed", (e) => cb(normalizeFps(e.fps))),
     onGraphChange: listen,
     onHeatDirty: (cb) => hub.events.on("brain:access", () => cb()),
+    onAccess: (cb) => hub.events.on("brain:access", cb),
+    onSession(cb) {
+      const offs = [hub.events.on("session:started", (e) => cb("started", e.sessionId)), hub.events.on("session:ended", (e) => cb("ended", e.sessionId))];
+      return () => offs.forEach((off) => off());
+    },
+    identity(sessionId) {
+      const s = hub.services.get("sessions")?.get(sessionId);
+      return s ? { title: s.title, color: s.color, cwd: s.cwd, kind: s.kind } : undefined;
+    },
   };
 }

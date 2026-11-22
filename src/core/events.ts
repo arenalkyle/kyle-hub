@@ -11,6 +11,8 @@ export interface BrainAccessEvent {
   path?: string;
   pattern?: string;
   hits?: number;
+  /** Working directory of the session, for naming agents that have no terminal pane. */
+  cwd?: string;
 }
 
 /** Typed event map; payloads are filled in as the emitting modules land. */

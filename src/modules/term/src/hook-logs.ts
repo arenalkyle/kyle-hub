@@ -33,6 +33,7 @@ export function forwardHookToLogs(services: Pick<ServiceRegistry, "get">, m: Hoo
       const { kind, path, pattern, hits } = access;
       opts.emitAccess({
         t, ...link, kind,
+        ...(cwd !== undefined ? { cwd } : {}),
         ...(path !== undefined ? { path } : {}),
         ...(pattern !== undefined ? { pattern } : {}),
         ...(hits !== undefined ? { hits } : {}),

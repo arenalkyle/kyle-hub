@@ -69,7 +69,7 @@ describe("forwardHookToLogs access capture", () => {
   it("emits brain:access and spools path/pattern/hits", () => {
     const { services, events, opts } = setup();
     forwardHookToLogs(services, grep(), opts);
-    expect(events).toEqual([{ t: "2026-01-02T03:04:05.000Z", sessionId: "term-1", kind: "search", pattern: "foo", hits: 4 }]);
+    expect(events).toEqual([{ t: "2026-01-02T03:04:05.000Z", sessionId: "term-1", kind: "search", cwd: vault(), pattern: "foo", hits: 4 }]);
     expect(spool()[0]?.access).toEqual({ kind: "search", root: "Brain", pattern: "foo", hits: 4 });
   });
 
