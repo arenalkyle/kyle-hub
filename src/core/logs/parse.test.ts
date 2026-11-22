@@ -73,7 +73,7 @@ describe("transcript search records (LOCK-65)", () => {
 
   it("records a zero-hit Grep with its vault-relative root and pattern", () => {
     const recs = run([call("Grep", { pattern: "needle", path: "C:\\Vault\\proj\\src" }), result("No files found")]);
-    expect(searches(recs)).toEqual([{ type: "search", t: "2026-11-22T10:00:02.000Z", tool: "Grep", root: "proj/src", pattern: "needle", hits: 0, durationMs: 2000 }]);
+    expect(searches(recs)).toEqual([{ type: "search", t: "2026-11-22T10:00:02.000Z", tool: "Grep", root: "proj/src", vault: VAULT, pattern: "needle", hits: 0, durationMs: 2000 }]);
   });
 
   it("counts a many-hit Glob from its result header and defaults the root to the cwd", () => {
@@ -104,6 +104,23 @@ describe("transcript search records (LOCK-65)", () => {
     const s = searches(recs)[0];
     expect(s).toBeDefined();
     expect(s).not.toHaveProperty("hits");
+  });
+
+  it("times a vault Read on its file_read record, with no content", () => {
+    const recs = run([call("Read", { file_path: "C:\\Vault\\proj\\n.md" }), result("SECRET BODY")]);
+    const reads = recs.filter((r) => r.type === "file_read");
+    expect(reads).toEqual([{ type: "file_read", t: "2026-11-22T10:00:00.000Z", pathRel: "n.md", vault: VAULT, durationMs: 2000 }]);
+    expect(JSON.stringify(recs)).not.toContain("SECRET");
+  });
+
+  it("keeps a Read outside the vault untimed and emitted at once", () => {
+    const recs = run([call("Read", { file_path: "D:\\other\\a.ts" })]);
+    expect(recs.filter((r) => r.type === "file_read")).toEqual([{ type: "file_read", t: "2026-11-22T10:00:00.000Z", pathRel: "<external>/a.ts" }]);
+  });
+
+  it("scopes searches to whichever configured vault holds them", () => {
+    const recs = run([call("Grep", { pattern: "x", path: "D:\\Work\\Brain" }), result("No files found")], { vaultRoot: [VAULT, "D:\\Work"], cwd: "D:\\Work" });
+    expect(searches(recs)[0]).toMatchObject({ root: "Brain", vault: "D:\\Work", hits: 0 });
   });
 
   it("emits no search record for a failed search", () => {

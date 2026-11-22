@@ -27,7 +27,7 @@ export function forwardHookToLogs(services: Pick<ServiceRegistry, "get">, m: Hoo
     const access = opts.vaultRoot ? accessFromHook(m.event, m.payload, opts.vaultRoot) : null;
     services.get("logs")?.appendHookEvent({
       ...link, name: m.event, t, cwd, runId: m.env?.KH_RUN, ticketId: m.env?.KH_TICKET, accountId: m.env?.KH_ACCOUNT,
-      ...(access ? { access } : {}),
+      ...(access ? { access: { ...access, vault: opts.vaultRoot } } : {}),
     });
     if (access && opts.emitAccess) {
       const { kind, path, pattern, hits } = access;

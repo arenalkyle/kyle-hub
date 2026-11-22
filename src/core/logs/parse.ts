@@ -1,4 +1,4 @@
-import { countHits, searchRoot } from "../domain/access";
+import { countHits, searchRoot, toVaultRelative } from "../domain/access";
 import { BUILTIN_RULES, redact } from "../redact";
 import { isShellTool, isWriteTool, normalizeCommand, normalizeSig, pathRel } from "./normalize";
 import type { DerivedRecord, PriceTable, Profile } from "./types";
@@ -13,7 +13,9 @@ export interface PendingCall {
   cmdNorm?: string;
   t: string;
   /** Grep/Glob inside the vault: vault-relative root and normalised pattern. */
-  search?: { root: string; pattern?: string };
+  search?: { root: string; vault: string; pattern?: string };
+  /** Read inside the vault: its `file_read` record is emitted when the result pairs up, so it can carry the duration. */
+  read?: { pathRel: string; vault: string };
 }
 
 /** Per-transcript parser memory, persisted in state.json so ingest can resume mid-session. */
@@ -27,8 +29,8 @@ export interface ParseState {
 export interface ParseCtx {
   sessionId: string;
   cwd?: string;
-  /** Vault root; Grep/Glob outside it produce no search record. Absent = no search records. */
-  vaultRoot?: string;
+  /** Vault root(s); Grep/Glob/Read outside them produce no search record or timed read. Absent = none. */
+  vaultRoot?: string | readonly string[];
   profile: Profile;
   prices?: PriceTable;
   state: ParseState;
@@ -68,11 +70,21 @@ function usageRecord(t: string, model: string, usage: Obj, ctx: ParseCtx): Deriv
 }
 
 /** Scope and normalised pattern of a Grep/Glob call; undefined when the search root is outside the vault. */
+const vaultsOf = (ctx: ParseCtx): readonly string[] => (ctx.vaultRoot === undefined ? [] : typeof ctx.vaultRoot === "string" ? [ctx.vaultRoot] : ctx.vaultRoot);
+
 function searchInfo(input: Obj, ctx: ParseCtx): PendingCall["search"] {
-  const root = searchRoot(ctx.vaultRoot ?? "", str(input.path), ctx.cwd);
+  let root: string | undefined;
+  let vault = "";
+  for (const v of vaultsOf(ctx)) {
+    root = searchRoot(v, str(input.path), ctx.cwd);
+    if (root !== undefined) {
+      vault = v;
+      break;
+    }
+  }
   if (root === undefined) return undefined;
   const pattern = str(input.pattern);
-  return { root, ...(pattern ? { pattern: redact(pattern, BUILTIN_RULES).slice(0, MAX_PATTERN) } : {}) };
+  return { root, vault, ...(pattern ? { pattern: redact(pattern, BUILTIN_RULES).slice(0, MAX_PATTERN) } : {}) };
 }
 
 /** Hit count of a tool_result, or undefined when the result carries no countable text (old or odd shapes). */
@@ -103,12 +115,16 @@ function onAssistant(o: Obj, t: string, ctx: ParseCtx): DerivedRecord[] {
     const input = isObj(b.input) ? b.input : {};
     const id = str(b.id);
     const cmdNorm = isShellTool(tool) && str(input.command) ? normalizeCommand(str(input.command) ?? "") : undefined;
-    const search = SEARCH_TOOLS.has(tool) && ctx.vaultRoot ? searchInfo(input, ctx) : undefined;
-    if (id) ctx.state.pending[id] = { tool, t, ...(cmdNorm !== undefined ? { cmdNorm } : {}), ...(search ? { search } : {}) };
-    ctx.state.lastTool = tool;
+    const search = SEARCH_TOOLS.has(tool) && vaultsOf(ctx).length > 0 ? searchInfo(input, ctx) : undefined;
     const file = str(input.file_path) ?? str(input.notebook_path);
     const rel = file ? pathRel(file, ctx.cwd) : undefined;
-    if (rel && tool === "Read") out.push({ type: "file_read", t, pathRel: rel });
+    const readVault = id && rel && tool === "Read" && file ? vaultsOf(ctx).find((v) => toVaultRelative(v, file, ctx.cwd) !== undefined) : undefined;
+    const vaultRead = readVault !== undefined && rel ? { pathRel: rel, vault: readVault } : undefined;
+    if (id) ctx.state.pending[id] = { tool, t, ...(cmdNorm !== undefined ? { cmdNorm } : {}), ...(search ? { search } : {}), ...(vaultRead ? { read: vaultRead } : {}) };
+    ctx.state.lastTool = tool;
+    if (rel && tool === "Read") {
+      if (!vaultRead) out.push({ type: "file_read", t, pathRel: rel });
+    }
     else if (rel && isWriteTool(tool)) out.push({ type: "file_write", t, pathRel: rel });
   }
   return out;
@@ -133,10 +149,11 @@ function onUser(o: Obj, t: string, ctx: ParseCtx): DerivedRecord[] {
     const dur = Date.parse(t) - Date.parse(p.t);
     if (Number.isFinite(dur) && dur >= 0) rec.durationMs = dur;
     out.push(rec);
+    if (p.read) out.push({ type: "file_read", t: p.t, pathRel: p.read.pathRel, vault: p.read.vault, ...(rec.durationMs !== undefined ? { durationMs: rec.durationMs } : {}) });
     if (p.search && ok) {
       // Only the count survives; the result text is dropped with this scope.
       const hits = resultHits(r.content);
-      const s: DerivedRecord = { type: "search", t, tool: p.tool, root: p.search.root };
+      const s: DerivedRecord = { type: "search", t, tool: p.tool, root: p.search.root, vault: p.search.vault };
       if (p.search.pattern !== undefined) s.pattern = p.search.pattern;
       if (hits !== undefined) s.hits = hits;
       if (rec.durationMs !== undefined) s.durationMs = rec.durationMs;

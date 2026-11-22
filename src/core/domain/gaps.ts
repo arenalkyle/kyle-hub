@@ -44,9 +44,13 @@ export interface MissingNote {
 export interface SearchTime {
   /** Time in vault Grep/Glob calls. */
   searchMs: number;
+  /** Time in vault Read calls. */
+  readMs: number;
+  /** `searchMs + readMs`: time spent looking things up. */
+  lookupMs: number;
   /** Duration of the vault sessions' runs. */
   agentMs: number;
-  /** `searchMs / agentMs`, 0 when no agent time. */
+  /** `lookupMs / agentMs`, 0 when no agent time. */
   share: number;
 }
 
@@ -113,6 +117,8 @@ export interface GapsInput {
   searches: SearchFact[];
   /** Duration of the vault sessions' runs. */
   agentMs: number;
+  /** Total time of timed vault Read calls. */
+  readMs?: number;
   config?: GradingConfig;
   warning?: string;
 }
@@ -212,7 +218,9 @@ export function computeGaps(input: GapsInput): GapsReport {
     .sort((a, b) => b.reads + b.emptySearches - (a.reads + a.emptySearches));
 
   const searchMs = input.searches.reduce((a, s) => a + (s.durationMs ?? 0), 0);
-  const searchTime: SearchTime = { searchMs, agentMs: input.agentMs, share: input.agentMs > 0 ? Math.min(1, searchMs / input.agentMs) : 0 };
+  const readMs = input.readMs ?? 0;
+  const lookupMs = searchMs + readMs;
+  const searchTime: SearchTime = { searchMs, readMs, lookupMs, agentMs: input.agentMs, share: input.agentMs > 0 ? Math.min(1, lookupMs / input.agentMs) : 0 };
 
   const folders = new Map<string, { notes: number; words: number }>();
   for (const n of input.notes) {

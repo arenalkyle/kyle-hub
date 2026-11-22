@@ -87,7 +87,7 @@ describe("kh gaps", () => {
     await runGaps([], io());
     const r = read();
     expect(r.emptySearches).toEqual([{ root: "Brain", pattern: "nothing", count: 1, totalMs: 2000 }]);
-    expect(r.searchTime).toEqual({ searchMs: 3500, agentMs: 10_000, share: 0.35 });
+    expect(r.searchTime).toEqual({ searchMs: 3500, readMs: 0, lookupMs: 3500, agentMs: 10_000, share: 0.35 });
     expect(r.grades[0]!.emptySearchesNearby).toBe(1);
   });
 
@@ -103,6 +103,24 @@ describe("kh gaps", () => {
     expect(read().warning).toBeUndefined();
   });
 
+  it("counts vault Read time from timed file_read records toward lookup time", async () => {
+    write("Brain/a.md", "x");
+    const dir = path.join(tmp, "local", "kyle-hub", "home");
+    fs.mkdirSync(path.join(dir, "runs"), { recursive: true });
+    const entry = { runId: "r1", sessionId: "s1", profile: "home", start: "2026-05-30T10:00:00.000Z", durationMs: 10_000, costUsd: 0, toolCalls: 2, errors: 0, denials: 0 };
+    fs.writeFileSync(path.join(dir, "index.jsonl"), `${JSON.stringify(entry)}\n`);
+    fs.writeFileSync(
+      path.join(dir, "runs", "r1.jsonl"),
+      [
+        { type: "file_read", t: "2026-05-30T10:00:01.000Z", pathRel: "Brain/a.md", vault, durationMs: 1500 },
+        { type: "file_read", t: "2026-05-30T10:00:02.000Z", pathRel: "outside.ts" },
+        { type: "search", t: "2026-05-30T10:00:05.000Z", tool: "Grep", root: "Brain", hits: 1, durationMs: 500 },
+      ].map((x) => JSON.stringify(x)).join("\n") + "\n",
+    );
+    await runGaps([], io());
+    expect(read().searchTime).toEqual({ searchMs: 500, readMs: 1500, lookupMs: 2000, agentMs: 10_000, share: 0.2 });
+  });
+
   it("prints JSON and runs from kh maintain", async () => {
     write("a.md", "x");
     expect(await runGaps(["--json"], io())).toBe(EXIT.ok);
@@ -110,6 +128,59 @@ describe("kh gaps", () => {
     lines.length = 0;
     await runMaintain(io());
     expect(lines.some((l) => l.startsWith("gaps: 1 notes graded"))).toBe(true);
+  });
+});
+
+describe("kh gaps with several vaults", () => {
+  let work: string;
+  const at = (n: number): string => `2026-05-30T10:0${n}:00.000Z`;
+  const reads = (vaultRoot: string | undefined, session: string): unknown[] =>
+    [0, 1, 2].map((n) => ({ t: at(n), sessionId: session, name: "PostToolUse", access: { kind: "read", path: "x.md", ...(vaultRoot ? { vault: vaultRoot } : {}) } }));
+
+  beforeEach(() => {
+    work = path.join(tmp, "work-vault");
+    for (const [root, text] of [[vault, "home note"], [work, "work note"]] as const) {
+      fs.mkdirSync(root, { recursive: true });
+      fs.writeFileSync(path.join(root, "x.md"), text);
+    }
+    fs.mkdirSync(path.join(vault, ".obsidian", "plugins", "kyle-hub"), { recursive: true });
+    fs.writeFileSync(
+      path.join(vault, ".obsidian", "plugins", "kyle-hub", "data.json"),
+      JSON.stringify({ modules: { core: { repos: { home: { path: vault, profile: "home" }, work: { path: work, profile: "work" } } } } }),
+    );
+    fs.mkdirSync(path.join(work, ".kyle-hub"), { recursive: true });
+    fs.writeFileSync(path.join(work, ".kyle-hub", "grading.json"), JSON.stringify({ windowDays: 7 }));
+  });
+
+  const both = (): Io => ({ ...io(), env: { ...io().env, KYLE_HUB_VAULTS: `${vault};${work}` } });
+  const readIn = (root: string): GapsReport => JSON.parse(fs.readFileSync(path.join(root, ".kyle-hub", "gaps", "latest.json"), "utf8")) as GapsReport;
+
+  it("writes each vault's own report using its own grading.json, profile and sessions", async () => {
+    spool("home", reads(vault, "home-session"));
+    spool("work", [...reads(work, "work-session"), ...reads(work, "work-session")]);
+    expect(await runGaps([], both())).toBe(EXIT.ok);
+    expect(readIn(vault).windowDays).toBe(30);
+    expect(readIn(work).windowDays).toBe(7);
+    expect(readIn(vault).grades[0]!.maxReadsInSession).toBe(3);
+    expect(readIn(work).grades[0]!.maxReadsInSession).toBe(6);
+    expect(fs.readFileSync(path.join(work, ".gitignore"), "utf8")).toBe(".kyle-hub/gaps/\n");
+  });
+
+  it("drops same-profile records that name another vault, and treats unnamed ones as the first vault's", async () => {
+    spool("home", [...reads(work, "other"), ...reads(undefined, "legacy")]);
+    await runGaps([], both());
+    expect(readIn(vault).grades[0]!.maxReadsInSession).toBe(3);
+    expect(readIn(work).grades[0]!.maxReadsInSession).toBe(0);
+  });
+
+  it("--vault limits the run to one vault, and kh maintain runs all", async () => {
+    await runGaps(["--vault", work], both());
+    expect(fs.existsSync(path.join(work, ".kyle-hub", "gaps", "latest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(vault, ".kyle-hub", "gaps", "latest.json"))).toBe(false);
+    lines.length = 0;
+    await runMaintain(both());
+    expect(lines.filter((l) => l.startsWith("gaps: "))).toHaveLength(2);
+    expect(fs.existsSync(path.join(vault, ".kyle-hub", "gaps", "latest.json"))).toBe(true);
   });
 });
 

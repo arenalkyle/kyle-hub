@@ -46,8 +46,7 @@ export async function runMaintain(io: Io): Promise<number> {
   const sweep = await svc.sweep({});
   io.out(`sweep: removed ${sweep.reduce((n, r) => n + r.items.length, 0)} item(s)`);
   try {
-    const { report } = await computeAndWriteGaps(io);
-    io.out(`gaps: ${report.summary.notes} notes graded, ${report.summary.byGrade.F} F`);
+    for (const { report } of await computeAndWriteGaps(io)) io.out(`gaps: ${report.summary.notes} notes graded, ${report.summary.byGrade.F} F`);
   } catch (e) {
     io.out(`gaps skipped: ${(e as Error).message}`);
   }

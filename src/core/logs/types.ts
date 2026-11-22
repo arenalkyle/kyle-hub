@@ -31,7 +31,7 @@ export interface HookEvent {
   parentSessionId?: string;
   agentType?: string;
   /** Vault access (LOCK-63): vault-relative path, search pattern and root, hit count; never contents. */
-  access?: { kind: "read" | "write" | "search"; path?: string; pattern?: string; root?: string; hits?: number; before?: string; after?: string };
+  access?: { kind: "read" | "write" | "search"; path?: string; pattern?: string; root?: string; hits?: number; before?: string; after?: string; vault?: string };
 }
 
 export interface IngestOptions {
@@ -136,6 +136,8 @@ export interface AccessRecord {
   /** Write content hashes (see `VaultAccess`); only on writes. */
   before?: string;
   after?: string;
+  /** Vault root the access was in (absent on older records: first configured vault). */
+  vault?: string;
 }
 
 /** A human note open read back from the human spool (LOCK-65). */
@@ -161,6 +163,8 @@ export interface SearchRecord extends DerivedRecord {
   pattern?: string;
   /** Vault-relative search root (`.` for the vault root). */
   root: string;
+  /** Vault root the search ran in (records before multi-vault support lack it: first configured vault). */
+  vault?: string;
   hits?: number;
   durationMs?: number;
 }

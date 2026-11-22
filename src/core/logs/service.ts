@@ -48,7 +48,7 @@ export interface LogServiceOptions {
   accounts?: readonly { id: string; configDir: string }[] | (() => readonly { id: string; configDir: string }[]);
   repoMap?: readonly RepoMapEntry[];
   /** Vault root: transcript Grep/Glob records are scoped to it (search records need it). */
-  vaultRoot?: string;
+  vaultRoot?: string | readonly string[];
   denylist?: readonly string[];
   prices?: PriceTable;
   now?: () => Date;
@@ -335,7 +335,7 @@ export class FileLogService implements LogService {
     const out: AccessRecord[] = [];
     for (const p of profile ? [profile] : PROFILES) {
       for (const r of readSpoolSince(path.join(this.dirFor(p), "hooks"), since, this.now())) {
-        const a = r.access as { kind?: unknown; path?: unknown; before?: unknown; after?: unknown } | undefined;
+        const a = r.access as { kind?: unknown; path?: unknown; before?: unknown; after?: unknown; vault?: unknown } | undefined;
         if (!a || (a.kind !== "read" && a.kind !== "write" && a.kind !== "search") || typeof r.sessionId !== "string") continue;
         out.push({
           t: r.t as string,
@@ -345,6 +345,7 @@ export class FileLogService implements LogService {
           ...(typeof a.path === "string" ? { path: a.path } : {}),
           ...(typeof a.before === "string" ? { before: a.before } : {}),
           ...(typeof a.after === "string" ? { after: a.after } : {}),
+          ...(typeof a.vault === "string" ? { vault: a.vault } : {}),
         });
       }
     }

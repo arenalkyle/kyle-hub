@@ -52,7 +52,9 @@ describe("computeGaps", () => {
   });
   it("computes the search share of agent time", () => {
     const r = computeGaps(input({ searches: [{ root: ".", durationMs: 250 }, { root: ".", hits: 1, durationMs: 250 }], agentMs: 2000 }));
-    expect(r.searchTime).toEqual({ searchMs: 500, agentMs: 2000, share: 0.25 });
+    expect(r.searchTime).toEqual({ searchMs: 500, readMs: 0, lookupMs: 500, agentMs: 2000, share: 0.25 });
+    const withReads = computeGaps(input({ searches: [{ root: ".", durationMs: 250 }], readMs: 750, agentMs: 2000 }));
+    expect(withReads.searchTime).toEqual({ searchMs: 250, readMs: 750, lookupMs: 1000, agentMs: 2000, share: 0.5 });
     expect(computeGaps(input({})).searchTime.share).toBe(0);
   });
   it("flags folders whose notes run large, needing the minimum note count", () => {

@@ -4,7 +4,9 @@ import { computeGaps, type GapsReport, type NoteFact, type ReadFact, type Search
 import { parseGradingConfig } from "../domain/grading";
 import { docMeta, proseLines } from "../brain/lint";
 import { splitFrontmatter } from "../domain/frontmatter";
-import type { LogService } from "../logs/types";
+import type { LogService, Profile } from "../logs/types";
+
+const normRoot = (p: string): string => p.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
 
 export const GAPS_DIR = path.join(".kyle-hub", "gaps");
 export const GRADING_FILE = path.join(".kyle-hub", "grading.json");
@@ -60,6 +62,10 @@ export interface GatherOptions {
   vaultRoot: string;
   logs: LogService;
   now?: Date;
+  /** Profile of this vault: only its spool and runs count. Omitted = every profile. */
+  profile?: Profile;
+  /** Every configured vault, first first. Records without a vault id belong to the first. Omitted = just `vaultRoot`. */
+  allVaults?: readonly string[];
 }
 
 /** Collects vault-scoped facts (hook spool accesses, transcript search records, run durations) and computes the report. */
@@ -78,7 +84,9 @@ export async function gatherGaps(opts: GatherOptions): Promise<GapsReport> {
   const reads: ReadFact[] = [];
   const writes: WriteFact[] = [];
   const vaultSessions = new Set<string>();
-  for (const a of await opts.logs.accessSince(since)) {
+  const mine = (recVault: string | undefined): boolean => normRoot(recVault ?? opts.allVaults?.[0] ?? opts.vaultRoot) === normRoot(opts.vaultRoot);
+  for (const a of await opts.logs.accessSince(since, opts.profile)) {
+    if (!mine(a.vault)) continue;
     const session = a.parentSessionId ?? a.sessionId;
     vaultSessions.add(session);
     if (!a.path) continue;
@@ -88,10 +96,16 @@ export async function gatherGaps(opts: GatherOptions): Promise<GapsReport> {
 
   const searches: SearchFact[] = [];
   let agentMs = 0;
-  for (const run of await opts.logs.runs({ since })) {
+  let readMs = 0;
+  for (const run of await opts.logs.runs({ since, ...(opts.profile ? { profile: opts.profile } : {}) })) {
     let hasSearch = false;
     for await (const r of opts.logs.records(run.runId)) {
-      if (r.type !== "search" || typeof r.root !== "string") continue;
+      if (r.type === "file_read" && typeof r.vault === "string" && mine(r.vault)) {
+        hasSearch = true;
+        if (typeof r.durationMs === "number") readMs += r.durationMs;
+        continue;
+      }
+      if (r.type !== "search" || typeof r.root !== "string" || !mine(typeof r.vault === "string" ? r.vault : undefined)) continue;
       hasSearch = true;
       searches.push({
         root: r.root,
@@ -102,7 +116,7 @@ export async function gatherGaps(opts: GatherOptions): Promise<GapsReport> {
     }
     if (hasSearch || vaultSessions.has(run.sessionId)) agentMs += run.durationMs;
   }
-  return computeGaps({ now, notes, reads, writes, searches, agentMs, config, ...(warning ? { warning } : {}) });
+  return computeGaps({ now, notes, reads, writes, searches, agentMs, readMs, config, ...(warning ? { warning } : {}) });
 }
 
 /** Adds `.kyle-hub/gaps/` to the vault `.gitignore` once, keeping existing content; returns whether it changed the file. */
