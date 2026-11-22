@@ -31,6 +31,7 @@ const options = {
     ...builtinModules.map((m) => `node:${m}`),
   ],
   logLevel: "info",
+  minify: !watch,
   sourcemap: watch ? "inline" : false,
   loader: { ".css": "text", ".md": "text" },
   // React picks its build from NODE_ENV at runtime; Obsidian leaves it unset, so pin production.
