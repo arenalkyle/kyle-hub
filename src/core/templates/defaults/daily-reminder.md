@@ -1,5 +1,18 @@
-# Placeholder: daily reminder
+---
+doctype: reminder
+audience: human
+reviewed: {{date}}
+---
+# {{title}}
 
-Replace this text with the real template (LOCK-69).
+## Today
 
-Date: {{date}}
+- [ ] One action per line, verb first.
+
+## Waiting on
+
+- Person or ticket, and what unblocks it.
+
+## Next
+
+- One line: the first thing tomorrow.
