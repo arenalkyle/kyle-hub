@@ -24,7 +24,10 @@ export class BrainView extends ItemView {
     const svc = this.hub.services.get("brainView");
     if (!svc) host.createDiv({ cls: "kh-brain-empty", text: "3D brain unavailable." });
     else this.handle = svc.mount(host);
-    this.gaps = new GapsPanel(split.createDiv({ cls: "kh-brain-gaps" }), this.hub.services.get("gaps"), (p) => this.selectNote(p));
+    this.gaps = new GapsPanel(split.createDiv({ cls: "kh-brain-gaps" }), this.hub.services.get("gaps"), {
+      select: (p) => this.handle?.highlight(p),
+      open: (p) => void this.app.workspace.openLinkText(p, "", "tab"),
+    });
     this.gaps.mount();
   }
 
@@ -33,11 +36,5 @@ export class BrainView extends ItemView {
     this.gaps = undefined;
     this.handle?.dispose();
     this.handle = undefined;
-  }
-
-  /** Row selection: highlights the note on the brain and opens it. */
-  private selectNote(notePath: string): void {
-    this.handle?.highlight(notePath);
-    void this.app.workspace.openLinkText(notePath, "", false);
   }
 }

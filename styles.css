@@ -749,6 +749,9 @@
 .kh-brain-gaps-heading { margin: 14px 0 4px; font-weight: var(--font-semibold); color: var(--text-muted); font-size: var(--font-smallest); text-transform: uppercase; letter-spacing: 0.04em; }
 .kh-brain-gaps-row { display: block; width: 100%; text-align: left; padding: 6px 8px; margin: 0 0 4px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 4px; box-shadow: none; cursor: pointer; }
 .kh-brain-gaps-row:hover { background: var(--background-modifier-hover); }
+.kh-brain-gaps-selected { border-color: var(--interactive-accent); }
+.kh-brain-gaps-link { color: var(--text-accent); cursor: pointer; }
+.kh-brain-gaps-link:hover { text-decoration: underline; }
 .kh-brain-gaps-head { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .kh-brain-gaps-grade { font-weight: var(--font-semibold); }
 .kh-brain-gaps-grade-F, .kh-brain-gaps-grade-D { color: var(--text-error); }
