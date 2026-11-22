@@ -46,6 +46,7 @@ export class TermView extends ItemView {
   private area!: HTMLElement;
   private queuePanel!: HTMLElement;
   private queueBody!: HTMLElement;
+  private unsubCounts: (() => void) | null = null;
   /** Tears down the selected tab's content: the tickets React root, or the Gaps subscription. */
   private unmountQueue: (() => void) | null = null;
   private wrap: HTMLElement | null = null;
@@ -169,9 +170,13 @@ export class TermView extends ItemView {
     const header = this.queuePanel.createDiv({ cls: "kh-term-header kh-term-queue-header" });
     const tabs = header.createDiv({ cls: "kh-term-queue-tabs", attr: { role: "tablist" } });
     for (const [key, label] of QUEUE_TABS) {
-      const tab = tabs.createEl("button", { text: label, cls: "kh-term-queue-tab", attr: { role: "tab", "data-tab": key } });
+      const tab = tabs.createEl("button", { cls: "kh-term-queue-tab", attr: { role: "tab", "data-tab": key } });
+      tab.createSpan({ text: label });
+      tab.createSpan({ cls: "kh-term-queue-count" });
       tab.onclick = () => this.selectQueueTab(key);
     }
+    this.unsubCounts = this.plugin.hub.services.get("queuePanel")?.onChange(() => this.refreshQueueCounts()) ?? null;
+    this.refreshQueueCounts();
     const toggle = header.createEl("button", { cls: "kh-term-btn-collapse kh-term-queue-toggle" });
     toggle.onclick = () => {
       this.plugin.settings.queueCollapsed = !this.plugin.settings.queueCollapsed;
@@ -181,6 +186,16 @@ export class TermView extends ItemView {
     this.queueBody = this.queuePanel.createDiv({ cls: "kh-term-queue-body" });
     this.mountQueueBody();
     this.applyQueue();
+  }
+
+  /** Shows Triage / Todo sizes from the tickets module; blank when it is off. */
+  private refreshQueueCounts(): void {
+    const counts = this.plugin.hub.services.get("queuePanel")?.counts();
+    this.queuePanel.querySelectorAll<HTMLElement>(".kh-term-queue-tab").forEach((el) => {
+      const n = el.dataset.tab === "triage" ? counts?.triage : el.dataset.tab === "todo" ? counts?.todo : undefined;
+      const badge = el.querySelector<HTMLElement>(".kh-term-queue-count");
+      if (badge) badge.textContent = n === undefined ? "" : String(n);
+    });
   }
 
   private selectQueueTab(tab: QueueTabKey): void {
@@ -306,6 +321,8 @@ export class TermView extends ItemView {
   override async onClose(): Promise<void> {
     this.unsubRetro?.();
     this.unsubRetro = null;
+    this.unsubCounts?.();
+    this.unsubCounts = null;
     this.unmountQueue?.();
     this.unmountQueue = null;
     // Sessions belong to the plugin: just detach, never kill.

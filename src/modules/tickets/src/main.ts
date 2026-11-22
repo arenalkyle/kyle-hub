@@ -14,6 +14,7 @@ import { renderAgentsDoc } from "../../../core/domain/agentsDoc";
 import { bootstrapFolder, ensureBaseSlices, syncAgentsDoc } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
 import { mountQueue } from "./views/QueueView";
+import { queueCounts } from "./queueCounts";
 import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";
 import { IssueStore } from "./store/IssueStore";
 import { AutoLinker } from "./github/autolink";
@@ -70,7 +71,18 @@ export default class TicketsHost {
     this.ctx.registerView(VIEW_TYPE_MAIN, (leaf) => new MainView(leaf, this));
     // The queue used to be its own view; drop any leaves left over from earlier layouts.
     for (const t of ["kh-term-queue-view", "kh-tickets-queue"]) this.app.workspace.detachLeavesOfType(t);
-    this.hub.services.register("queuePanel", { mount: (el, tab) => mountQueue(this, el, tab) });
+    this.hub.services.register("queuePanel", {
+      mount: (el, tab) => mountQueue(this, el, tab),
+      counts: () => queueCounts(this.store.getIssues(), this.data.settings.statuses),
+      onChange: (cb) => {
+        const offStore = this.store.on("change", cb);
+        const offSettings = this.onSettingsChange(cb);
+        return () => {
+          offStore();
+          offSettings();
+        };
+      },
+    });
     this.ctx.register(() => this.hub.services.unregister("queuePanel"));
     this.ctx.registerView(VIEW_TYPE_ISSUE, (leaf) => new IssueView(leaf, this));
     this.ctx.registerView(VIEW_TYPE_PROJECT, (leaf) => new ProjectView(leaf, this));

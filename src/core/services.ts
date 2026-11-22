@@ -191,10 +191,19 @@ export interface BrainViewService {
 /** Launch-queue tabs. The terminal sidebar owns the tab strip and passes the selected one. */
 export type QueueTab = "triage" | "todo";
 
-/** Published by the tickets module: renders the launch queue rows for one tab into an element. */
+/** Launch-queue sizes per tab. */
+export interface QueueCounts {
+  triage: number;
+  todo: number;
+}
+
+/** Published by the tickets module: renders the launch queue rows for one tab into an element, and reports tab sizes. */
 export interface QueuePanelService {
   /** Returns an unmount function. */
   mount(el: HTMLElement, tab: QueueTab): () => void;
+  counts(): QueueCounts;
+  /** Fires when issues or settings change; returns an unsubscribe function. */
+  onChange(cb: () => void): () => void;
 }
 
 /** Published by the term module: starts a ticket run in a terminal session. */
