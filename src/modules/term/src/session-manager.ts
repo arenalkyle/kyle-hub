@@ -278,7 +278,7 @@ export class SessionManager {
           if (rt.redrawTimer) clearTimeout(rt.redrawTimer);
           rt.redrawTimer = setTimeout(() => {
             rt.redrawTimer = undefined;
-            if (rt.ptyId && s.status === "running" && s.agent.state !== "needs-input") this.deps.pty.write(rt.ptyId, "");
+            if (rt.ptyId && s.status === "running" && s.agent.state !== "needs-input") this.deps.pty.write(rt.ptyId, "\x0c");
           }, 500);
         }
       },
