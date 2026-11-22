@@ -9,7 +9,7 @@ export interface RetentionPolicy {
   retentionDays: number;
   /** Context packs (`packs/*`). */
   packRetentionDays: number;
-  /** Consumed hook spool files (`hooks/*.jsonl`). */
+  /** Consumed hook spool files (`hooks/*.jsonl`). Human-open spool files (`human/*.jsonl`) use `retentionDays`. */
   spoolDays: number;
 }
 
@@ -62,6 +62,13 @@ export function sweepProfile(dir: string, now: Date, policy: RetentionPolicy, dr
     if (!olderThan(p, spoolCutoff)) continue;
     if ((hookOffsets[name] ?? 0) < fs.statSync(p).size) continue;
     items.push({ kind: "spool", path: p });
+  }
+
+  // Human opens are history like run records (kept for retentionDays); nothing consumes them yet, so no offset check.
+  for (const name of listDir(path.join(dir, "human"))) {
+    if (!name.endsWith(".jsonl")) continue;
+    const p = path.join(dir, "human", name);
+    if (olderThan(p, cutoffRuns)) items.push({ kind: "spool", path: p, detail: "human_open" });
   }
 
   if (!dryRun) {
