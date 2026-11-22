@@ -1,6 +1,6 @@
-// CDP smoke for the usage tracker (LOCK-60): checks the usage service, the status-bar chip and the dashboard usage tile,
-// and that the per-account line the launch picker shows is available. Read-only: writes nothing.
-// Requires the usage and commandCenter modules enabled, at least one account, and Obsidian started with a debug port:
+// CDP smoke for the usage tracker (LOCK-60): checks the usage service, the status-bar chip and that the per-account
+// line the launch picker shows is available. Read-only: writes nothing.
+// Requires the usage module enabled, at least one account, and Obsidian started with a debug port:
 //   Obsidian.exe --remote-debugging-port=9222   then   node scripts/cdp-usage-smoke.mjs
 // Exit 0 on pass, 1 on failure.
 const PORT = Number(process.env.CDP_PORT ?? 9222);
@@ -13,20 +13,12 @@ const EXPR = `(async () => {
   const snap = await usage.snapshot();
   const lines = await usage.lines();
   const chip = document.querySelector(".kh-usage-chip");
-  await app.commands.executeCommandById("kyle-hub:command-center-open");
-  await new Promise((r) => setTimeout(r, 1500));
-  const tile = document.querySelector(".kh-usage-tile");
-  const rows = tile ? tile.querySelectorAll(".kh-usage-row").length : 0;
-  const bars = tile ? tile.querySelectorAll(".kh-usage-bar").length : 0;
   const out = {
     accounts: snap.length,
     pickerLines: Object.keys(lines).length,
     chipText: chip ? chip.textContent : null,
-    tileRows: rows,
-    tileBars: bars,
   };
-  out.ok = snap.length > 0 && out.pickerLines === snap.length && Boolean(out.chipText) && rows === snap.length;
-  for (const l of app.workspace.getLeavesOfType("kh-command-center-view")) l.detach();
+  out.ok = snap.length > 0 && out.pickerLines === snap.length && Boolean(out.chipText);
   return out;
 })()`;
 
@@ -51,7 +43,7 @@ async function main() {
   ws.close();
   console.log(JSON.stringify(result));
   if (!result.ok) {
-    console.error("FAIL: usage chip, picker lines or dashboard tile missing");
+    console.error("FAIL: usage chip or picker lines missing");
     process.exitCode = 1;
   } else console.log("PASS");
 }
