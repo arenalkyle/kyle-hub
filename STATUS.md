@@ -12,10 +12,10 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
   - Tiled terminals (up to 4 columns x 2 stacked): drag to split, expand, state outlines. Splitting doesn't duplicate Claude's screen (bundled ConPTY, [term ADR-0003](src/modules/term/docs/ADR/0003-bundled-conpty.md)), the wheel scrolls Claude, bright white is readable. Each new session gets a unique colour tag, shown on its sidebar stripe and pane header.
   - kyle-hub's Claude hooks are installed globally (9 events, incl. SessionEnd); pending move to the vault file (see above).
   - Old kyle-tickets and kyle-term plugins are disabled in the vault.
-  - Health: build passes, 852 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2800 KB (limit 3072 KB).
+  - Health: build passes, 867 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2810 KB (limit 3072 KB).
 - **In progress**: verification in the real vault. The latest build is deployed but not yet confirmed there (Obsidian was closed at the last check); the terminal fixes were tested in throwaway vaults only. All 109 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
 - **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
-- **Command Center v2** (LOCK-61): 10.1 layout, 11.1 vault-scoped capture and 11.2 history capture (transcript `search` records, `human_open` spool) done (hook installer now targets `<vault>/.claude/settings.local.json`; re-run "Install hooks" in Obsidian to move it out of global settings). Next: 12.1 Brain Vitals (LOCK-66). Spec in [docs/PHASES.md](docs/PHASES.md) Phases 10–16.
+- **Command Center v2** (LOCK-61): 10.1 layout, 11.1 vault-scoped capture 11.2 history capture (transcript `search` records, `human_open` spool) and 12.1 Brain Vitals card + FPS setting done (hook installer now targets `<vault>/.claude/settings.local.json`; re-run "Install hooks" in Obsidian to move it out of global settings). Next: 13.1 3D brain (LOCK-67; ~260 KB size headroom). Spec in [docs/PHASES.md](docs/PHASES.md) Phases 10–16.
 - **Next**
   1. Open Obsidian and run the "Terminal tiling" manual checks.
   2. Add repos to the repo map in kyle-hub settings, then check Queue launch and clear kyle-hub's brain findings.
@@ -44,7 +44,7 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
 | 9 Accounts + usage | 9.1 · 9.2 | LOCK-59 · LOCK-60 | S · S | Done |
 | 10 Layout | 10.1 | LOCK-62 | H | Done |
 | 11 Capture | 11.1 · 11.2 | LOCK-63 · LOCK-65 | S · H | Done |
-| 12 Vitals | 12.1 | LOCK-66 | H | Backlog |
+| 12 Vitals | 12.1 | LOCK-66 | H | Done |
 | 13 Brain 3D | 13.1 · 13.2 | LOCK-67 · LOCK-70 | S · S | Backlog |
 | 14 Gaps | 14.1 · 14.2 | LOCK-68 · LOCK-71 | S · H | Backlog |
 | 15 Gaps UI | 15.1 · 15.2 | LOCK-72 · LOCK-73 | H · H | Backlog |
