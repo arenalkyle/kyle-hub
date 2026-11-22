@@ -19,6 +19,7 @@ import { DEFAULT_FLOOD } from "./core/domain/flood";
 import { DEFAULT_PUBLIC_HOSTS } from "./core/domain/scrub";
 import { accountEnv, accountsOf, addAccount, removeAccount, renameAccount, setDefaultAccount, type Account, type AccountsSettings } from "./core/accounts";
 import { vaultProfileOf } from "./core/profile";
+import { UserTemplatesSection } from "./core/templates/settings";
 import { termModule, termSettings } from "./modules/term";
 import { ticketsModule, ticketsSettings } from "./modules/tickets";
 import { brainModule, brainSettings } from "./modules/brain";
@@ -143,6 +144,8 @@ class HubSettingTab extends PluginSettingTab {
       containerEl.createEl("h2", { text: MODULE_LABELS[id] });
       section.render(containerEl.createDiv());
     }
+    containerEl.createEl("h2", { text: "Templates" });
+    new UserTemplatesSection(() => (this.app.vault.adapter instanceof FileSystemAdapter ? this.app.vault.adapter.getBasePath() : undefined)).render(containerEl.createDiv());
     this.displayProfile(containerEl);
     this.displayAccounts(containerEl);
     this.displayRepos(containerEl);

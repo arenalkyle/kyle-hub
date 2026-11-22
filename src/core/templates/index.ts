@@ -1,9 +1,24 @@
 import fs from "node:fs";
 import path from "node:path";
+import linearTicketOut from "./defaults/linear-ticket-out.md";
+import linearTicketIn from "./defaults/linear-ticket-in.md";
+import repoNote from "./defaults/repo-note.md";
+import dailyReminder from "./defaults/daily-reminder.md";
+import skillProposal from "./defaults/skill-proposal.md";
+import scriptProposal from "./defaults/script-proposal.md";
 
 export const TEMPLATE_IDS = ["linear-ticket-out", "linear-ticket-in", "repo-note", "daily-reminder", "skill-proposal", "script-proposal"] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
-export type TemplateDefaults = Record<TemplateId, string>;
+
+/** Shipped defaults, used when `<vault>/.kyle-hub/templates/<id>.md` is absent. */
+export const TEMPLATE_DEFAULTS: Record<TemplateId, string> = {
+  "linear-ticket-out": linearTicketOut,
+  "linear-ticket-in": linearTicketIn,
+  "repo-note": repoNote,
+  "daily-reminder": dailyReminder,
+  "skill-proposal": skillProposal,
+  "script-proposal": scriptProposal,
+};
 
 /** Stable id to file name, both in the shipped defaults folder and in `<vault>/.kyle-hub/templates/`. */
 export const TEMPLATE_FILES: Record<TemplateId, string> = {
@@ -30,7 +45,7 @@ export function hasVaultTemplate(vaultRoot: string, id: TemplateId): boolean {
  * The vault file when present, else the shipped default. Reads fresh on every call (no cache, no watcher),
  * so a file edited by an agent applies on the next use without a reload.
  */
-export function readTemplate(vaultRoot: string | undefined, id: TemplateId, defaults: TemplateDefaults): string {
+export function readTemplate(vaultRoot: string | undefined, id: TemplateId): string {
   if (vaultRoot !== undefined) {
     try {
       return fs.readFileSync(templatePath(vaultRoot, id), "utf8");
@@ -38,7 +53,7 @@ export function readTemplate(vaultRoot: string | undefined, id: TemplateId, defa
       /* missing or unreadable override: fall back to the shipped default */
     }
   }
-  return defaults[id];
+  return TEMPLATE_DEFAULTS[id];
 }
 
 export function writeTemplate(vaultRoot: string, id: TemplateId, text: string): void {

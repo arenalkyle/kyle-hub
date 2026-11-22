@@ -1,30 +1,13 @@
 import { Notice, Setting } from "obsidian";
-import type { SettingsSection } from "../../core/context";
+import type { SettingsSection } from "../context";
 import {
   hasVaultTemplate,
   readTemplate,
   resetTemplate,
   TEMPLATE_FILES,
   TEMPLATE_IDS,
-  type TemplateDefaults,
   writeTemplate,
-} from "../../core/templates";
-import linearTicketOut from "./templates/linear-ticket-out.md";
-import linearTicketIn from "./templates/linear-ticket-in.md";
-import repoNote from "./templates/repo-note.md";
-import dailyReminder from "./templates/daily-reminder.md";
-import skillProposal from "./templates/skill-proposal.md";
-import scriptProposal from "./templates/script-proposal.md";
-
-/** Shipped defaults, used when `<vault>/.kyle-hub/templates/<id>.md` is absent. */
-export const TEMPLATE_DEFAULTS: TemplateDefaults = {
-  "linear-ticket-out": linearTicketOut,
-  "linear-ticket-in": linearTicketIn,
-  "repo-note": repoNote,
-  "daily-reminder": dailyReminder,
-  "skill-proposal": skillProposal,
-  "script-proposal": scriptProposal,
-};
+} from "./index";
 
 /** Settings block: one text editor per template, Save writes the vault file, Reset deletes it. */
 export class UserTemplatesSection implements SettingsSection {
@@ -37,13 +20,13 @@ export class UserTemplatesSection implements SettingsSection {
       el.createEl("p", { text: "Templates need a filesystem vault." });
       return;
     }
-    el.createEl("p", { cls: "kh-brain-templates-desc", text: "Stored in .kyle-hub/templates/ in the vault. Reset deletes the vault file and falls back to the built-in default." });
+    el.createEl("p", { cls: "kh-core-templates-desc", text: "Stored in .kyle-hub/templates/ in the vault. Reset deletes the vault file and falls back to the built-in default." });
     for (const id of TEMPLATE_IDS) {
       const custom = hasVaultTemplate(root, id);
-      const row = el.createDiv({ cls: "kh-brain-templates-row" });
+      const row = el.createDiv({ cls: "kh-core-templates-row" });
       new Setting(row).setName(id).setDesc(`${TEMPLATE_FILES[id]} (${custom ? "vault file" : "default"})`);
-      const area = row.createEl("textarea", { cls: "kh-brain-templates-text" });
-      area.value = readTemplate(root, id, TEMPLATE_DEFAULTS);
+      const area = row.createEl("textarea", { cls: "kh-core-templates-text" });
+      area.value = readTemplate(root, id);
       new Setting(row)
         .addButton((b) =>
           b.setButtonText("Save").setCta().onClick(() => {

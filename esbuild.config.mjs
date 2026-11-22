@@ -62,6 +62,7 @@ const cliOptions = {
   target: "node18",
   outdir: "bin",
   banner: { js: "#!/usr/bin/env node" },
+  loader: { ".md": "text" },
   logLevel: "info",
 };
 

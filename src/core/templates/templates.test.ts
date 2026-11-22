@@ -2,9 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { readTemplate, resetTemplate, TEMPLATE_IDS, templatePath, type TemplateDefaults, writeTemplate } from "./templates";
-
-const defaults = Object.fromEntries(TEMPLATE_IDS.map((id) => [id, `default ${id}`])) as TemplateDefaults;
+import { readTemplate, resetTemplate, TEMPLATE_DEFAULTS, templatePath, writeTemplate } from "./index";
 
 let vault: string;
 beforeEach(() => {
@@ -16,24 +14,24 @@ afterEach(() => {
 
 describe("readTemplate", () => {
   it("returns the shipped default when the vault has no file", () => {
-    expect(readTemplate(vault, "repo-note", defaults)).toBe("default repo-note");
+    expect(readTemplate(vault, "repo-note")).toBe(TEMPLATE_DEFAULTS["repo-note"]);
   });
 
   it("returns the default when no vault root is available", () => {
-    expect(readTemplate(undefined, "repo-note", defaults)).toBe("default repo-note");
+    expect(readTemplate(undefined, "repo-note")).toBe(TEMPLATE_DEFAULTS["repo-note"]);
   });
 
   it("returns the vault override when the file exists", () => {
     fs.mkdirSync(path.join(vault, ".kyle-hub", "templates"), { recursive: true });
     fs.writeFileSync(templatePath(vault, "repo-note"), "vault text", "utf8");
-    expect(readTemplate(vault, "repo-note", defaults)).toBe("vault text");
+    expect(readTemplate(vault, "repo-note")).toBe("vault text");
   });
 
   it("picks up a direct edit on the next read without any reload", () => {
     writeTemplate(vault, "daily-reminder", "first");
-    expect(readTemplate(vault, "daily-reminder", defaults)).toBe("first");
+    expect(readTemplate(vault, "daily-reminder")).toBe("first");
     fs.writeFileSync(templatePath(vault, "daily-reminder"), "second", "utf8");
-    expect(readTemplate(vault, "daily-reminder", defaults)).toBe("second");
+    expect(readTemplate(vault, "daily-reminder")).toBe("second");
   });
 });
 
@@ -43,7 +41,7 @@ describe("writeTemplate and resetTemplate", () => {
     expect(fs.readFileSync(templatePath(vault, "skill-proposal"), "utf8")).toBe("custom");
     resetTemplate(vault, "skill-proposal");
     expect(fs.existsSync(templatePath(vault, "skill-proposal"))).toBe(false);
-    expect(readTemplate(vault, "skill-proposal", defaults)).toBe("default skill-proposal");
+    expect(readTemplate(vault, "skill-proposal")).toBe(TEMPLATE_DEFAULTS["skill-proposal"]);
   });
 
   it("reset is a no-op when no override exists", () => {

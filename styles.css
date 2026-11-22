@@ -769,7 +769,7 @@
 .kh-brain-gaps-item { color: var(--text-normal); overflow-wrap: anywhere; padding: 2px 0; }
 .kh-brain-gaps-muted, .kh-brain-gaps-empty { color: var(--text-muted); }
 
-/* Editable templates (kh-brain-templates-) */
-.kh-brain-templates-desc { color: var(--text-muted); font-size: var(--font-smallest); }
-.kh-brain-templates-row { margin-bottom: 12px; }
-.kh-brain-templates-text { width: 100%; min-height: 8em; font-family: var(--font-monospace); font-size: var(--font-smallest); }
+/* Editable templates (kh-core-templates-) */
+.kh-core-templates-desc { color: var(--text-muted); font-size: var(--font-smallest); }
+.kh-core-templates-row { margin-bottom: 12px; }
+.kh-core-templates-text { width: 100%; min-height: 8em; font-family: var(--font-monospace); font-size: var(--font-smallest); }
