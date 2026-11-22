@@ -98,7 +98,6 @@ interface Runtime {
   inputSeen: boolean;
   /** Last width sent to the pty, to spot width changes. */
   lastCols?: number;
-  redrawTimer?: ReturnType<typeof setTimeout>;
   idleTimer?: ReturnType<typeof setTimeout>;
   quietTimer?: ReturnType<typeof setTimeout>;
   fallbackTimer?: ReturnType<typeof setTimeout>;
@@ -269,18 +268,11 @@ export class SessionManager {
       },
       onResize: (c, r) => {
         if (!rt.ptyId || s.status !== "running") return;
-        const widthChanged = rt.lastCols !== undefined && rt.lastCols !== c;
+        // Claude Code erases its old frame by line count, which is wrong after a width change and leaves a stale banner;
+        // blank the visible screen first so its redraw starts clean (scrollback is kept).
+        if (s.kind === "claude" && rt.lastCols !== undefined && rt.lastCols !== c) rt.term.write("[2J[H");
         rt.lastCols = c;
         this.deps.pty.resize(rt.ptyId, c, r);
-        // ConPTY repaints its old buffer on resize and Claude Code redraws on top, leaving a stale banner. Once both settle,
-        // Ctrl+L makes Claude clear the screen and redraw once (it ignores it at prompts, so skip those).
-        if (widthChanged && s.kind === "claude") {
-          if (rt.redrawTimer) clearTimeout(rt.redrawTimer);
-          rt.redrawTimer = setTimeout(() => {
-            rt.redrawTimer = undefined;
-            if (rt.ptyId && s.status === "running" && s.agent.state !== "needs-input") this.deps.pty.write(rt.ptyId, "");
-          }, 500);
-        }
       },
       onTitle: (t) => { s.oscTitle = t; this.emit(); },
       onBell: () => { if (s.status === "running") this.dispatch(s, { type: "bell" }); },
@@ -369,8 +361,6 @@ export class SessionManager {
     if (rt.quietTimer) clearTimeout(rt.quietTimer);
     if (rt.fallbackTimer) clearTimeout(rt.fallbackTimer);
     rt.quietTimer = rt.fallbackTimer = undefined;
-    if (rt.redrawTimer) clearTimeout(rt.redrawTimer);
-    rt.redrawTimer = undefined;
   }
 
   setActive(id: string): void {
