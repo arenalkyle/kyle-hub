@@ -2,7 +2,7 @@ import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { Hub } from "../../core";
 import type { BrainInventory } from "../../core/brain/inventory";
 import { METRICS, SensorSampler, sparkPoints } from "./sensors";
-import { buildCommandCenterModel, loadCommandCenterData, SPARKLINE_HEIGHT, SPARKLINE_WIDTH, type CommandCenterModel, type CommandCenterReader, type Part, type Tile, type UsageRow } from "./model";
+import { buildCommandCenterModel, loadCommandCenterData, SPARKLINE_HEIGHT, SPARKLINE_WIDTH, type CommandCenterModel, type CommandCenterReader, type Part, type Tile } from "./model";
 
 export const COMMAND_CENTER_VIEW_TYPE = "kh-command-center-view";
 const REFRESH_MS = 60_000;
@@ -111,6 +111,13 @@ export class CommandCenterView extends ItemView {
         li.addEventListener("click", () => void this.focusTicket(r.ticketId));
       }
     });
+    const retro = tile("retro");
+    if (retro) {
+      const c = left.createDiv({ cls: "kh-command-center-card" });
+      c.createEl("h4", { text: "Retro" });
+      c.createDiv({ text: retro.value });
+      if (retro.detail) c.createDiv({ cls: "kh-command-center-empty", text: retro.detail });
+    }
     this.paintSection(left, "Recent runs", m.recentRuns, (list, rows) => {
       if (rows.length === 0) list.createEl("li", { text: "No runs yet" });
       for (const r of rows) {
@@ -151,15 +158,6 @@ export class CommandCenterView extends ItemView {
         spend.appendChild(svg);
       }
     }
-    this.paintUsage(center, m.usage);
-    const retro = tile("retro");
-    if (retro) {
-      const c = center.createDiv({ cls: "kh-command-center-card" });
-      c.createEl("h4", { text: "Retro" });
-      c.createDiv({ text: retro.value });
-      if (retro.detail) c.createDiv({ cls: "kh-command-center-empty", text: retro.detail });
-    }
-
     // Right: brain and system
     const brain = right.createDiv({ cls: "kh-command-center-card" });
     brain.createEl("h4", { text: "Brain" });
@@ -210,30 +208,6 @@ export class CommandCenterView extends ItemView {
       row.appendChild(svg);
     }
     box.createDiv({ cls: "kh-command-center-empty", text: "CPU temperature needs a sensor tool and isn't shown yet." });
-  }
-
-  private paintUsage(el: HTMLElement, p: Part<UsageRow[]>): void {
-    const box = el.createDiv({ cls: "kh-command-center-usage kh-usage-tile kh-command-center-card" });
-    box.createEl("h4", { text: "Usage" });
-    if (p.state !== "ok") return void box.createDiv({ text: degradedText(p) });
-    if (p.value.length === 0) return void box.createDiv({ text: "No accounts" });
-    for (const r of p.value) {
-      const row = box.createDiv({ cls: "kh-usage-row", attr: { "data-account": r.accountId } });
-      row.createDiv({ cls: "kh-usage-label", text: `${r.label} (${r.source})` });
-      if (r.dollars) {
-        const d = r.dollars;
-        row.createDiv({ cls: "kh-usage-dollars", text: `${d.today} today · ${d.month} this month${d.budget ? ` of ${d.budget}` : ""}` });
-        continue;
-      }
-      for (const b of r.bars ?? []) {
-        const line = row.createDiv({ cls: `kh-usage-bar kh-usage-bar-${b.id}` });
-        line.createSpan({ cls: "kh-usage-bar-label", text: `${b.label} ${b.percent}%${b.reset ? ` · resets ${b.reset}` : ""}` });
-        const track = line.createDiv({ cls: "kh-usage-track" });
-        const fill = track.createDiv({ cls: "kh-usage-fill" });
-        fill.style.width = `${Math.min(100, b.percent)}%`;
-        if (b.percent >= 80) fill.addClass("kh-usage-fill-warn");
-      }
-    }
   }
 
   private paintTile(parent: HTMLElement, t: Tile): void {

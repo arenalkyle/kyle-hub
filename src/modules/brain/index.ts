@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { HubModule, ModuleSettingsDef } from "../../core";
+import type { Hub, HubModule, ModuleSettingsDef } from "../../core";
 import { createBrainService, type RepoEntry } from "../../core/brain/service";
 import { DEFAULT_HEALTH_WEIGHTS, type HealthWeights } from "../../core/brain/health";
 import { createConventionDocs } from "./conventions";
@@ -8,6 +8,7 @@ import { Notice, TFile } from "obsidian";
 import { planPromote, promoteEligible, scrubOptionsFrom } from "../../core/domain/promote";
 import { vaultProfileOf } from "../../core/profile";
 import { PromoteModal } from "./promoteModal";
+import { BRAIN_VIEW_TYPE, BrainView } from "./view";
 
 export const brainSettings: ModuleSettingsDef = {
   id: "brain",
@@ -15,9 +16,15 @@ export const brainSettings: ModuleSettingsDef = {
   enabledByDefault: false,
 };
 
+async function openBrain(hub: Hub): Promise<void> {
+  await hub.app.workspace.getLeaf(false).setViewState({ type: BRAIN_VIEW_TYPE, active: true });
+}
+
 export const brainModule: HubModule = {
   id: "brain",
   load(hub, ctx) {
+    ctx.registerView(BRAIN_VIEW_TYPE, (leaf) => new BrainView(leaf));
+    ctx.addNavItem({ id: "brain", label: "Brain", icon: "brain", viewType: BRAIN_VIEW_TYPE, order: 30, open: () => void openBrain(hub) });
     const repos = (): Record<string, RepoEntry> => (hub.settings.module("core").repos ?? {}) as Record<string, RepoEntry>;
     const ignoreSymbols = (key: string): string[] => {
       const map = (hub.settings.module("brain").ignoreSymbols ?? {}) as Record<string, string[]>;
