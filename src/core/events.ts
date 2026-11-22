@@ -1,6 +1,17 @@
 import type { UsageWindowName } from "./domain/usage";
 import type { AttentionReason } from "./services";
 
+export interface BrainAccessEvent {
+  t: string;
+  sessionId: string;
+  parentSessionId?: string;
+  agentType?: string;
+  kind: "read" | "write" | "search";
+  path?: string;
+  pattern?: string;
+  hits?: number;
+}
+
 /** Typed event map; payloads are filled in as the emitting modules land. */
 export interface HubEvents {
   "ticket:created": { id: string };
@@ -20,6 +31,8 @@ export interface HubEvents {
   /** Score changed for one repo (`key` = repo-map key) or the vault (`key` = `vault`). */
   /** An account crossed the warning level in a window (once per window instance). */
   "usage:threshold": { accountId: string; window: UsageWindowName; percent: number; windowStart: string };
+  /** A Claude agent read, wrote or searched the vault (paths vault-relative; never contents). `sessionId` is the sub-agent id when `parentSessionId` is set. */
+  "brain:access": BrainAccessEvent;
   "brain:health-changed": { scope: "repo" | "vault"; key: string; score: number; previous?: number };
 }
 

@@ -27,6 +27,11 @@ export interface HookEvent {
   cwd?: string;
   profile?: Profile;
   accountId?: string;
+  /** Sub-agent events: `sessionId` is the sub-agent id, this is the owning session. */
+  parentSessionId?: string;
+  agentType?: string;
+  /** Vault access (LOCK-63): vault-relative path, search pattern and root, hit count; never contents. */
+  access?: { kind: "read" | "write" | "search"; path?: string; pattern?: string; root?: string; hits?: number };
 }
 
 export interface IngestOptions {

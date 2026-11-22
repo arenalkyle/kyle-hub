@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import { dataDir } from "../paths";
-import { makeRedactor } from "../redact";
+import { BUILTIN_RULES, makeRedactor, redact } from "../redact";
 import { parseTranscriptLine, type ParseState } from "./parse";
 import { countSince as countIndexSince, mergeIndex, queryRuns, readIndex, spendByDay as spendIndexByDay, summarizeRun, writeIndexAtomic } from "./runIndex";
 import { DEFAULT_RETENTION, sweepProfile, type RetentionPolicy, type SweepResult } from "./retention";
@@ -347,7 +347,9 @@ export class FileLogService implements LogService {
       const profile = event.profile ?? resolveRepo(event.cwd, this.repoMap).profile;
       const dir = path.join(this.dirFor(profile), "hooks");
       fs.mkdirSync(dir, { recursive: true });
-      const line = JSON.stringify({ t, sessionId: event.sessionId, name: event.name, state: event.state, runId: event.runId, ticketId: event.ticketId, accountId: event.accountId, cwd: event.cwd });
+      const a = event.access;
+      const access = a ? { ...a, ...(a.pattern !== undefined ? { pattern: redact(a.pattern, BUILTIN_RULES) } : {}) } : undefined;
+      const line = JSON.stringify({ t, sessionId: event.sessionId, name: event.name, state: event.state, runId: event.runId, ticketId: event.ticketId, accountId: event.accountId, cwd: event.cwd, parentSessionId: event.parentSessionId, agentType: event.agentType, access });
       fs.appendFileSync(path.join(dir, `${t.slice(0, 10)}.jsonl`), `${line}\n`);
     } catch {
       // swallowed on purpose: a failing log write must never break a hook
@@ -394,10 +396,12 @@ export class FileLogService implements LogService {
         }
         const t = typeof e.t === "string" ? e.t : this.now().toISOString();
         const cwd = typeof e.cwd === "string" ? e.cwd : undefined;
-        const s = this.ensureSession(state, batch, e.sessionId, cwd, profile, t);
+        // Sub-agent events belong to their parent session's run.
+        const owner = typeof e.parentSessionId === "string" ? e.parentSessionId : e.sessionId;
+        const s = this.ensureSession(state, batch, owner, cwd, profile, t);
         if (typeof e.runId === "string" && e.runId !== s.runId) {
           s.runId = e.runId;
-          batch.header(s.runId, { type: "run", t: s.start, sessionId: e.sessionId, cwd: s.cwd, repo: s.repo, profile, ...(s.accountId ? { accountId: s.accountId } : {}) }, s.cwd);
+          batch.header(s.runId, { type: "run", t: s.start, sessionId: owner, cwd: s.cwd, repo: s.repo, profile, ...(s.accountId ? { accountId: s.accountId } : {}) }, s.cwd);
         }
         if (typeof e.accountId === "string" && e.accountId !== s.accountId) {
           s.accountId = e.accountId;

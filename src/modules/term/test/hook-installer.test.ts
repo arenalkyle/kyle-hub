@@ -141,3 +141,25 @@ describe("loadSettingsFile", () => {
     } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   });
 });
+
+describe("vault-scoped install (temp dirs only)", () => {
+  it("writes the vault file, removes global entries, and is idempotent", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kh-vault-install-"));
+    try {
+      const globalFile = path.join(dir, "home", "settings.json");
+      const vaultFile = path.join(dir, "vault", ".claude", "settings.local.json");
+      fs.mkdirSync(path.dirname(globalFile), { recursive: true });
+      fs.writeFileSync(globalFile, JSON.stringify(installHooks({ model: "x" }, script)));
+      expect(applyToFile(vaultFile, "install", script).changed).toBe(true);
+      expect(applyToFile(globalFile, "uninstall", script).changed).toBe(true);
+      expect(JSON.parse(fs.readFileSync(globalFile, "utf8"))).toEqual({ model: "x" });
+      expect(count(JSON.parse(fs.readFileSync(vaultFile, "utf8")))).toBe(HOOK_EVENTS.length);
+      const before = fs.readFileSync(vaultFile, "utf8");
+      expect(applyToFile(vaultFile, "install", script).changed).toBe(false);
+      expect(applyToFile(globalFile, "uninstall", script).changed).toBe(false);
+      expect(fs.readFileSync(vaultFile, "utf8")).toBe(before);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

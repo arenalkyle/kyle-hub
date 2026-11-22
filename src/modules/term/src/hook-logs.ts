@@ -1,13 +1,43 @@
-import type { ServiceRegistry } from "../../../core";
+import type { BrainAccessEvent, ServiceRegistry } from "../../../core";
+import { accessFromHook } from "../../../core/domain/access";
 import type { HookMessage } from "./hook-server";
 
-/** Forwards one hook event to the core LogService spool. Absent logs service (module off) is a no-op; never throws. */
-export function forwardHookToLogs(services: Pick<ServiceRegistry, "get">, m: HookMessage): void {
+export interface HookLogOptions {
+  /** Absolute vault root; access events outside it are dropped. Omitted = no access capture. */
+  vaultRoot?: string;
+  /** Publishes the live `brain:access` event. */
+  emitAccess?: (e: BrainAccessEvent) => void;
+  now?: () => Date;
+}
+
+const nonEmpty = (v: unknown): string | undefined => (typeof v === "string" && v !== "" ? v : undefined);
+
+/**
+ * Forwards one hook event to the core LogService spool and, for vault reads/writes/searches, to the
+ * `brain:access` bus event. Sub-agent events (payload `agent_id`) get the sub-agent id as `sessionId`
+ * and the terminal session as `parentSessionId`. Absent logs service is a no-op; never throws.
+ */
+export function forwardHookToLogs(services: Pick<ServiceRegistry, "get">, m: HookMessage, opts: HookLogOptions = {}): void {
   try {
-    const logs = services.get("logs");
-    if (!logs) return;
     const cwd = typeof m.payload.cwd === "string" ? m.payload.cwd : undefined;
-    logs.appendHookEvent({ sessionId: m.session, name: m.event, cwd, runId: m.env?.KH_RUN, ticketId: m.env?.KH_TICKET, accountId: m.env?.KH_ACCOUNT });
+    const agentId = nonEmpty(m.payload.agent_id);
+    const agentType = nonEmpty(m.payload.agent_type);
+    const link = agentId ? { sessionId: agentId, parentSessionId: m.session, ...(agentType ? { agentType } : {}) } : { sessionId: m.session };
+    const t = (opts.now?.() ?? new Date()).toISOString();
+    const access = opts.vaultRoot ? accessFromHook(m.event, m.payload, opts.vaultRoot) : null;
+    services.get("logs")?.appendHookEvent({
+      ...link, name: m.event, t, cwd, runId: m.env?.KH_RUN, ticketId: m.env?.KH_TICKET, accountId: m.env?.KH_ACCOUNT,
+      ...(access ? { access } : {}),
+    });
+    if (access && opts.emitAccess) {
+      const { kind, path, pattern, hits } = access;
+      opts.emitAccess({
+        t, ...link, kind,
+        ...(path !== undefined ? { path } : {}),
+        ...(pattern !== undefined ? { pattern } : {}),
+        ...(hits !== undefined ? { hits } : {}),
+      });
+    }
   } catch {
     // hooks must not fail Claude Code; a broken log write is dropped
   }
