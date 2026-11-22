@@ -96,6 +96,8 @@ interface Runtime {
   /** Command typed for the current start only (a resume); s.command stays the original. */
   command?: string;
   inputSeen: boolean;
+  /** Last width sent to the pty, to spot width changes. */
+  lastCols?: number;
   idleTimer?: ReturnType<typeof setTimeout>;
   quietTimer?: ReturnType<typeof setTimeout>;
   fallbackTimer?: ReturnType<typeof setTimeout>;
@@ -264,7 +266,14 @@ export class SessionManager {
         if (!s.agent.hasHookEvents) this.dispatch(s, { type: "viewed" });
         this.deps.pty.write(rt.ptyId, d);
       },
-      onResize: (c, r) => { if (rt.ptyId && s.status === "running") this.deps.pty.resize(rt.ptyId, c, r); },
+      onResize: (c, r) => {
+        if (!rt.ptyId || s.status !== "running") return;
+        // Claude Code erases its old frame by line count, which is wrong after a width change and leaves a stale banner;
+        // blank the visible screen first so its redraw starts clean (scrollback is kept).
+        if (s.kind === "claude" && rt.lastCols !== undefined && rt.lastCols !== c) rt.term.write("[2J[H");
+        rt.lastCols = c;
+        this.deps.pty.resize(rt.ptyId, c, r);
+      },
       onTitle: (t) => { s.oscTitle = t; this.emit(); },
       onBell: () => { if (s.status === "running") this.dispatch(s, { type: "bell" }); },
     };
