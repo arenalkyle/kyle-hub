@@ -506,7 +506,7 @@
 
 /* Tiled layouts: up to 4 columns of 1-2 stacked sessions. Outline blue = needs you, green = finished. */
 .kh-term-grid { display: flex; gap: 6px; padding: 6px; box-sizing: border-box; }
-.kh-term-grid.is-solo { display: block; padding: 0; }
+.kh-term-grid.is-solo { padding: 0; gap: 0; }
 .kh-term-col { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
 .kh-term-tile { flex: 1 1 0; position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; border: 2px solid var(--background-modifier-border); border-radius: 6px; }
 .kh-term-grid.is-solo .kh-term-tile { height: 100%; border-width: 0; border-radius: 0; }
@@ -521,6 +521,7 @@
 .kh-term-tile-btn:hover { color: var(--text-normal); }
 .kh-term-tile-btn svg { width: 14px; height: 14px; }
 .kh-term-tile-body { flex: 1; min-height: 0; position: relative; }
+.kh-term-tile-body > .kh-term-term { position: absolute; inset: 0; height: auto; width: auto; }
 .kh-term-dropzone { position: absolute; display: none; pointer-events: none; z-index: 20; box-sizing: border-box; background: color-mix(in srgb, var(--interactive-accent) 25%, transparent); border: 2px dashed var(--interactive-accent); border-radius: 6px; }
 
 .kh-term-header { display: flex; gap: 4px; padding: 6px; align-items: center; }
