@@ -40,7 +40,12 @@ export class XtermSession implements TermLike {
     term.loadAddon(this.fitAddon);
     term.loadAddon(this.serializer);
     term.onData(h.onInput);
-    term.onResize(({ cols, rows }) => h.onResize(cols, rows));
+    // Claude Code redraws (and re-prints its banner into scrollback) on every pty resize, so only the settled size is sent.
+    let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+    term.onResize(({ cols, rows }) => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => h.onResize(cols, rows), 200);
+    });
     term.onTitleChange(h.onTitle);
     term.onBell(h.onBell);
     this.el.className = "kh-term-term";
