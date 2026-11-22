@@ -164,5 +164,5 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 ## Terminal tiling (term ADR-0003)
 
 - [ ] Reload Obsidian, open two Claude sessions, drag the first onto the left edge of the second: one banner per pane, prompt at the bottom of both.
-- [ ] Stack, expand and restore panes with a long conversation open: no repeated content; PgUp/PgDn scroll Claude.
+- [ ] Stack, expand and restore panes with a long conversation open: no repeated content; the mouse wheel and PgUp/PgDn scroll Claude, including in a pane without focus.
 - [ ] Drag-select + Ctrl+C copies and right-click pastes once.

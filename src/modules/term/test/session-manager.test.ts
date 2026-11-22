@@ -81,6 +81,44 @@ describe("terminal reports", () => {
     expect(s.agent.state).not.toBe(initial);
   });
 
+  describe("wheel", () => {
+    const WHEEL = "\x1b[<64;3;3M";
+    const output = () => pty.listeners.get([...pty.listeners.keys()][0]!)!.onData("output");
+
+    it("doesn't count as typing", () => {
+      const s = shell();
+      terms[0]!.h.onInput(WHEEL);
+      clock += 5000;
+      output();
+      expect(s.agent.state).toBe(initial);
+    });
+
+    it("doesn't turn a finished session back to working when the app redraws", () => {
+      const s = shell();
+      terms[0]!.h.onInput("x");
+      output();
+      vi.advanceTimersByTime(10_000);
+      expect(s.agent.state).toBe("finished");
+      terms[0]!.h.onInput(WHEEL);
+      output();
+      expect(s.agent.state).toBe("finished");
+      clock += 1000;
+      output();
+      expect(s.agent.state).toBe("working");
+    });
+
+    it("doesn't stop a working session from finishing", () => {
+      const s = shell();
+      terms[0]!.h.onInput("x");
+      output();
+      terms[0]!.h.onInput(WHEEL);
+      output();
+      expect(s.agent.state).toBe("working");
+      vi.advanceTimersByTime(10_000);
+      expect(s.agent.state).toBe("finished");
+    });
+  });
+
   const initial = initialAgent().state;
 });
 

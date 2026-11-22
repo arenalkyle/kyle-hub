@@ -1,6 +1,7 @@
 import type { ShellProfile } from "./shells";
 import { resolveTitle } from "./title";
 import { initialAgent, reduceAgent, SUBAGENT_FADE_MS, type AgentEvent, type AgentInfo, type AgentState } from "./agent-state";
+import { WHEEL_REPORT } from "./alt-screen";
 import { dimScrollback, dividerLine, serializeSessions, type PersistedSession } from "./persist";
 import type { SessionListener, SpawnOptions } from "./pty-manager";
 
@@ -96,6 +97,8 @@ interface Runtime {
   /** Command typed for the current start only (a resume); s.command stays the original. */
   command?: string;
   inputSeen: boolean;
+  /** When the wheel was last passed to the app. */
+  scrolledAt?: number;
   idleTimer?: ReturnType<typeof setTimeout>;
   quietTimer?: ReturnType<typeof setTimeout>;
   fallbackTimer?: ReturnType<typeof setTimeout>;
@@ -105,6 +108,8 @@ const QUIET_MS = 400;
 const FALLBACK_MS = 5000;
 const ACTIVITY_THROTTLE_MS = 300;
 const TITLE_MAX = 60;
+/** Output this soon after a scroll is the app redrawing, not working. */
+const SCROLL_REDRAW_MS = 1000;
 const FOCUS_IN = "\x1b[I";
 /** What xterm sends by itself: device attributes, cursor/status/mode reports, focus, colour-scheme, OSC and DCS replies. */
 // eslint-disable-next-line no-control-regex
@@ -264,7 +269,9 @@ export class SessionManager {
     return {
       onInput: (d) => {
         if (!rt.ptyId || s.status !== "running") return;
-        const typed = !TERMINAL_REPORT.test(d);
+        const scrolled = WHEEL_REPORT.test(d);
+        if (scrolled) rt.scrolledAt = this.now();
+        const typed = !scrolled && !TERMINAL_REPORT.test(d);
         if (typed) rt.inputSeen = true;
         if (!s.agent.hasHookEvents && (typed || d === FOCUS_IN)) this.dispatch(s, { type: "viewed" });
         this.deps.pty.write(rt.ptyId, d);
@@ -346,6 +353,7 @@ export class SessionManager {
   /** Fallback for CLIs without hooks: output after user input means busy; quiet means finished. */
   private armIdle(s: Session, rt: Runtime): void {
     if (s.agent.hasHookEvents || !rt.inputSeen) return;
+    if (s.agent.state !== "working" && rt.scrolledAt !== undefined && this.now() - rt.scrolledAt < SCROLL_REDRAW_MS) return;
     this.dispatch(s, { type: "output" });
     if (rt.idleTimer) clearTimeout(rt.idleTimer);
     rt.idleTimer = setTimeout(() => this.dispatch(s, { type: "idle" }), this.deps.idleMs?.() ?? 10_000);

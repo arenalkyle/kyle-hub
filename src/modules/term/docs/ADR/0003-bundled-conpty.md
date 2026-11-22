@@ -18,6 +18,6 @@ Pin `@lydell/node-pty` 1.2.0-beta.18 (the first line we use that ships Microsoft
 - xterm sees the real alternate screen, so resizing can't push TUI frames into scrollback.
 - ConPTY queries the terminal at startup and waits up to 3 s for the answer. Anything driving the helper without xterm must answer `ESC[c` with `ESC[?1;2c`.
 - Those answers and focus reports arrive as input; `SessionManager` doesn't count them as typing.
-- Mouse-capture requests now reach xterm. `keepMouseLocal` ignores them to keep drag-select and right-click paste; the wheel does nothing in the alternate screen (use PgUp/PgDn in Claude).
+- Mouse-capture requests now reach xterm. `keepMouseLocal` ignores them to keep drag-select and right-click paste; only the wheel is forwarded, as SGR reports, to alternate-screen apps that requested the mouse. In other alternate-screen apps the wheel does nothing, because xterm would send Up/Down and cycle prompt history. Wheel reports and the redraw they cause don't count as activity.
 - Saved scrollback flattens the alternate screen (`serializeFlat`).
 - It is a beta dependency: before upgrading, repeat the tiling check in `docs/MANUAL-CHECKS.md`.
