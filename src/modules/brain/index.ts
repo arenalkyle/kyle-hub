@@ -11,6 +11,7 @@ import { PromoteModal } from "./promoteModal";
 import { BRAIN_VIEW_TYPE, BrainView } from "./view";
 import { BrainScene } from "./scene";
 import { createGapsService } from "./gaps";
+import { UserTemplatesSection } from "./userTemplates";
 import { brainOptions, createBrainSource, DEFAULT_BLOOM, DEFAULT_NODE_SIZE } from "./source";
 
 export const brainSettings: ModuleSettingsDef = {
@@ -35,7 +36,8 @@ export const brainModule: HubModule = {
       hub.services.get("logs")?.appendHumanOpen({ profile: vaultProfileOf(hub.settings.module("core")), path: f.path, t });
       hub.events.emit("brain:human-open", { t, path: f.path });
     }));
-    const repos = (): Record<string, RepoEntry> => (hub.settings.module("core").repos ?? {}) as Record<string, RepoEntry>;
+    ctx.addSettingsSection(new UserTemplatesSection(() => (hub.app.vault.adapter as { getBasePath?: () => string }).getBasePath?.()));
+    const repos = (): Record<string, RepoEntry> =>(hub.settings.module("core").repos ?? {}) as Record<string, RepoEntry>;
     const ignoreSymbols = (key: string): string[] => {
       const map = (hub.settings.module("brain").ignoreSymbols ?? {}) as Record<string, string[]>;
       return map[key] ?? [];
