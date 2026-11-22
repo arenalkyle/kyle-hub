@@ -1,5 +1,5 @@
 import { FileSystemAdapter, Menu, Notice, Platform, TFile, TFolder, type TAbstractFile } from "obsidian";
-import type { AttentionService, Hub, ModuleContext, SessionService, SessionState, TicketService } from "../../../core";
+import type { AttentionService, Hub, LaunchService, ModuleContext, SessionService, SessionState, TicketService } from "../../../core";
 import { FolderSuggest } from "./folder-suggest";
 import { buildRefs, parseDropText } from "./vault-paths";
 import path from "node:path";
@@ -39,7 +39,6 @@ import { finishRun } from "../run/sessionEnd";
 import { offerWorktreeCleanup } from "../run/cleanup";
 import { categoryOf } from "../../../core/domain/fields";
 import { offerNotice } from "../run/offerNotice";
-import { QueueView, QUEUE_VIEW_TYPE } from "../queue/QueueView";
 import { RepoPicker } from "../queue/RepoPicker";
 import { claudeRunner } from "../retro/llm";
 import { createRetroService } from "../retro/service";
@@ -100,9 +99,8 @@ export default class TermHost {
     // Re-measure cells once web fonts finish loading, or glyph spacing can be off.
     void document.fonts?.ready.then(() => this.applyAppearance());
     this.ctx.registerView(VIEW_TYPE, (leaf) => new TermView(leaf, this));
-    this.ctx.registerView(QUEUE_VIEW_TYPE, (leaf) => new QueueView(leaf, this.hub, () => this.launcher(), (id) => this.focusSession(id)));
-    this.ctx.addCommand({ id: "term-open-queue", name: "Open launch queue", callback: () => void this.openQueue() });
     this.ctx.addRibbonIcon("terminal", "Open terminal", () => void this.activateView());
+    this.ctx.addNavItem({ id: "terminal", label: "Terminal", icon: "terminal", viewType: VIEW_TYPE, order: 20, open: () => void this.activateView() });
     this.ctx.addCommand({ id: "term-open", name: "Open terminal", callback: () => void this.activateView() });
     this.ctx.addCommand({
       id: "term-new-terminal",
@@ -437,6 +435,19 @@ export default class TermHost {
     }
   }
 
+  /** Core-facing wrapper so other modules (the ticket queue) can launch without importing term. */
+  launchService(): LaunchService {
+    return {
+      launch: async (id, opts) => {
+        const l = this.launcher();
+        if (!l) return { ok: false, message: "Terminal sessions are unavailable." };
+        const r = await l.launch(id, opts);
+        return r.ok ? { ok: true, sessionId: r.sessionId } : { ok: false, message: r.message };
+      },
+      runningTickets: () => this.launcher()?.runningTickets() ?? new Map<string, string>(),
+    };
+  }
+
   /** The launch orchestrator; null while the sessions service is unavailable. Tickets are read per call (module may be off). */
   launcher(): Launcher | null {
     const sessions = this.hub.services.get("sessions");
@@ -473,15 +484,6 @@ export default class TermHost {
 
   async focusSession(id: string): Promise<void> {
     await this.hub.services.get("sessions")?.focus(id);
-  }
-
-  async openQueue(): Promise<void> {
-    const { workspace } = this.app;
-    const existing = workspace.getLeavesOfType(QUEUE_VIEW_TYPE)[0];
-    const leaf = existing ?? workspace.getRightLeaf(false);
-    if (!leaf) return;
-    if (!existing) await leaf.setViewState({ type: QUEUE_VIEW_TYPE, active: true });
-    await workspace.revealLeaf(leaf);
   }
 
   async activateView(): Promise<void> {

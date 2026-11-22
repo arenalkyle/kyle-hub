@@ -6,6 +6,8 @@ import { logServiceFromSettings, type CoreSettingsLike } from "./core/logs/hubSe
 import {
   createHubParts,
   createModuleContext,
+  NavRegistry,
+  renderNav,
   loadModules,
   type Hub,
   type HubModule,
@@ -38,6 +40,7 @@ export default class KyleHubPlugin extends Plugin {
   private loaded: HubModule[] = [];
   private readonly contexts = new Map<ModuleId, ModuleContext>();
   readonly sections: SectionRegistry = new Map();
+  readonly nav = new NavRegistry();
 
   override async onload(): Promise<void> {
     const parts = createHubParts();
@@ -52,6 +55,11 @@ export default class KyleHubPlugin extends Plugin {
     parts.services.register("logs", logServiceFromSettings(parts.settings.module("core") as CoreSettingsLike));
     this.loaded = await loadModules(this.hub, MODULES, (id) => this.contextFor(id));
     this.addSettingTab(new HubSettingTab(this));
+    const paint = (): void => renderNav(this.app, this.nav);
+    this.nav.onChange(paint);
+    this.registerEvent(this.app.workspace.on("layout-change", paint));
+    this.registerEvent(this.app.workspace.on("active-leaf-change", paint));
+    this.app.workspace.onLayoutReady(paint);
   }
 
   override async onunload(): Promise<void> {
@@ -60,7 +68,7 @@ export default class KyleHubPlugin extends Plugin {
   }
 
   private contextFor(id: ModuleId): ModuleContext {
-    const ctx = createModuleContext(id, this, this.hub.settings, () => this.hub.save(), this.sections);
+    const ctx = createModuleContext(id, this, this.hub.settings, () => this.hub.save(), this.sections, this.nav);
     this.contexts.set(id, ctx);
     return ctx;
   }

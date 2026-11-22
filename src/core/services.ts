@@ -166,6 +166,14 @@ export interface Services {
   brain: BrainService;
   promote: PromoteService;
   usage: UsageService;
+  launcher: LaunchService;
+}
+
+/** Published by the term module: starts a ticket run in a terminal session. */
+export interface LaunchService {
+  launch(ticketId: string, opts?: { pick?: boolean }): Promise<{ ok: true; sessionId: string } | { ok: false; message: string }>;
+  /** ticket id -> session id of runs started in this Obsidian session. */
+  runningTickets(): Map<string, string>;
 }
 
 import type { AccountUsage } from "./domain/usage";

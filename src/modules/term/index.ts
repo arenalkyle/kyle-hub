@@ -20,8 +20,10 @@ export const termModule: HubModule = {
     hub.services.register("sessions", await host.start());
     hub.services.register("attention", host.attentionService());
     hub.services.register("retro", host.retroService());
+    hub.services.register("launcher", host.launchService());
     unregister = () => {
       hub.services.unregister("retro");
+      hub.services.unregister("launcher");
       hub.services.unregister("sessions");
       hub.services.unregister("attention");
     };

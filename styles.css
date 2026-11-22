@@ -668,3 +668,22 @@
 .kh-accounts .setting-item-description { overflow-wrap: anywhere; }
 .kh-accounts .setting-item-control { flex-wrap: wrap; justify-content: flex-start; max-width: 100%; }
 .kh-accounts .setting-item-control input[type="text"] { width: 130px; }
+
+/* Header nav on kyle-hub views */
+.kh-nav { display: flex; gap: 4px; align-items: center; margin: 0 auto; }
+.kh-nav-item { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; background: transparent; box-shadow: none; color: var(--text-muted); font-size: var(--font-ui-small); }
+.kh-nav-item:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.kh-nav-item.is-active { background: var(--background-modifier-active-hover); color: var(--text-normal); }
+.kh-nav-icon { display: flex; }
+.kh-nav-icon svg { width: 14px; height: 14px; }
+
+/* Queue view (tickets module) */
+.kh-tickets-queue { display: flex; flex-direction: column; height: 100%; }
+.kh-tickets-queue-tabs { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--background-modifier-border); }
+.kh-tickets-queue-tab { background: transparent; box-shadow: none; color: var(--text-muted); }
+.kh-tickets-queue-tab.is-active { background: var(--background-modifier-active-hover); color: var(--text-normal); }
+.kh-tickets-queue-list { flex: 1; overflow-y: auto; }
+.kh-tickets-queue-item { position: relative; height: 36px; }
+.kh-tickets-queue-empty { padding: 16px; color: var(--text-muted); }
+.kh-tickets-queue-btn { height: 22px; padding: 0 8px; font-size: var(--font-ui-smaller); }
+.kh-tickets-queue-btn.is-running { background: var(--interactive-accent); color: var(--text-on-accent); }

@@ -13,6 +13,7 @@ import { SetupModal } from "./settings/SetupModal";
 import { renderAgentsDoc } from "../../../core/domain/agentsDoc";
 import { bootstrapFolder, ensureBaseSlices, syncAgentsDoc } from "./settings/bootstrap";
 import { MainView, VIEW_TYPE_MAIN } from "./views/MainView";
+import { QueueView, VIEW_TYPE_QUEUE } from "./views/QueueView";
 import { NewIssueModal, type NewIssueDefaults } from "./views/NewIssueModal";
 import { IssueStore } from "./store/IssueStore";
 import { AutoLinker } from "./github/autolink";
@@ -67,6 +68,9 @@ export default class TicketsHost {
 
   start(): void {
     this.ctx.registerView(VIEW_TYPE_MAIN, (leaf) => new MainView(leaf, this));
+    this.ctx.registerView(VIEW_TYPE_QUEUE, (leaf) => new QueueView(leaf, this));
+    // The queue used to live in the right sidebar as a term view; drop any leaf left over from that layout.
+    this.app.workspace.detachLeavesOfType("kh-term-queue-view");
     this.ctx.registerView(VIEW_TYPE_ISSUE, (leaf) => new IssueView(leaf, this));
     this.ctx.registerView(VIEW_TYPE_PROJECT, (leaf) => new ProjectView(leaf, this));
     this.interceptor.install();
@@ -79,6 +83,9 @@ export default class TicketsHost {
       checkCallback: (check) => this.interceptor.toggle(check),
     });
     this.ctx.addRibbonIcon("kanban-square", "kyle-tickets", () => void this.activateMainView());
+    this.ctx.addNavItem({ id: "queue", label: "Queue", icon: "list-checks", viewType: VIEW_TYPE_QUEUE, order: 30, open: () => void this.activateQueueView() });
+    this.ctx.addCommand({ id: "open-queue", name: "Open launch queue", callback: () => void this.activateQueueView() });
+    this.ctx.addNavItem({ id: "tickets", label: "Tickets", icon: "kanban-square", viewType: VIEW_TYPE_MAIN, order: 10, open: () => void this.activateMainView() });
     this.ctx.addCommand({
       id: "open",
       name: "Open kyle-tickets",
@@ -240,6 +247,15 @@ export default class TicketsHost {
     const leaf = workspace.getLeaf("tab");
     await leaf.setViewState({ type: VIEW_TYPE_MAIN, active: true });
     await workspace.revealLeaf(leaf);
+  }
+
+  /** Queue opens as a main-area tab; the right sidebar is retracted for width. Collapse comes after the reveal, never on a sidebar leaf. */
+  async activateQueueView(): Promise<void> {
+    const { workspace } = this.app;
+    const leaf = workspace.getLeavesOfType(VIEW_TYPE_QUEUE)[0] ?? workspace.getLeaf("tab");
+    if (leaf.view.getViewType() !== VIEW_TYPE_QUEUE) await leaf.setViewState({ type: VIEW_TYPE_QUEUE, active: true });
+    await workspace.revealLeaf(leaf);
+    workspace.rightSplit.collapse();
   }
 
   private openSetup(): void {

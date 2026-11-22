@@ -1,4 +1,5 @@
 import type { Command, EventRef, MarkdownPostProcessor, Plugin, View, WorkspaceLeaf } from "obsidian";
+import type { NavItem, NavRegistry } from "./nav";
 import type { ModuleData, ModuleId, SettingsRegistry } from "./settings";
 
 /** A module's block inside the kyle-hub settings tab. */
@@ -22,6 +23,8 @@ export interface ModuleContext {
   registerView(type: string, creator: (leaf: WorkspaceLeaf) => View): void;
   addCommand(command: Command): void;
   addRibbonIcon(icon: string, title: string, cb: (evt: MouseEvent) => void): void;
+  /** A button in the header nav shown on every kyle-hub view. */
+  addNavItem(item: NavItem): void;
   registerEvent(ref: EventRef): void;
   /** Runs `cb` on dispose. */
   register(cb: () => unknown): void;
@@ -44,6 +47,7 @@ export function createModuleContext(
   settings: SettingsRegistry,
   save: () => Promise<void>,
   sections: SectionRegistry,
+  nav?: NavRegistry,
 ): ModuleContext {
   let teardowns: (() => unknown)[] = [];
   const onDispose = (fn: () => unknown): void => void teardowns.push(fn);
@@ -70,6 +74,9 @@ export function createModuleContext(
     addRibbonIcon(icon, title, cb) {
       const el = plugin.addRibbonIcon(icon, title, cb);
       onDispose(() => el.remove());
+    },
+    addNavItem(item) {
+      if (nav) onDispose(nav.add(item));
     },
     registerEvent(ref) {
       plugin.registerEvent(ref);
