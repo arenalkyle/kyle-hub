@@ -6,10 +6,29 @@ Plan: [docs/PLAN.md](docs/PLAN.md) · Phases: [docs/PHASES.md](docs/PHASES.md) �
 
 Linear parent: [LOCK-42](https://linear.app/divinity/issue/LOCK-42)
 
-- **Done**: all of Phases 1–9 (LOCK-43…60) built, reviewed (build, tests, lint, deploy) and pushed to `origin/main`; tickets marked Done in Linear. Dispatch panel (Queue sidebar: parent progress, Ready/Todo/Triage sections, one-click launch, Shift for account picker) built and pushed; not yet checked in Obsidian. 821 tests pass (1 skipped); `main.js` 2.7 MB (limit 3 MB).
-- **In progress**: tiled terminals (up to 4 columns x 2 stacked = 8 visible): drag a session from the sidebar or a tile header onto a tile edge to split, double-click a tile header or use its expand button to fill the column then everything; blue/green outlines for needs-input/finished. Recent runs hides unprompted (ticketless) sessions. Banner duplication on split fixed with the bundled ConPTY (term ADR-0003), and mouse-wheel scrolling inside Claude, both verified in a throwaway vault; not yet confirmed in the real vault. Layout is not persisted. Obsidian-side verification is outstanding: every ticket's manual steps are in `docs/MANUAL-CHECKS.md`, including the CDP smoke scripts (`npm run smoke`, `smoke:triage`, `smoke:launch`, `smoke:session-end`, `smoke:retro`, `smoke:promote`, `smoke:usage`, `cdp-command-center-smoke.mjs`) that need Obsidian on `--remote-debugging-port=9222` in a throwaway vault.
-- **Next**: run `docs/MANUAL-CHECKS.md` in Obsidian; register the scheduled task (`kh schedule install --yes`); run `kh import linear` and the cutover (disable old kyle-tickets/kyle-term, archive old repos); calibrate usage caps against `/usage`; clear kyle-hub's own brain findings (shorthand paths).
-- **Known gaps**: `kh` CLI changes to Done are not gated on acceptance criteria; usage "official reading" is an unverified best-effort; retro patcher on CRLF files untested; brain health recomputed on plugin load only; sessions with no hook events (plain shells, other CLIs) can show working/finished on a focus or resize redraw after typing.
+- **Done**
+  - Phases 1–9 (LOCK-43…60) built and pushed; all 18 tickets are Done in Linear.
+  - Queue sidebar: Triage/Todo tabs, parent progress, launch button, Shift for account picker.
+  - Tiled terminals (up to 4 columns x 2 stacked): drag to split, expand, state outlines. Splitting doesn't duplicate Claude's screen (bundled ConPTY, [term ADR-0003](src/modules/term/docs/ADR/0003-bundled-conpty.md)), the wheel scrolls Claude, bright white is readable.
+  - kyle-hub's Claude hooks are installed (9 events, incl. SessionEnd).
+  - Old kyle-tickets and kyle-term plugins are disabled in the vault.
+  - Health: build passes, 821 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2790 KB (limit 3072 KB).
+- **In progress**: verification in the real vault. The latest build is deployed but not yet confirmed there (Obsidian was closed at the last check); the terminal fixes were tested in throwaway vaults only. All 108 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
+- **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
+- **Next**
+  1. Open Obsidian and run the "Terminal tiling" manual checks.
+  2. Add repos to the repo map in kyle-hub settings, then check Queue launch and clear kyle-hub's brain findings.
+  3. Register the scheduled task (`kh schedule install --yes`; `kh doctor` reports it missing).
+  4. Set `cleanupPeriodDays` in Claude settings (`kh doctor` warns; the default is 30).
+  5. Finish the cutover: `kh import linear` (no imported tickets in the vault yet), then archive the kyle-term and kyle-tickets repos.
+  6. Run the remaining manual checks and CDP smoke scripts; calibrate usage caps against `/usage`.
+- **Known gaps**
+  - Tile layout is not persisted.
+  - Sessions with no hook events (plain shells, other CLIs) can show working/finished on a focus or resize redraw after typing.
+  - `kh` CLI changes to Done are not gated on acceptance criteria.
+  - Usage "official reading" is an unverified best-effort.
+  - Retro patcher on CRLF files is untested.
+  - Brain health is recomputed on plugin load only.
 
 | Phase | Sub-phases | Ticket | Model | State |
 |---|---|---|---|---|
