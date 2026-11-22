@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { GAPS_VERSION, type EmptySearchGap, type GapsReport, type GradedNote, type LargeFolder } from "../../../core/domain/gaps";
-import { GAPS_DIR } from "../../../core/gaps/gather";
+import { parseGradingConfig, type GradingConfig } from "../../../core/domain/grading";
+import { GAPS_DIR, GRADING_FILE } from "../../../core/gaps/gather";
 
 const GRADES: ReadonlySet<string> = new Set(["A", "B", "C", "D", "F"]);
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -23,11 +24,20 @@ export function parseGapsReport(raw: unknown): GapsReport | undefined {
   return { ...(raw as unknown as GapsReport), grades, emptySearches, largeFolders };
 }
 
-/** `<vault>/.kyle-hub/gaps/latest.json`. Missing, unreadable or invalid reads as undefined (no gap proposals). */
-export function readGapsReport(vaultRoot: string): GapsReport | undefined {
+/** The report and the vault's grading config (defaults when missing or invalid). Undefined when there is no valid report: no gap proposals. */
+export function readGapInputs(vaultRoot: string): { report: GapsReport; grading: GradingConfig } | undefined {
+  let report: GapsReport | undefined;
   try {
-    return parseGapsReport(JSON.parse(fs.readFileSync(path.join(vaultRoot, GAPS_DIR, "latest.json"), "utf8")));
+    report = parseGapsReport(JSON.parse(fs.readFileSync(path.join(vaultRoot, GAPS_DIR, "latest.json"), "utf8")));
   } catch {
     return undefined;
   }
+  if (report === undefined) return undefined;
+  let text: string | undefined;
+  try {
+    text = fs.readFileSync(path.join(vaultRoot, GRADING_FILE), "utf8");
+  } catch {
+    text = undefined;
+  }
+  return { report, grading: parseGradingConfig(text).config };
 }

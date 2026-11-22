@@ -1,15 +1,16 @@
 import type { GapsReport } from "../../../../core/domain/gaps";
+import { DEFAULT_GRADING, type GradingConfig } from "../../../../core/domain/grading";
 import type { Issue, StatusDef } from "../../../../core/domain/types";
 import { categoryOf } from "../../../../core/domain/fields";
 import { parseSignature } from "../ticketMeta";
 
-/** Thresholds for the gap proposals (pure; no config yet). */
+/**
+ * Gap proposal thresholds. Note and folder limits come from the vault's grading config (LOCK-68): split_note uses
+ * `oversizedWords` and `unkeptDays`, review_note uses the `B` grade cutoff, and split_folder takes LOCK-68's large folders as they are.
+ */
 export const GAP_THRESHOLDS = {
-  splitMinWords: 1000,
   emptyMinCount: 3,
   staleDays: 90,
-  folderMinNotes: 3,
-  folderMinAvgWords: 800,
   /** Proposals per Retro run. */
   cap: 5,
 } as const;
@@ -48,14 +49,14 @@ function proposal(kind: GapKind, target: string, title: string, reasons: string,
 }
 
 /** Pure: candidate proposals from a gaps report, before memory and cap. Each kind keeps the report's worst-first order. */
-export function gapCandidates(report: GapsReport): GapProposal[] {
+export function gapCandidates(report: GapsReport, cfg: GradingConfig = DEFAULT_GRADING): GapProposal[] {
   const t = GAP_THRESHOLDS;
   const out: GapProposal[] = [];
   for (const g of report.grades) {
-    if (g.words >= t.splitMinWords && (g.grade === "D" || g.grade === "F")) {
+    if (g.words > cfg.oversizedWords && g.ageDays >= cfg.unkeptDays) {
       out.push(proposal("split_note", g.path, `Split \`${g.path}\` (${fmt(g.words)} words, ${g.grade} ${Math.round(g.score)})`, g.reasons, g.words));
     }
-    if (g.grade === "C" || g.grade === "D" || g.grade === "F" || g.ageDays >= t.staleDays) {
+    if (g.score < cfg.thresholds.B || g.ageDays >= t.staleDays) {
       out.push(proposal("review_note", g.path, `Review \`${g.path}\` (${g.grade} ${Math.round(g.score)}, ${Math.round(g.ageDays)} days)`, g.reasons, 100 - g.score));
     }
   }
@@ -66,9 +67,7 @@ export function gapCandidates(report: GapsReport): GapProposal[] {
     out.push(proposal("write_note", target, `Write a note for \`${target}\` (empty ${e.count}×, ${minutes} min agent time)`, `Searches under \`${e.root}\` found nothing ${e.count} times.`, e.count));
   }
   for (const f of report.largeFolders) {
-    if (f.notes >= t.folderMinNotes && f.avgWords >= t.folderMinAvgWords) {
-      out.push(proposal("split_folder", f.folder, `Split folder \`${f.folder}\` (${f.notes} notes, avg ${fmt(f.avgWords)} words)`, `${f.notes} notes average ${fmt(f.avgWords)} words.`, f.avgWords));
-    }
+    out.push(proposal("split_folder", f.folder, `Split folder \`${f.folder}\` (${f.notes} notes, avg ${fmt(f.avgWords)} words)`, `${f.notes} notes average ${fmt(f.avgWords)} words.`, f.avgWords));
   }
   return out;
 }
@@ -77,9 +76,9 @@ export function gapCandidates(report: GapsReport): GapProposal[] {
  * Pure and deterministic: proposals for the worst gaps, minus those already waiting or not strictly worse than a closed
  * ticket's recorded badness. Sorted by kind, then worst first; capped at `GAP_THRESHOLDS.cap`.
  */
-export function detectGapProposals(report: GapsReport | undefined, memory: ReadonlyMap<string, GapMemory>, cap: number = GAP_THRESHOLDS.cap): GapProposal[] {
+export function detectGapProposals(report: GapsReport | undefined, memory: ReadonlyMap<string, GapMemory>, cfg: GradingConfig = DEFAULT_GRADING, cap: number = GAP_THRESHOLDS.cap): GapProposal[] {
   if (report === undefined) return [];
-  const kept = gapCandidates(report).filter((p) => {
+  const kept = gapCandidates(report, cfg).filter((p) => {
     const m = memory.get(p.signature);
     if (m === undefined) return true;
     return !m.open && p.badness > m.badness;

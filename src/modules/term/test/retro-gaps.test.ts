@@ -6,7 +6,8 @@ import { GAPS_VERSION, type GapsReport, type GradedNote } from "../../../core/do
 import { DEFAULT_STATUSES } from "../../../core/domain/defaults";
 import type { Issue } from "../../../core/domain/types";
 import { countWaitingGapProposals, detectGapProposals, gapCandidates, gapMemory, GAP_THRESHOLDS } from "../retro/detectors/gaps";
-import { parseGapsReport, readGapsReport } from "../retro/gapReport";
+import { parseGapsReport, readGapInputs } from "../retro/gapReport";
+import { DEFAULT_GRADING } from "../../../core/domain/grading";
 
 const note = (over: Partial<GradedNote>): GradedNote => ({
   path: "a.md",
@@ -38,18 +39,28 @@ const ticket = (id: string, description: string, status = "Triage"): Issue =>
   ({ id, title: id, description, status, tags: [], priority: "none" }) as unknown as Issue;
 
 describe("split_note", () => {
-  it("proposes an oversized D/F note and not a small or well-graded one", () => {
+  it("proposes oversized and unkept notes (grading config limits), not small or recently kept ones", () => {
     const r = report({
       grades: [
-        note({ path: "wiki/x.md", grade: "F", score: 41, words: 1900, reasons: "F 41" }),
-        note({ path: "wiki/big-ok.md", grade: "A", score: 90, words: 1900 }),
-        note({ path: "wiki/short.md", grade: "F", score: 30, words: 400 }),
+        note({ path: "wiki/x.md", grade: "F", score: 41, words: 1900, ageDays: 40, reasons: "F 41" }),
+        note({ path: "wiki/kept.md", grade: "A", score: 90, words: 1900, ageDays: 1 }),
+        note({ path: "wiki/short.md", grade: "F", score: 30, words: 400, ageDays: 400 }),
+        note({ path: "wiki/edge.md", grade: "C", score: 75, words: DEFAULT_GRADING.oversizedWords, ageDays: 400 }),
       ],
     });
     const splits = gapCandidates(r).filter((p) => p.kind === "split_note");
     expect(splits.map((p) => p.title)).toEqual(["Split `wiki/x.md` (1,900 words, F 41)"]);
     expect(splits[0]!.signature).toBe("gap:split_note:wiki/x.md");
     expect(splits[0]!.badness).toBe(1900);
+  });
+
+  it("takes its limits from the grading config", () => {
+    const r = report({ grades: [note({ path: "wiki/m.md", grade: "A", score: 95, words: 600, ageDays: 35 })] });
+    expect(gapCandidates(r).some((p) => p.kind === "split_note")).toBe(true);
+    const strict = { ...DEFAULT_GRADING, oversizedWords: 700 };
+    expect(gapCandidates(r, strict).some((p) => p.kind === "split_note")).toBe(false);
+    const lenient = { ...DEFAULT_GRADING, unkeptDays: 60 };
+    expect(gapCandidates(r, lenient).some((p) => p.kind === "split_note")).toBe(false);
   });
 });
 
@@ -85,22 +96,21 @@ describe("review_note", () => {
 });
 
 describe("split_folder", () => {
-  it("proposes a folder with enough large notes", () => {
+  it("proposes every large folder LOCK-68 reported, without re-thresholding", () => {
     const r = report({
       largeFolders: [
         { folder: "notes/deep", notes: 4, avgWords: 1234.4 },
         { folder: "notes/few", notes: 2, avgWords: 5000 },
-        { folder: "notes/small", notes: 9, avgWords: 300 },
       ],
     });
     const folders = gapCandidates(r).filter((p) => p.kind === "split_folder");
-    expect(folders.map((p) => p.title)).toEqual(["Split folder `notes/deep` (4 notes, avg 1,234 words)"]);
+    expect(folders.map((p) => p.title)).toEqual(["Split folder `notes/deep` (4 notes, avg 1,234 words)", "Split folder `notes/few` (2 notes, avg 5,000 words)"]);
   });
 });
 
 describe("detectGapProposals", () => {
   const fixture = report({
-    grades: [note({ path: "wiki/x.md", grade: "F", score: 41, words: 1900 }), note({ path: "docs/y.md", grade: "C", score: 72, ageDays: 45 })],
+    grades: [note({ path: "wiki/x.md", grade: "F", score: 41, words: 1900, ageDays: 40 }), note({ path: "docs/y.md", grade: "C", score: 72, ageDays: 45 })],
     emptySearches: [{ root: "wiki", pattern: "auth flow", count: 7, totalMs: 240_000 }],
     largeFolders: [{ folder: "notes/deep", notes: 4, avgWords: 1200 }],
   });
@@ -116,7 +126,7 @@ describe("detectGapProposals", () => {
   });
 
   it("caps the proposals per run", () => {
-    expect(detectGapProposals(fixture, new Map(), 2)).toHaveLength(2);
+    expect(detectGapProposals(fixture, new Map(), DEFAULT_GRADING, 2)).toHaveLength(2);
   });
 
   it("does not re-propose a waiting gap, nor a closed one that is not strictly worse", () => {
@@ -129,10 +139,10 @@ describe("detectGapProposals", () => {
   });
 
   it("re-proposes a closed gap once it is strictly worse", () => {
-    const worse = report({ grades: [note({ path: "wiki/x.md", grade: "F", score: 30, words: 2100 })] });
+    const worse = report({ grades: [note({ path: "wiki/x.md", grade: "F", score: 30, words: 2100, ageDays: 40 })] });
     const memory = new Map([["gap:split_note:wiki/x.md", { open: false as const, badness: 1900 }]]);
     expect(detectGapProposals(worse, memory).filter((p) => p.kind === "split_note").map((p) => p.title)).toEqual(["Split `wiki/x.md` (2,100 words, F 30)"]);
-    const same = report({ grades: [note({ path: "wiki/x.md", grade: "F", score: 41, words: 1900 })] });
+    const same = report({ grades: [note({ path: "wiki/x.md", grade: "F", score: 41, words: 1900, ageDays: 40 })] });
     expect(detectGapProposals(same, memory).filter((p) => p.kind === "split_note")).toEqual([]);
   });
 });
@@ -160,7 +170,7 @@ describe("gap tickets", () => {
   });
 });
 
-describe("readGapsReport", () => {
+describe("readGapInputs", () => {
   let dir: string;
   beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "kh-gaps-"));
@@ -174,15 +184,18 @@ describe("readGapsReport", () => {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const raw = { ...report(), grades: [{ path: "a.md", grade: "F", score: 1, words: 1, ageDays: 1 }, { path: "bad.md", grade: "Z" }] };
     fs.writeFileSync(file, JSON.stringify(raw));
-    expect(readGapsReport(dir)?.grades.map((g) => g.path)).toEqual(["a.md"]);
+    expect(readGapInputs(dir)?.report.grades.map((g) => g.path)).toEqual(["a.md"]);
+    expect(readGapInputs(dir)?.grading).toEqual(DEFAULT_GRADING);
+    fs.writeFileSync(path.join(dir, ".kyle-hub", "grading.json"), JSON.stringify({ oversizedWords: 800 }));
+    expect(readGapInputs(dir)?.grading.oversizedWords).toBe(800);
   });
 
   it("treats missing, invalid and wrong-version files as no report", () => {
-    expect(readGapsReport(dir)).toBeUndefined();
+    expect(readGapInputs(dir)).toBeUndefined();
     const file = path.join(dir, ".kyle-hub", "gaps", "latest.json");
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, "{not json");
-    expect(readGapsReport(dir)).toBeUndefined();
+    expect(readGapInputs(dir)).toBeUndefined();
     expect(parseGapsReport({ version: 2, grades: [] })).toBeUndefined();
     expect(parseGapsReport(null)).toBeUndefined();
   });

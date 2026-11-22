@@ -10,7 +10,7 @@ import { convertToProposal, draftRule, MAX_EXCERPTS, type LlmRunner } from "./ll
 import { performRetro } from "./run";
 import { resolveRetroSettings, type RetroSettings } from "./settings";
 import { readRetroState, retroFile, sessionsSinceRetro } from "./state";
-import { readGapsReport } from "./gapReport";
+import { readGapInputs } from "./gapReport";
 import { countWaitingGapProposals } from "./detectors/gaps";
 import type { TemplateContext } from "./templates";
 import { parseSignature } from "./ticketMeta";
@@ -81,7 +81,7 @@ export function createRetroService(deps: RetroServiceDeps): RetroService {
         stateFile: deps.stateFile,
         readGaps: () => {
           const root = deps.vaultRoot?.();
-          return root === undefined ? undefined : readGapsReport(root);
+          return root === undefined ? undefined : readGapInputs(root);
         },
         now,
       });
