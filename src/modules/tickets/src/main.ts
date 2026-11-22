@@ -70,7 +70,7 @@ export default class TicketsHost {
     this.ctx.registerView(VIEW_TYPE_MAIN, (leaf) => new MainView(leaf, this));
     // The queue used to be its own view; drop any leaves left over from earlier layouts.
     for (const t of ["kh-term-queue-view", "kh-tickets-queue"]) this.app.workspace.detachLeavesOfType(t);
-    this.hub.services.register("queuePanel", { mount: (el) => mountQueue(this, el) });
+    this.hub.services.register("queuePanel", { mount: (el, tab) => mountQueue(this, el, tab) });
     this.ctx.register(() => this.hub.services.unregister("queuePanel"));
     this.ctx.registerView(VIEW_TYPE_ISSUE, (leaf) => new IssueView(leaf, this));
     this.ctx.registerView(VIEW_TYPE_PROJECT, (leaf) => new ProjectView(leaf, this));

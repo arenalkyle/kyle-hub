@@ -26,6 +26,8 @@ export interface TermSettings {
   sidebarWidth: number;
   sidebarCollapsed: boolean;
   queueCollapsed: boolean;
+  /** Selected right-sidebar tab. */
+  queueTab: "triage" | "todo" | "gaps";
   sounds: SoundSettings;
   appearance: AppearanceSettings;
 }
@@ -43,6 +45,7 @@ export const DEFAULT_SETTINGS: TermSettings = {
   sidebarWidth: 240,
   sidebarCollapsed: false,
   queueCollapsed: false,
+  queueTab: "todo",
   sounds: DEFAULT_SOUNDS,
   appearance: DEFAULT_APPEARANCE,
 };

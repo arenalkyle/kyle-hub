@@ -188,10 +188,13 @@ export interface BrainViewService {
   mount(el: HTMLElement): BrainHandle;
 }
 
-/** Published by the tickets module: renders the launch queue (ticket-board rows, Todo/Triage tabs) into an element. */
+/** Launch-queue tabs. The terminal sidebar owns the tab strip and passes the selected one. */
+export type QueueTab = "triage" | "todo";
+
+/** Published by the tickets module: renders the launch queue rows for one tab into an element. */
 export interface QueuePanelService {
   /** Returns an unmount function. */
-  mount(el: HTMLElement): () => void;
+  mount(el: HTMLElement, tab: QueueTab): () => void;
 }
 
 /** Published by the term module: starts a ticket run in a terminal session. */

@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { categoryOf } from "../../../../core/domain/fields";
 import { parentProgress, type ParentProgress } from "../../../../core/domain/progress";
 import type { Issue, Priority, Settings } from "../../../../core/domain/types";
+import type { QueueTab } from "../../../../core/services";
 import type KyleTicketsPlugin from "../main";
 import { useIssues, useSettings } from "../store/hooks";
 import { PluginContext, usePlugin } from "./PluginContext";
@@ -13,14 +14,11 @@ import { PriorityIcon, StatusIcon } from "./components/icons";
 import { PriorityPicker } from "./components/pickers/PriorityPicker";
 import { StatusPicker } from "./components/pickers/StatusPicker";
 
-type Tab = "triage" | "todo";
-
-/** Launch queue: the same rows as the ticket board, split into Todo / Triage, each with a Launch button. */
-function QueueApp() {
+/** Launch queue: the same rows as the ticket board for one tab (Todo / Triage), each with a Launch button. */
+function QueueApp({ tab }: { tab: QueueTab }) {
   const plugin = usePlugin();
   const issues = useIssues();
   const settings = useSettings();
-  const [tab, setTab] = useState<Tab>("todo");
   const [, tick] = useState(0);
   const [picker, setPicker] = useState<{ kind: "status" | "priority"; id: string; anchor: HTMLElement } | null>(null);
 
@@ -45,14 +43,6 @@ function QueueApp() {
 
   return (
     <div className="kh-tickets-queue">
-      <div className="kh-tickets-queue-tabs" role="tablist">
-        {([["triage", "Triage", triage.length], ["todo", "Todo", todo.length]] as const).map(([k, label, n]) => (
-          <button key={k} type="button" role="tab" aria-selected={tab === k} className={`kh-tickets-queue-tab${tab === k ? " is-active" : ""}`} onClick={() => setTab(k)}>
-            <span>{label}</span>
-            <span className="kh-tickets-queue-count">{n}</span>
-          </button>
-        ))}
-      </div>
       <div className="kh-tickets-queue-list">
         {list.length === 0 && <div className="kh-tickets-queue-empty">Nothing in {tab === "todo" ? "Todo" : "Triage"}.</div>}
         {list.map((issue) => {
@@ -179,13 +169,13 @@ function LaunchButton({ id, ready, sessionId, onDone }: { id: string; ready: boo
 }
 
 /** Renders the queue into `el` (the terminal view's right panel); returns an unmount function. */
-export function mountQueue(plugin: KyleTicketsPlugin, el: HTMLElement): () => void {
+export function mountQueue(plugin: KyleTicketsPlugin, el: HTMLElement, tab: QueueTab): () => void {
   el.addClass("kh-tickets-root");
   const root: Root = createRoot(el);
   root.render(
     <StrictMode>
       <PluginContext.Provider value={plugin}>
-        <QueueApp />
+        <QueueApp tab={tab} />
       </PluginContext.Provider>
     </StrictMode>,
   );

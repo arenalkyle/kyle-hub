@@ -693,10 +693,6 @@
 
 /* Queue view (tickets module) */
 .kh-tickets-queue { display: flex; flex-direction: column; height: 100%; }
-.kh-tickets-queue-tabs { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--background-modifier-border); }
-.kh-tickets-queue-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--background-modifier-hover); box-shadow: none; color: var(--text-muted); }
-.kh-tickets-queue-count { min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--background-modifier-border); color: var(--text-normal); font-size: var(--font-ui-smaller); line-height: 18px; text-align: center; }
-.kh-tickets-queue-tab.is-active { background: var(--background-modifier-active-hover); color: var(--text-normal); }
 .kh-tickets-queue-list { flex: 1; overflow-y: auto; }
 .kh-tickets-queue-item { position: relative; height: 36px; }
 .kh-tickets-queue-empty { padding: 16px; color: var(--text-muted); }
@@ -706,9 +702,18 @@
 /* Queue panel inside the terminal view (right side, mirrors the session sidebar) */
 .kh-term-queue-panel { display: flex; flex-direction: column; flex: none; min-width: 0; border-left: 1px solid var(--background-modifier-border); background: var(--background-secondary); }
 .kh-term-queue-panel.kh-term-collapsed { width: 32px; }
-.kh-term-queue-panel.kh-term-collapsed .kh-term-queue-body, .kh-term-queue-panel.kh-term-collapsed .kh-term-queue-heading { display: none; }
+.kh-term-queue-panel.kh-term-collapsed .kh-term-queue-body, .kh-term-queue-panel.kh-term-collapsed .kh-term-queue-tabs { display: none; }
 .kh-term-queue-panel.kh-term-collapsed .kh-term-header { padding: 6px 2px; justify-content: center; }
-.kh-term-queue-heading { flex: 1; font-weight: var(--font-semibold); }
+.kh-term-queue-tabs { display: flex; flex: 1; gap: 4px; min-width: 0; }
+.kh-term-queue-tab { flex: 1; min-width: 0; padding: 2px 6px; background: var(--background-modifier-hover); box-shadow: none; color: var(--text-muted); font-size: var(--font-ui-small); }
+.kh-term-queue-tab.is-active { background: var(--background-modifier-active-hover); color: var(--text-normal); }
+.kh-term-gaps { display: flex; flex-direction: column; gap: 6px; padding: 8px; height: 100%; overflow-y: auto; }
+.kh-term-gap { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 6px 8px; border: 1px solid var(--background-modifier-border); border-radius: 6px; cursor: pointer; }
+.kh-term-gap:hover { background: var(--background-modifier-hover); }
+.kh-term-gap-top { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.kh-term-gap-grade { font-weight: var(--font-semibold); color: var(--text-error); }
+.kh-term-gap-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-ui-small); }
+.kh-term-gap-reason { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-ui-smaller); color: var(--text-muted); }
 .kh-term-queue-body { flex: 1; min-height: 0; overflow: hidden; }
 .kh-tickets-queue-item { height: auto; }
 .kh-tickets-queue-list { display: flex; flex-direction: column; gap: 8px; padding: 8px; }

@@ -1,5 +1,7 @@
 import { ItemView, Menu, Modal, Notice, setIcon, type WorkspaceLeaf } from "obsidian";
+import type { GapsReport } from "../../../core/domain/gaps";
 import { COLORS } from "./colors";
+import { gapRows } from "./gapsRows";
 import type TermHost from "./main";
 import type { Session, SessionManager } from "./session-manager";
 import { formatAge } from "./title";
@@ -15,6 +17,9 @@ const STATE_LABEL: Record<AgentState, string> = {
 };
 
 export const VIEW_TYPE = "kh-term-view";
+
+const QUEUE_TABS: readonly (readonly [QueueTabKey, string])[] = [["triage", "Triage"], ["todo", "Todo"], ["gaps", "Gaps"]];
+type QueueTabKey = "triage" | "todo" | "gaps";
 
 class ConfirmModal extends Modal {
   constructor(app: TermHost["app"], private message: string, private onYes: () => void) {
@@ -40,6 +45,8 @@ export class TermView extends ItemView {
   private list!: HTMLElement;
   private area!: HTMLElement;
   private queuePanel!: HTMLElement;
+  private queueBody!: HTMLElement;
+  /** Tears down the selected tab's content: the tickets React root, or the Gaps subscription. */
   private unmountQueue: (() => void) | null = null;
   private wrap: HTMLElement | null = null;
   private renamingId: string | null = null;
@@ -156,22 +163,81 @@ export class TermView extends ItemView {
     else this.refresh();
   }
 
-  /** Right-hand launch queue, same width as the session sidebar and collapsible. Content comes from the tickets module. */
+  /** Right-hand sidebar, same width as the session sidebar and collapsible. Tabs: Triage / Todo (tickets), Gaps (brain). */
   private buildQueuePanel(root: HTMLElement): void {
     this.queuePanel = root.createDiv({ cls: "kh-term-queue-panel" });
     const header = this.queuePanel.createDiv({ cls: "kh-term-header kh-term-queue-header" });
-    header.createSpan({ text: "Queue", cls: "kh-term-queue-heading" });
+    const tabs = header.createDiv({ cls: "kh-term-queue-tabs", attr: { role: "tablist" } });
+    for (const [key, label] of QUEUE_TABS) {
+      const tab = tabs.createEl("button", { text: label, cls: "kh-term-queue-tab", attr: { role: "tab", "data-tab": key } });
+      tab.onclick = () => this.selectQueueTab(key);
+    }
     const toggle = header.createEl("button", { cls: "kh-term-btn-collapse kh-term-queue-toggle" });
     toggle.onclick = () => {
       this.plugin.settings.queueCollapsed = !this.plugin.settings.queueCollapsed;
       void this.plugin.saveSettings();
       this.applyQueue();
     };
-    const body = this.queuePanel.createDiv({ cls: "kh-term-queue-body" });
-    const svc = this.plugin.hub.services.get("queuePanel");
-    if (svc) this.unmountQueue = svc.mount(body);
-    else body.createDiv({ cls: "kh-term-message", text: "Tickets module disabled. Turn it on in the kyle-hub settings to see the queue." });
+    this.queueBody = this.queuePanel.createDiv({ cls: "kh-term-queue-body" });
+    this.mountQueueBody();
     this.applyQueue();
+  }
+
+  private selectQueueTab(tab: QueueTabKey): void {
+    this.plugin.settings.queueTab = tab;
+    void this.plugin.saveSettings();
+    this.mountQueueBody();
+  }
+
+  /** Mounts the selected tab. Each tab shows a short message when its source module is off. */
+  private mountQueueBody(): void {
+    this.unmountQueue?.();
+    this.unmountQueue = null;
+    this.queueBody.empty();
+    const s = this.plugin.settings;
+    const tab: QueueTabKey = QUEUE_TABS.some(([k]) => k === s.queueTab) ? s.queueTab : "todo";
+    this.queuePanel.querySelectorAll<HTMLElement>(".kh-term-queue-tab").forEach((el) => {
+      const on = el.dataset.tab === tab;
+      el.toggleClass("is-active", on);
+      el.setAttribute("aria-selected", String(on));
+    });
+    if (tab === "gaps") {
+      const gaps = this.plugin.hub.services.get("gaps");
+      if (!gaps) {
+        this.queueBody.createDiv({ cls: "kh-term-message", text: "Brain module is disabled. Turn it on in the kyle-hub settings to see gaps." });
+        return;
+      }
+      const list = this.queueBody.createDiv({ cls: "kh-term-gaps" });
+      const render = (): void => this.renderGaps(list, gaps.read());
+      render();
+      this.unmountQueue = gaps.onChange(render);
+      return;
+    }
+    const svc = this.plugin.hub.services.get("queuePanel");
+    if (svc) this.unmountQueue = svc.mount(this.queueBody, tab);
+    else this.queueBody.createDiv({ cls: "kh-term-message", text: "Tickets module is disabled. Turn it on in the kyle-hub settings to see Triage and Todo." });
+  }
+
+  /** Worst-first notes under the cutoff. Click opens the note in a new tab, keeping the terminal view. */
+  private renderGaps(list: HTMLElement, report: GapsReport | undefined): void {
+    list.empty();
+    if (!report) {
+      list.createDiv({ cls: "kh-term-message", text: "No gaps data yet. Run `kh maintain`." });
+      return;
+    }
+    const rows = gapRows(report);
+    if (rows.length === 0) {
+      list.createDiv({ cls: "kh-term-message", text: "No notes under the cutoff." });
+      return;
+    }
+    for (const row of rows) {
+      const item = list.createDiv({ cls: "kh-term-gap", attr: { role: "button", tabindex: "0", title: row.path } });
+      item.onclick = () => void this.app.workspace.openLinkText(row.path, "", "tab");
+      const top = item.createDiv({ cls: "kh-term-gap-top" });
+      top.createSpan({ cls: "kh-term-gap-grade", text: row.grade });
+      top.createSpan({ cls: "kh-term-gap-name", text: row.name });
+      item.createDiv({ cls: "kh-term-gap-reason", text: row.reason });
+    }
   }
 
   private applyQueue(): void {
@@ -181,7 +247,7 @@ export class TermView extends ItemView {
     const btn = this.queuePanel.querySelector<HTMLElement>(".kh-term-queue-toggle");
     if (btn) {
       setIcon(btn, s.queueCollapsed ? "chevrons-left" : "chevrons-right");
-      btn.setAttribute("aria-label", s.queueCollapsed ? "Expand queue" : "Collapse queue");
+      btn.setAttribute("aria-label", s.queueCollapsed ? "Expand panel" : "Collapse panel");
     }
     const id = this.mgr?.active?.id;
     if (id) window.setTimeout(() => this.mgr?.term(id)?.fit(), 0);

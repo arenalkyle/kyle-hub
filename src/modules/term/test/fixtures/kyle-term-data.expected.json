@@ -20,7 +20,8 @@
   "scrollbackLines": 5000,
   "sidebarWidth": 300,
   "sidebarCollapsed": true,
-  "queueCollapsed": false,  "sounds": {
+  "queueCollapsed": false,
+  "queueTab": "todo",  "sounds": {
     "muted": true,
     "master": 40,
     "events": {
