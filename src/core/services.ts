@@ -164,10 +164,23 @@ export interface Services {
   attention: AttentionService;
   retro: RetroService;
   brain: BrainService;
+  brainView: BrainViewService;
   promote: PromoteService;
   usage: UsageService;
   launcher: LaunchService;
   queuePanel: QueuePanelService;
+}
+
+/** A mounted 3D brain. `dispose` frees the WebGL context and every listener. */
+export interface BrainHandle {
+  /** Emphasises the node for a vault-relative note path for a few seconds (no-op when unknown). */
+  highlight(path: string): void;
+  dispose(): void;
+}
+
+/** Published by the brain module: mounts the 3D brain into an element (Command Center middle column, Brain tab). */
+export interface BrainViewService {
+  mount(el: HTMLElement): BrainHandle;
 }
 
 /** Published by the tickets module: renders the launch queue (ticket-board rows, Todo/Triage tabs) into an element. */

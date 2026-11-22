@@ -4,15 +4,17 @@ import { createBrainService, type RepoEntry } from "../../core/brain/service";
 import { DEFAULT_HEALTH_WEIGHTS, type HealthWeights } from "../../core/brain/health";
 import { createConventionDocs } from "./conventions";
 import { NewDocModal } from "./newDocModal";
-import { Notice, TFile } from "obsidian";
+import { Notice, Setting, TFile } from "obsidian";
 import { planPromote, promoteEligible, scrubOptionsFrom } from "../../core/domain/promote";
 import { vaultProfileOf } from "../../core/profile";
 import { PromoteModal } from "./promoteModal";
 import { BRAIN_VIEW_TYPE, BrainView } from "./view";
+import { BrainScene } from "./scene";
+import { brainOptions, createBrainSource, DEFAULT_BLOOM, DEFAULT_NODE_SIZE } from "./source";
 
 export const brainSettings: ModuleSettingsDef = {
   id: "brain",
-  defaults: { autoFindings: false, ignoreSymbols: {}, healthWeights: { ...DEFAULT_HEALTH_WEIGHTS } },
+  defaults: { autoFindings: false, ignoreSymbols: {}, healthWeights: { ...DEFAULT_HEALTH_WEIGHTS }, bloomStrength: DEFAULT_BLOOM, nodeSize: DEFAULT_NODE_SIZE, layoutCache: {} },
   enabledByDefault: false,
 };
 
@@ -23,7 +25,7 @@ async function openBrain(hub: Hub): Promise<void> {
 export const brainModule: HubModule = {
   id: "brain",
   load(hub, ctx) {
-    ctx.registerView(BRAIN_VIEW_TYPE, (leaf) => new BrainView(leaf));
+    ctx.registerView(BRAIN_VIEW_TYPE, (leaf) => new BrainView(leaf, hub));
     ctx.addNavItem({ id: "brain", label: "Brain", icon: "brain", viewType: BRAIN_VIEW_TYPE, order: 30, open: () => void openBrain(hub) });
     // The human's own note opens feed the vitals human line (LOCK-65); written through the logs service.
     ctx.registerEvent(hub.app.workspace.on("file-open", (f) => {
@@ -81,6 +83,22 @@ export const brainModule: HubModule = {
           });
         }
         return true;
+      },
+    });
+    const brainSource = createBrainSource(hub, ctx);
+    hub.services.register("brainView", { mount: (el) => new BrainScene(el, brainSource) });
+    ctx.register(() => hub.services.unregister("brainView"));
+    ctx.addSettingsSection({
+      render(el) {
+        const cur = brainOptions(ctx.settings.get());
+        new Setting(el)
+          .setName("Brain bloom strength")
+          .setDesc("Glow of the 3D brain. Applies live.")
+          .addSlider((sl) => sl.setLimits(0, 3, 0.1).setValue(cur.bloom).setDynamicTooltip().onChange((v) => void ctx.settings.update({ bloomStrength: v })));
+        new Setting(el)
+          .setName("Brain node size")
+          .setDesc("Size multiplier for notes in the 3D brain. Applies live.")
+          .addSlider((sl) => sl.setLimits(0.4, 3, 0.1).setValue(cur.nodeSize).setDynamicTooltip().onChange((v) => void ctx.settings.update({ nodeSize: v })));
       },
     });
     ctx.addCommand({

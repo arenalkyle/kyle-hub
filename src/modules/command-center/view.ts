@@ -1,5 +1,5 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
-import type { BrainAccessEvent, Hub } from "../../core";
+import type { BrainAccessEvent, BrainHandle, Hub } from "../../core";
 import type { BrainInventory } from "../../core/brain/inventory";
 import { METRICS, SensorSampler, sparkPoints } from "./sensors";
 import {
@@ -53,6 +53,9 @@ export class CommandCenterView extends ItemView {
   private brainState: { bt?: Tile; inv?: BrainInventory } = {};
   /** Vault samples in the last hour: refreshed history merged with live `brain:access` / `brain:human-open` events. */
   private live: VitalsSample[] = [];
+  /** The 3D brain lives in a persistent element that is re-attached on every repaint, so its WebGL context survives. */
+  private brainHost: HTMLElement | undefined;
+  private brainHandle: BrainHandle | undefined;
   private sensors = new SensorSampler(SENSOR_HISTORY, () => this.paintSystem());
 
   constructor(
@@ -84,6 +87,10 @@ export class CommandCenterView extends ItemView {
 
   override async onClose(): Promise<void> {
     this.isOpen = false;
+    this.brainHandle?.dispose();
+    this.brainHandle = undefined;
+    this.brainHost?.remove();
+    this.brainHost = undefined;
     this.sensors.stop();
     this.offs.forEach((o) => o());
     this.offs = [];
@@ -161,7 +168,8 @@ export class CommandCenterView extends ItemView {
       }
     });
 
-    // Center: spend
+    // Center: 3D brain, then spend
+    this.paintBrain3d(center);
     const spend = center.createDiv({ cls: "kh-command-center-spend kh-command-center-card" });
     spend.createEl("h4", { text: "Spend" });
     const st = tile("spend");
@@ -190,6 +198,18 @@ export class CommandCenterView extends ItemView {
     this.paintBrain();
     this.sysEl = right.createDiv({ cls: "kh-command-center-card kh-command-center-system" });
     this.paintSystem();
+  }
+
+  private paintBrain3d(center: HTMLElement): void {
+    const host = (this.brainHost ??= document.createElement("div"));
+    host.className = "kh-command-center-card kh-brain-host kh-brain-host-card";
+    center.prepend(host);
+    if (this.brainHandle) return;
+    const svc = this.hub.services.get("brainView");
+    if (svc) {
+      host.empty();
+      this.brainHandle = svc.mount(host);
+    } else if (host.childElementCount === 0) host.createDiv({ cls: "kh-command-center-empty", text: "3D brain: the Brain module is disabled." });
   }
 
   private onAccess(e: BrainAccessEvent): void {
