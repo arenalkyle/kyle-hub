@@ -10,6 +10,7 @@ import { vaultProfileOf } from "../../core/profile";
 import { PromoteModal } from "./promoteModal";
 import { BRAIN_VIEW_TYPE, BrainView } from "./view";
 import { BrainScene } from "./scene";
+import { createGapsService } from "./gaps";
 import { brainOptions, createBrainSource, DEFAULT_BLOOM, DEFAULT_NODE_SIZE } from "./source";
 
 export const brainSettings: ModuleSettingsDef = {
@@ -87,6 +88,13 @@ export const brainModule: HubModule = {
     });
     const brainSource = createBrainSource(hub, ctx);
     hub.services.register("brainView", { mount: (el) => new BrainScene(el, brainSource) });
+    const gapsBase = (hub.app.vault.adapter as { getBasePath?: () => string }).getBasePath?.();
+    const gaps = createGapsService(gapsBase);
+    hub.services.register("gaps", gaps.service);
+    ctx.register(() => {
+      gaps.dispose();
+      hub.services.unregister("gaps");
+    });
     ctx.register(() => hub.services.unregister("brainView"));
     ctx.addSettingsSection({
       render(el) {

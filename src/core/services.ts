@@ -169,6 +169,7 @@ export interface Services {
   retro: RetroService;
   brain: BrainService;
   brainView: BrainViewService;
+  gaps: GapsService;
   promote: PromoteService;
   usage: UsageService;
   launcher: LaunchService;
@@ -215,6 +216,16 @@ export interface UsageService {
 export interface PromoteService {
   /** Opens the diff modal for `text` (a work lesson or applied proposal); returns a refusal reason, or undefined when opened. */
   open(name: string, text: string): string | undefined;
+}
+
+import type { GapsReport } from "./domain/gaps";
+
+/** Published by the brain module (LOCK-72): reads and watches .kyle-hub/gaps/latest.json. Shared with the terminal Gaps tab (LOCK-73). */
+export interface GapsService {
+  /** The latest valid report, or undefined when the file is missing or invalid. */
+  read(): GapsReport | undefined;
+  /** Fires (debounced) after the report file changes; returns an unsubscribe function. */
+  onChange(cb: () => void): () => void;
 }
 
 export class ServiceRegistry {

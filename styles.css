@@ -740,3 +740,21 @@
 .kh-brain-tip-name { font-weight: var(--font-semibold); }
 .kh-brain-tip-note { color: var(--text-muted); overflow-wrap: anywhere; }
 .kh-brain-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-muted); pointer-events: none; }
+.kh-brain-split { display: flex; height: 100%; }
+.kh-brain-split > .kh-brain-host-full { flex: 1 1 auto; min-width: 0; }
+.kh-brain-gaps { flex: 0 0 300px; width: 300px; overflow-y: auto; padding: 12px; border-left: 1px solid var(--background-modifier-border); font-size: var(--font-ui-small); }
+.kh-brain-gaps-title { font-weight: var(--font-semibold); font-size: var(--font-ui-medium); margin-bottom: 8px; }
+.kh-brain-gaps-cutoff { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--text-muted); }
+.kh-brain-gaps-cutoff input { flex: 1; }
+.kh-brain-gaps-heading { margin: 14px 0 4px; font-weight: var(--font-semibold); color: var(--text-muted); font-size: var(--font-smallest); text-transform: uppercase; letter-spacing: 0.04em; }
+.kh-brain-gaps-row { display: block; width: 100%; text-align: left; padding: 6px 8px; margin: 0 0 4px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 4px; box-shadow: none; cursor: pointer; }
+.kh-brain-gaps-row:hover { background: var(--background-modifier-hover); }
+.kh-brain-gaps-head { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.kh-brain-gaps-grade { font-weight: var(--font-semibold); }
+.kh-brain-gaps-grade-F, .kh-brain-gaps-grade-D { color: var(--text-error); }
+.kh-brain-gaps-grade-C { color: var(--text-warning); }
+.kh-brain-gaps-score { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.kh-brain-gaps-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-normal); }
+.kh-brain-gaps-reason { color: var(--text-muted); font-size: var(--font-smallest); overflow-wrap: anywhere; }
+.kh-brain-gaps-item { color: var(--text-normal); overflow-wrap: anywhere; padding: 2px 0; }
+.kh-brain-gaps-muted, .kh-brain-gaps-empty { color: var(--text-muted); }

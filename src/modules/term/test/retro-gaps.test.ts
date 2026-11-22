@@ -2,11 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { GAPS_VERSION, type GapsReport, type GradedNote } from "../../../core/domain/gaps";
+import { GAPS_VERSION, parseGapsReport, type GapsReport, type GradedNote } from "../../../core/domain/gaps";
 import { DEFAULT_STATUSES } from "../../../core/domain/defaults";
 import type { Issue } from "../../../core/domain/types";
 import { countWaitingGapProposals, detectGapProposals, gapCandidates, gapMemory, GAP_THRESHOLDS } from "../retro/detectors/gaps";
-import { parseGapsReport, readGapInputs } from "../retro/gapReport";
+import { readGapInputs } from "../retro/gapReport";
 import { DEFAULT_GRADING } from "../../../core/domain/grading";
 
 const note = (over: Partial<GradedNote>): GradedNote => ({
