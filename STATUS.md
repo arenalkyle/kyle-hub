@@ -13,13 +13,13 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
   - kyle-hook lives in the vault's `.claude/settings.local.json` (9 events); removed from global `~/.claude/settings.json` (backup kept). `kh doctor` hooks ok.
   - Vault `Brain/conventions/agent.md` and `human.md` created from the shipped templates.
   - Old kyle-tickets and kyle-term plugins are disabled in the vault.
-  - Health: build passes, 1043 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2390 KB (minified, three.js included) (limit 3072 KB). Command Center CDP smoke passes 8/8 in the real vault.
-- **In progress**: verification in the real vault. Latest build (`af6e03e`) is deployed and running there; the terminal fixes were tested in throwaway vaults only. All 164 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
+  - Health: build passes, 1059 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2394 KB (minified, three.js included) (limit 3072 KB). Command Center CDP smoke passes 8/8 in the real vault.
+- **In progress**: verification in the real vault. Latest build (`cc7e0bc`, Brain v3) is deployed (reload kyle-hub to pick it up) and running there; the terminal fixes were tested in throwaway vaults only. All 193 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
 - **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
 - **Command Center v2** (LOCK-61): all 13 tickets (LOCK-62–74) built, verified (build/test/lint/check-size) and Done; LOCK-61 closed. Deployed to the real vault. Post-review rework (done, pushed): brain no longer renders white (bloom/clear-colour fix); brain is a full-view backdrop behind translucent cards; Spend is a slim strip at the top; folder hubs connect every note and frontmatter references count as links; hover card (title, folder, snippet), click opens the note, folder picker/focus, agent name tags. Awaiting your review of the new look ("theme" assumed to mean the Hivemynd reference). v2 manual checks unticked.
-- **In progress: Brain v3** (LOCK-75): 17.1 brain shape and regions (LOCK-76, renders approved), 17.2 themes, shapes and rotation (LOCK-77), 18.1 orbiting agents (LOCK-78), 19.1 Brain tab removed and brain menu (LOCK-79), 19.2 Retro card and scrolling lists (LOCK-80) Done and deployed. In progress: 18.2 name tags and toasts (LOCK-81). None of the Brain v3 visuals checked by eye yet (no CDP); 17.2 screenshots deferred. Gaps cutoff (`commandCenter.gapsCutoff`, default 70) has no UI control yet. See PHASES.md Phases 17–19.
+- **Brain v3** (LOCK-75): all six tickets (LOCK-76–81) built, verified (build/test/lint/check-size) and Done; LOCK-75 closed. Deployed to the real vault. None of it has been checked by eye yet (no CDP in the running Obsidian); 17.2 screenshots deferred to the manual checks.
 - **Next**
-  1. Review the reworked brain/Command Center live, then work through the Command Center v2 manual checks (includes the 2,000-note frame-rate test; watch GPU load).
+  1. Reload kyle-hub and run the Brain v3 manual checks (brain shape, themes, orbiting agents, toasts, brain menu, Retro card), then the Command Center v2 ones (includes the 2,000-note frame-rate test; watch GPU load).
   2. Run the "Terminal tiling" manual checks.
   3. Add repos to the repo map in kyle-hub settings, then check Queue launch and clear kyle-hub's brain findings.
   4. Register the scheduled task (`kh schedule install --yes`; `kh doctor` reports it missing).
@@ -33,6 +33,10 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
   - Usage "official reading" is an unverified best-effort.
   - Retro patcher on CRLF files is untested.
   - Brain health is recomputed on plugin load only.
+  - Gaps cutoff (`commandCenter.gapsCutoff`, default 70) has no UI control.
+  - A sub-agent read arriving just after its stop event brings its moon back until the 10-minute fallback or parent end.
+  - Brain layout re-runs (about 230 ms at 500 notes) on every note or link change, after the 500 ms debounce.
+  - Non-brain shapes have no region labels (folder focus is in the brain menu).
 
 | Phase | Sub-phases | Ticket | Model | State |
 |---|---|---|---|---|
@@ -53,5 +57,5 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
 | 15 Gaps UI | 15.1 · 15.2 | LOCK-72 · LOCK-73 | H · H | Done |
 | 16 Templates | 16.1 · 16.2 · 16.3 | LOCK-64 · LOCK-69 · LOCK-74 | H · S · S | Done |
 | 17 Brain shape + look | 17.1 · 17.2 | LOCK-76 · LOCK-77 | S · S | Done (17.2 screenshots pending) |
-| 18 Orbiting agents | 18.1 · 18.2 | LOCK-78 · LOCK-81 | S · S | 18.1 Done · 18.2 In progress |
+| 18 Orbiting agents | 18.1 · 18.2 | LOCK-78 · LOCK-81 | S · S | Done |
 | 19 Command Center tidy | 19.1 · 19.2 | LOCK-79 · LOCK-80 | H · H | Done |

@@ -275,28 +275,36 @@ Before you start: close Obsidian and run `npm run deploy` once, so the locked no
 
 ### 17.2 Scene shapes, themes, rotation — LOCK-77
 
-- [ ] Shape switch morphs over about 1 s; all 10 shapes load (no Cerebrum).
+- [ ] Shape switch morphs over about 1 s; all 11 shapes load (Brain plus the 10 Hivemynd shapes, no Cerebrum).
+- [ ] Morph doesn't hitch at the FPS setting on a vault of about 500 notes.
+- [ ] Every one of the 10 themes renders with no white-out; Inkblot (light) stays readable behind the see-through cards.
+- [ ] Multiverse and Inkblot colours look right (values were chosen by the agent, not copied from Hivemynd).
+- [ ] Screenshots for LOCK-77: Brain, Galaxy, and an Inkblot-themed brain (needs Obsidian started with `--remote-debugging-port=9222`).
 - [ ] Theme switch changes only the brain; cards keep Obsidian colours.
 - [ ] Region labels replace folder hubs; tree edges are hidden.
-- [ ] Auto-rotate slider 0–1 (default 0.3): pauses on mouse input and resumes after about 5 s.
+- [ ] Auto-rotate slider 0–1 (default 0.3): pauses on drag, zoom and folder fly, and resumes after about 5 s; 0.3 feels right.
 
 ### 18.1 Orbiting agents — LOCK-78
 
 - [ ] Each running session orbits the brain from start to end in its own colour; sub-agents appear as smaller moons.
 - [ ] A read or write zaps a lightning line to the note; writes are brighter; no flights or trails.
 - [ ] Orbit mode (drift, still, solar, atom) and orbit line colour and opacity settings apply live.
+- [ ] A session idle for 10 minutes is still orbiting.
+- [ ] A sub-agent's moon stays while the sub-agent is quiet (for example, during a long command) and disappears when it finishes.
 
 ### 18.2 Name tags and toasts — LOCK-81
 
 - [ ] Agent name tags are always visible; clashing titles show the short ID; sub-agent tags are smaller.
 - [ ] Toasts appear bottom-right in the Command Center only: one per agent, merged within 2 s, gone after 3 s, max 5 plus a faded 6th.
-- [ ] Hover pauses a toast; click opens its ticket; toasts can be turned off in settings.
+- [ ] Hover pauses a toast; click opens its note; toasts can be turned off in settings.
+- [ ] A burst of reads from one agent shows a single toast ("<name> read N notes · ./last.md").
 
 ### 19.1 No Brain tab; brain menu — LOCK-79
 
 - [ ] No Brain tab, nav item or command; an old saved Brain tab opens the Command Center.
 - [ ] Brain icon in the Brain Vitals title row opens the menu: folder focus, theme, shape, orbit mode, colour, opacity, rotation, toasts, per-min/per-hour.
 - [ ] Settings tab offers the same options and they stay in sync with the menu.
+- [ ] Menu keyboard: Esc closes it and returns focus to the brain icon; Tab moves between controls.
 
 ### 19.2 Retro card and scrolling lists — LOCK-80
 
@@ -304,5 +312,5 @@ Before you start: close Obsidian and run `npm run deploy` once, so the locked no
 - [ ] Perform Retro (term module on) shows its result in the scrolling box; with term module off the button is hidden.
 - [ ] Box lists last retro clusters and tickets; clicking a ticket opens it.
 - [ ] Box lists doc gaps worst first under the cutoff (setting, default 70); clicking a note opens it in a new tab.
-- [ ] Terminal sidebar Queue has only Triage and Todo tabs; the Brain view has no Gaps panel.
+- [ ] Terminal sidebar Queue has only Triage and Todo tabs; there is no Gaps side panel anywhere.
 - [ ] With 40 proposals and 40 gaps, the Command Center page height does not change; each list card scrolls inside itself.
