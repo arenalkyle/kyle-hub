@@ -6,6 +6,12 @@ export interface LayoutOptions {
   fixed?: ReadonlyMap<number, readonly [number, number, number]>;
   /** Target spring length. */
   linkLength?: number;
+  /** Start position for a free node (default: random inside a sphere). Must be a valid position for `accept`. */
+  initial?: (i: number, rand: () => number) => readonly [number, number, number];
+  /** Volume constraint: a move to (x, y, z) is backed off (halved up to 4 times, then dropped) until this returns true. */
+  accept?: (i: number, x: number, y: number, z: number) => boolean;
+  /** Point the weak gravity pulls toward (default: origin). */
+  center?: readonly [number, number, number];
 }
 
 function rng(seed: number): () => number {
@@ -35,6 +41,11 @@ export function forceLayout(n: number, edges: readonly (readonly [number, number
     if (f) {
       pos.set(f, i * 3);
       pinned[i] = 1;
+      continue;
+    }
+    const init = opts.initial?.(i, rand);
+    if (init) {
+      pos.set(init, i * 3);
       continue;
     }
     const u = rand() * 2 - 1;
@@ -99,12 +110,18 @@ export function forceLayout(n: number, edges: readonly (readonly [number, number
     const maxStep = L * 0.6 * cool + 0.05;
     for (let i = 0; i < n; i++) {
       if (pinned[i]) continue;
+      const o = i * 3;
+      const d: [number, number, number] = [0, 0, 0];
       for (let c = 0; c < 3; c++) {
-        const idx = i * 3 + c;
-        // Gravity toward the origin keeps disconnected components together.
-        const f = (force[idx]! - pos[idx]! * 0.02) * 0.3;
-        pos[idx] = pos[idx]! + Math.max(-maxStep, Math.min(maxStep, f));
+        // Gravity toward the centre keeps disconnected components together.
+        const f = (force[o + c]! - (pos[o + c]! - (opts.center?.[c] ?? 0)) * 0.02) * 0.3;
+        d[c] = Math.max(-maxStep, Math.min(maxStep, f));
       }
+      let t = 1;
+      if (opts.accept) {
+        for (let b = 0; b < 4 && !opts.accept(i, pos[o]! + d[0] * t, pos[o + 1]! + d[1] * t, pos[o + 2]! + d[2] * t); b++) t = b === 3 ? 0 : t / 2;
+      }
+      for (let c = 0; c < 3; c++) pos[o + c] = pos[o + c]! + d[c]! * t;
     }
   }
   return pos;

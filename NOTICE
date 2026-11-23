@@ -1,0 +1,7 @@
+kyle-hub
+
+The 3D brain shape library (src/core/domain/brainShape.ts: sphere, cube, diamond, pyramid, star,
+heart, ring, double helix and galaxy shape definitions) is adapted from Hivemynd,
+Copyright (c) J Tansill, licensed under the Apache License, Version 2.0
+(http://www.apache.org/licenses/LICENSE-2.0). The shapes were rewritten in TypeScript; the brain
+shape and folder regions are original to kyle-hub.
