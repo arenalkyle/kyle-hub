@@ -247,6 +247,22 @@ export class AgentLayer {
     return best;
   }
 
+  /** Screen positions (pixels inside the canvas) of every visible agent, for name tags. */
+  labels(camera: PerspectiveCamera, width: number, height: number): { id: string; name: string; color: string; x: number; y: number; alpha: number }[] {
+    const now = Date.now();
+    const out: { id: string; name: string; color: string; x: number; y: number; alpha: number }[] = [];
+    for (const a of this.agents.values()) {
+      const f = this.flights.get(a.id);
+      if (!f) continue;
+      this.tmp.copy(f.p).project(camera);
+      if (this.tmp.z > 1 || Math.abs(this.tmp.x) > 1.05 || Math.abs(this.tmp.y) > 1.05) continue;
+      const alpha = agentAlpha(a, now);
+      if (alpha < 0.05) continue;
+      out.push({ id: a.id, name: a.name, color: a.color, x: (this.tmp.x * 0.5 + 0.5) * width, y: (-this.tmp.y * 0.5 + 0.5) * height, alpha });
+    }
+    return out;
+  }
+
   dispose(): void {
     for (const o of [this.trails, this.tether, this.points, this.flashPoints]) {
       this.scene.remove(o);

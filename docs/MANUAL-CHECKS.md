@@ -175,7 +175,8 @@ Before you start: close Obsidian and run `npm run deploy` once, so the locked no
 ### 10.1 Layout — LOCK-62
 
 - [ ] At 1920px: side columns are about half their old width; the middle column takes the rest. Under 1000px it collapses to one column.
-- [ ] Spend shows its title, big number and a ~40px strip with no empty space below. System sparklines are still full height (56px). No Usage tile.
+- [ ] Spend is a slim strip at the top of the middle column (title, total and caption on one line, ~24px sparkline; about half its old height). System sparklines are still full height (56px). No Usage tile.
+- [ ] The 3D brain fills the whole Command Center behind the cards; cards are translucent and show the brain through them. Empty space orbits, zooms, hovers and clicks the brain; cards still scroll and click normally.
 - [ ] Retro sits in the left column under Needs attention.
 - [ ] Header tabs read `Command Center | Tickets | Terminal | Brain`; Brain opens in the same leaf.
 - [ ] `npm run smoke:usage` passes (chip and picker lines only now).
@@ -203,7 +204,10 @@ Before you start: close Obsidian and run `npm run deploy` once, so the locked no
 
 ### 13.1 3D brain — LOCK-67
 
-- [ ] Command Center middle column and Brain tab both show the 3D brain: teal nodes and links, glow, nebula, slow drift, orphans visible, no auto-rotate.
+- [ ] Command Center backdrop and Brain tab both show the 3D brain (not white): teal notes, violet folder hubs, glow, nebula, slow drift, no auto-rotate.
+- [ ] Every note is connected: note → folder hub → parent folder → vault root (faint lines). Wikilinks and frontmatter references (a ticket's `project`/`parent`) draw brighter lines.
+- [ ] Hover a note: card with title, folder, a short snippet and link count. Click opens it in a new tab (or reveals it if already open); the brain's tab stays. Ctrl-click opens a split.
+- [ ] Hover a folder hub: name and note count. Click focuses it (others dim, camera flies there); click again or the root shows everything. The "All folders" picker does the same.
 - [ ] Mouse zoom, rotate and pan work.
 - [ ] With ~2,000 notes, frame rate holds the FPS cap on the RTX 3070 (DevTools → Rendering → FPS meter). First open lays out in about a second or less.
 - [ ] Recently/often-read notes are gold and larger; notes untouched for 30–90 days are dim.
@@ -216,7 +220,7 @@ Before you start: close Obsidian and run `npm run deploy` once, so the locked no
 - [ ] Start three Claude sessions in the vault (one outside a terminal pane if possible) and trigger sub-agents: each session is a glowing point in its pane colour; the paneless one is named `folder·abcd`.
 - [ ] Sub-agents are a lighter shade, named `parent › agent-type`, tethered while both are active.
 - [ ] Agents fly to notes they read or write, leaving a short trail; reads flash, writes pulse harder.
-- [ ] Hover shows name and current note. Idle agents fade after 2 minutes; ending a session removes it.
+- [ ] Every agent carries a name tag in its colour that follows it. Hover shows name and current note. Idle agents fade after 2 minutes; ending a session removes it.
 
 ### 14.1 Grading and `kh gaps` — LOCK-68
 

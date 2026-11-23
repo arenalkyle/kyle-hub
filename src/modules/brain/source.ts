@@ -1,4 +1,5 @@
 import type { EventRef } from "obsidian";
+import { frontmatterRefs, noteSnippet } from "../../core/domain/brainGraph";
 import type { Hub, ModuleContext } from "../../core";
 import { normalizeFps } from "../../core/domain/fps";
 import { vaultProfileOf } from "../../core/profile";
@@ -21,7 +22,9 @@ export function createBrainSource(hub: Hub, ctx: ModuleContext): BrainSource {
   const { app } = hub;
   const vaultKey = app.vault.getName();
   const stored = (ctx.settings.get<{ layoutCache?: CacheStore }>().layoutCache ?? {})[vaultKey] ?? {};
-  const layoutCache = new Map<string, Pos>(Object.entries(stored));
+  // Caches from before folder hubs (no `folder/` keys) are dropped once so notes re-cluster around their folders.
+  const legacy = Object.keys(stored).length > 0 && !Object.keys(stored).some((k) => k.endsWith("/"));
+  const layoutCache = new Map<string, Pos>(legacy ? [] : Object.entries(stored));
   let saveTimer = 0;
   const saveNow = (): void => {
     const all = { ...(ctx.settings.get<{ layoutCache?: CacheStore }>().layoutCache ?? {}) };
@@ -58,7 +61,29 @@ export function createBrainSource(hub: Hub, ctx: ModuleContext): BrainSource {
 
   return {
     notes: () => app.vault.getMarkdownFiles().map((f) => ({ path: f.path, mtime: f.stat.mtime })),
-    resolvedLinks: () => app.metadataCache.resolvedLinks,
+    resolvedLinks() {
+      // Wikilinks plus frontmatter values that name another note (a ticket's `project`, `parent`, ...).
+      const out: Record<string, Record<string, number>> = {};
+      for (const [src, targets] of Object.entries(app.metadataCache.resolvedLinks)) out[src] = { ...targets };
+      for (const f of app.vault.getMarkdownFiles()) {
+        const fm = app.metadataCache.getFileCache(f)?.frontmatter;
+        const refs = frontmatterRefs(fm, f.path, (t) => app.metadataCache.getFirstLinkpathDest(t, f.path)?.path);
+        if (refs.length === 0) continue;
+        const row = (out[f.path] ??= {});
+        for (const r of refs) row[r] = (row[r] ?? 0) + 1;
+      }
+      return out;
+    },
+    async snippet(path) {
+      const f = app.vault.getFileByPath(path);
+      return f ? noteSnippet(await app.vault.cachedRead(f)) : "";
+    },
+    open(path, split) {
+      // Never replace the view hosting the brain: reveal the note if it is open, else open it in a new tab.
+      const leaf = app.workspace.getLeavesOfType("markdown").find((l) => (l.view as { file?: { path: string } }).file?.path === path);
+      if (leaf && !split) return void app.workspace.setActiveLeaf(leaf, { focus: true });
+      void app.workspace.openLinkText(path, "", split ? "split" : "tab");
+    },
     layoutCache,
     saveLayout() {
       window.clearTimeout(saveTimer);

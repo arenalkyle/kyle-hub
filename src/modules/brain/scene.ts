@@ -9,6 +9,7 @@ import {
   Scene,
   ShaderMaterial,
   Vector2,
+  Vector3,
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -18,11 +19,11 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import type { BrainAccessEvent, BrainHandle } from "../../core";
 import type { IdentityLookup } from "../../core/domain/brainAgents";
-import { buildGraph, type BrainGraph } from "../../core/domain/brainGraph";
+import { buildGraph, inFolder, nodeLabel, parentFolder, ROOT_FOLDER, withFolders, type BrainGraph } from "../../core/domain/brainGraph";
 import { countReads, heatOf, type ReadAccess, type ReadCounts } from "../../core/domain/brainHeat";
 import { forceLayout } from "../../core/domain/forceLayout";
 import { DEFAULT_FPS } from "../../core/domain/fps";
-import { AgentLayer } from "./agents";
+import { AgentLayer, drift } from "./agents";
 
 export interface BrainOptions {
   bloom: number;
@@ -34,6 +35,10 @@ export interface BrainSource {
   /** Markdown note paths with modified times, and the resolved link map. */
   notes(): { path: string; mtime: number }[];
   resolvedLinks(): Record<string, Record<string, number>>;
+  /** Plain-text start of a note for the hover card ("" when unreadable). */
+  snippet(path: string): Promise<string>;
+  /** Opens a note without replacing the brain's view: reveals an open tab, else a new tab (a split with Ctrl/Cmd). */
+  open(path: string, split: boolean): void;
   /** Cached node positions for this vault; mutated by the scene. */
   layoutCache: Map<string, [number, number, number]>;
   saveLayout(): void;
@@ -57,6 +62,13 @@ export interface BrainSource {
 const TEAL = new Color(0.1, 0.78, 0.72);
 const GOLD = new Color(1.0, 0.76, 0.22);
 const HIGHLIGHT = new Color(1, 1, 1);
+const FOLDER = new Color(0.62, 0.45, 1.0);
+const ROOT = new Color(0.85, 0.8, 1.0);
+/** Colour factor for nodes outside the focused folder. */
+const UNFOCUSED = 0.1;
+const PICK_PX = 10;
+const CLICK_SLOP_PX = 4;
+const FLY_MS = 700;
 const HIGHLIGHT_MS = 4000;
 const HEAT_REFRESH_MS = 5 * 60_000;
 
@@ -149,7 +161,15 @@ export class BrainScene implements BrainHandle {
   private readonly nebula: Points;
   private nodes: Points | undefined;
   private lines: LineSegments | undefined;
-  private graph: BrainGraph = { paths: [], edges: [], degree: [] };
+  private graph: BrainGraph = { paths: [], edges: [], degree: [], kinds: [], edgeKinds: [] };
+  private focus: string | null = null;
+  private fly: { from: Vector3; to: Vector3; camFrom: Vector3; camTo: Vector3; start: number } | undefined;
+  private hovered: number | undefined;
+  private hoverToken = 0;
+  private time = 0;
+  private folderSelect: HTMLSelectElement;
+  private labels: HTMLElement;
+  private readonly labelEls = new Map<string, HTMLElement>();
   private mtimes: number[] = [];
   private counts = new Map<string, ReadCounts>();
   private baseSize = new Float32Array(0);
@@ -198,7 +218,7 @@ export class BrainScene implements BrainHandle {
     this.controls.maxDistance = 1800;
 
     this.lineMat = new ShaderMaterial({
-      uniforms: { uTime: this.nodeMat.uniforms.uTime!, uAlpha: { value: 0.22 } },
+      uniforms: { uTime: this.nodeMat.uniforms.uTime!, uAlpha: { value: 0.45 } },
       vertexShader: LINE_VS,
       fragmentShader: LINE_FS,
       transparent: true,
@@ -216,24 +236,48 @@ export class BrainScene implements BrainHandle {
       radius: () => this.radius,
       identity: (id) => src.identity(id),
     });
+    this.labels = host.createDiv({ cls: "kh-brain-labels" });
     this.tip = host.createDiv({ cls: "kh-brain-tip" });
     this.tip.hide();
+    this.folderSelect = host.createEl("select", { cls: "dropdown kh-brain-folders", attr: { "aria-label": "Focus a folder" } });
+    this.folderSelect.addEventListener("change", () => this.focusFolder(this.folderSelect.value || null));
     const onMove = (ev: PointerEvent): void => {
       const r = canvas.getBoundingClientRect();
-      const hit = this.agentLayer.pick(ev.clientX - r.left, ev.clientY - r.top, this.camera, r.width, r.height);
-      if (!hit) return this.tip.hide();
-      this.tip.empty();
-      this.tip.createDiv({ cls: "kh-brain-tip-name", text: hit.name });
-      this.tip.createDiv({ cls: "kh-brain-tip-note", text: hit.note ?? "no note yet" });
-      this.tip.setCssProps({ left: `${hit.x + 12}px`, top: `${hit.y + 12}px` });
-      this.tip.show();
+      const x = ev.clientX - r.left, y = ev.clientY - r.top;
+      const hit = this.agentLayer.pick(x, y, this.camera, r.width, r.height);
+      if (hit) {
+        this.setHovered(undefined);
+        this.tip.empty();
+        this.tip.createDiv({ cls: "kh-brain-tip-name", text: hit.name });
+        this.tip.createDiv({ cls: "kh-brain-tip-note", text: hit.note ?? "no note yet" });
+        this.placeTip(hit.x, hit.y);
+        this.tip.show();
+        return;
+      }
+      this.setHovered(this.pickNode(x, y, r.width, r.height), x, y);
     };
-    const onLeave = (): void => this.tip.hide();
+    const onLeave = (): void => this.setHovered(undefined);
+    let down: { x: number; y: number } | undefined;
+    const onDown = (ev: PointerEvent): void => void (down = { x: ev.clientX, y: ev.clientY });
+    const onUp = (ev: PointerEvent): void => {
+      const d = down;
+      down = undefined;
+      if (!d || Math.hypot(ev.clientX - d.x, ev.clientY - d.y) > CLICK_SLOP_PX || ev.button !== 0) return;
+      const idx = this.hovered;
+      if (idx === undefined) return;
+      const path = this.graph.paths[idx]!;
+      if (this.graph.kinds[idx] === "note") this.src.open(path, ev.ctrlKey || ev.metaKey);
+      else this.focusFolder(path === ROOT_FOLDER || path === this.focus ? null : path);
+    };
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerleave", onLeave);
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointerup", onUp);
     this.cleanups.push(() => {
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerleave", onLeave);
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointerup", onUp);
     });
     this.cleanups.push(src.onAccess((e) => this.agentLayer.access(e)));
     this.cleanups.push(src.onSession((k, id) => this.agentLayer.session(k, id)));
@@ -310,6 +354,8 @@ export class BrainScene implements BrainHandle {
     this.nebula.geometry.dispose();
     this.agentLayer.dispose();
     this.tip.remove();
+    this.labels.remove();
+    this.folderSelect.remove();
     this.nebulaMat.dispose();
     this.nodeMat.dispose();
     this.lineMat.dispose();
@@ -355,9 +401,150 @@ export class BrainScene implements BrainHandle {
     this.bloom.strength = o.bloom;
     this.nodeMat.uniforms.uSizeMul!.value = o.nodeSize;
     this.nodeMat.uniforms.uTime!.value = t;
+    this.time = t;
+    if (this.fly) {
+      const k = Math.min(1, (performance.now() - this.fly.start) / FLY_MS);
+      const e = 1 - (1 - k) ** 3;
+      this.controls.target.lerpVectors(this.fly.from, this.fly.to, e);
+      this.camera.position.lerpVectors(this.fly.camFrom, this.fly.camTo, e);
+      if (k >= 1) this.fly = undefined;
+    }
     this.controls.update();
     this.agentLayer.frame(t);
     this.composer.render();
+    this.paintLabels();
+  }
+
+  // --- hover, click, folders, labels ---
+
+  /** Nearest node under a canvas pixel, or undefined. Uses the same drift as the shaders. */
+  private pickNode(x: number, y: number, width: number, height: number): number | undefined {
+    if (!this.nodes || width < 2 || height < 2) return undefined;
+    const v = new Vector3();
+    const view = new Vector3();
+    const dpr = this.renderer.getPixelRatio();
+    const scale = (this.nodeMat.uniforms.uScale!.value as number) * this.src.options().nodeSize;
+    let best: number | undefined;
+    let bestD = Infinity;
+    for (let i = 0; i < this.graph.paths.length; i++) {
+      drift([this.pos[i * 3]!, this.pos[i * 3 + 1]!, this.pos[i * 3 + 2]!], this.time, v);
+      const depth = -view.copy(v).applyMatrix4(this.camera.matrixWorldInverse).z;
+      if (depth <= 0.1) continue;
+      v.project(this.camera);
+      const sx = (v.x * 0.5 + 0.5) * width, sy = (-v.y * 0.5 + 0.5) * height;
+      const d = Math.hypot(sx - x, sy - y);
+      const reach = Math.max(PICK_PX, (((this.baseSize[i] ?? 1) * scale) / depth / dpr) * 0.35);
+      if (d < reach && d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  private setHovered(idx: number | undefined, x = 0, y = 0): void {
+    this.renderer.domElement.setCssProps({ cursor: idx === undefined ? "" : "pointer" });
+    if (idx === undefined) {
+      this.hovered = undefined;
+      this.tip.hide();
+      return;
+    }
+    if (idx === this.hovered) return this.placeTip(x, y);
+    this.hovered = idx;
+    const path = this.graph.paths[idx]!;
+    const folder = this.graph.kinds[idx] === "folder";
+    const token = ++this.hoverToken;
+    this.tip.empty();
+    this.tip.createDiv({ cls: "kh-brain-tip-name", text: nodeLabel(path) });
+    const parent = parentFolder(path);
+    if (path !== ROOT_FOLDER) this.tip.createDiv({ cls: "kh-brain-tip-folder", text: parent === ROOT_FOLDER ? "Vault root" : parent.slice(0, -1) });
+    if (folder) {
+      const notes = this.graph.paths.filter((p, i) => this.graph.kinds[i] === "note" && inFolder(p, path)).length;
+      this.tip.createDiv({ cls: "kh-brain-tip-note", text: `${notes} note${notes === 1 ? "" : "s"}` });
+      this.tip.createDiv({ cls: "kh-brain-tip-hint", text: path === ROOT_FOLDER || path === this.focus ? "Click to show everything" : "Click to focus this folder" });
+    } else {
+      const links = this.graph.edges.filter(([a, b], i) => this.graph.edgeKinds[i] === "link" && (a === idx || b === idx)).length;
+      const snip = this.tip.createDiv({ cls: "kh-brain-tip-snippet", text: "…" });
+      this.tip.createDiv({ cls: "kh-brain-tip-hint", text: `${links} link${links === 1 ? "" : "s"} · click to open` });
+      void this.src.snippet(path).then(
+        (t) => {
+          if (token === this.hoverToken) snip.setText(t || "(empty note)");
+        },
+        () => undefined,
+      );
+    }
+    this.placeTip(x, y);
+    this.tip.show();
+  }
+
+  /** Keeps the card inside the host, beside the pointer. */
+  private placeTip(x: number, y: number): void {
+    const w = this.host.clientWidth, h = this.host.clientHeight;
+    const left = x + 280 > w ? Math.max(4, x - 284) : x + 14;
+    const top = y + 140 > h ? Math.max(4, y - 140) : y + 14;
+    this.tip.setCssProps({ left: `${left}px`, top: `${top}px` });
+  }
+
+  /** Dims everything outside `folder` and flies the camera to it; null shows the whole vault. */
+  private focusFolder(folder: string | null): void {
+    this.focus = folder === ROOT_FOLDER ? null : folder;
+    this.folderSelect.value = this.focus ?? "";
+    this.applyAttributes();
+    if (this.graph.paths.length === 0) return;
+    const at = (i: number): Vector3 => new Vector3(this.pos[i * 3]!, this.pos[i * 3 + 1]!, this.pos[i * 3 + 2]!);
+    const members: number[] = [];
+    this.graph.paths.forEach((p, i) => {
+      if (this.focus === null || inFolder(p, this.focus)) members.push(i);
+    });
+    const centre = new Vector3();
+    for (const i of members) centre.add(at(i));
+    centre.divideScalar(Math.max(1, members.length));
+    let r = 6;
+    for (const i of members) r = Math.max(r, centre.distanceTo(at(i)));
+    const dir = this.camera.position.clone().sub(this.controls.target).normalize();
+    if (dir.lengthSq() === 0) dir.set(0, 0, 1);
+    this.fly = {
+      from: this.controls.target.clone(),
+      to: centre,
+      camFrom: this.camera.position.clone(),
+      camTo: centre.clone().add(dir.multiplyScalar(r * 2.2 + 10)),
+      start: performance.now(),
+    };
+  }
+
+  private fillFolderSelect(): void {
+    const sel = this.folderSelect;
+    sel.empty();
+    sel.createEl("option", { text: "All folders", value: "" });
+    const folders = this.graph.paths.filter((p, i) => this.graph.kinds[i] === "folder" && p !== ROOT_FOLDER);
+    for (const f of folders) {
+      const n = this.graph.paths.filter((p, i) => this.graph.kinds[i] === "note" && inFolder(p, f)).length;
+      const depth = f.split("/").length - 2;
+      sel.createEl("option", { text: `${"\u00A0\u00A0".repeat(depth)}${nodeLabel(f)} (${n})`, value: f });
+    }
+    sel.value = this.focus ?? "";
+    sel.toggle(folders.length > 0);
+  }
+
+  /** Name tags that follow each agent on screen. */
+  private paintLabels(): void {
+    const w = this.host.clientWidth, h = this.host.clientHeight;
+    const seen = new Set<string>();
+    for (const l of this.agentLayer.labels(this.camera, w, h)) {
+      seen.add(l.id);
+      let el = this.labelEls.get(l.id);
+      if (!el) {
+        el = this.labels.createDiv({ cls: "kh-brain-label" });
+        this.labelEls.set(l.id, el);
+      }
+      if (el.textContent !== l.name) el.setText(l.name);
+      el.setCssProps({ transform: `translate(${Math.round(l.x + 9)}px, ${Math.round(l.y - 9)}px)`, opacity: String(l.alpha), "--kh-brain-agent-color": l.color });
+    }
+    for (const [id, el] of this.labelEls) {
+      if (seen.has(id)) continue;
+      el.remove();
+      this.labelEls.delete(id);
+    }
   }
 
   private resize(): void {
@@ -394,7 +581,7 @@ export class BrainScene implements BrainHandle {
 
   private rebuild(): void {
     const notes = this.src.notes();
-    const graph = buildGraph(notes.map((n) => n.path), this.src.resolvedLinks());
+    const graph = withFolders(buildGraph(notes.map((n) => n.path), this.src.resolvedLinks()));
     const mt = new Map(notes.map((n) => [n.path, n.mtime] as const));
     this.graph = graph;
     this.mtimes = graph.paths.map((p) => mt.get(p) ?? 0);
@@ -405,6 +592,9 @@ export class BrainScene implements BrainHandle {
       this.highlighted = undefined;
     }
     const n = graph.paths.length;
+    this.hovered = undefined;
+    this.fillFolderSelect();
+    if (this.focus && !graph.paths.includes(this.focus)) this.focus = null;
     if (n === 0) return;
     const pos = layoutFor(graph, this.src.layoutCache);
     this.pos = pos;
@@ -469,9 +659,16 @@ export class BrainScene implements BrainHandle {
     const col = new Float32Array(n * 3);
     const c = new Color();
     for (let i = 0; i < n; i++) {
-      const h = heatOf(this.counts.get(graph.paths[i]!), this.mtimes[i] ?? 0, now);
-      size[i] = (0.9 + Math.log1p(graph.degree[i]!) * 0.35) * (1 + h.heat * 1.8);
-      c.copy(TEAL).lerp(GOLD, h.heat).multiplyScalar(1 - h.dim * 0.65);
+      const path = graph.paths[i]!;
+      if (graph.kinds[i] === "folder") {
+        size[i] = path === ROOT_FOLDER ? 3.2 : 1.8 + Math.log1p(graph.degree[i]!) * 0.45;
+        c.copy(path === ROOT_FOLDER ? ROOT : FOLDER);
+      } else {
+        const h = heatOf(this.counts.get(path), this.mtimes[i] ?? 0, now);
+        size[i] = (0.9 + Math.log1p(graph.degree[i]!) * 0.35) * (1 + h.heat * 1.8);
+        c.copy(TEAL).lerp(GOLD, h.heat).multiplyScalar(1 - h.dim * 0.65);
+      }
+      if (this.focus && !inFolder(path, this.focus)) c.multiplyScalar(UNFOCUSED);
       col.set([c.r, c.g, c.b], i * 3);
     }
     this.baseSize = size;
@@ -479,9 +676,11 @@ export class BrainScene implements BrainHandle {
     (nodes.geometry.getAttribute("aColor") as BufferAttribute).set(col).needsUpdate = true;
     if (lines) {
       const lc = lines.geometry.getAttribute("aColor") as BufferAttribute;
+      // Links (wikilinks, frontmatter references) bright; folder tree edges fainter.
       graph.edges.forEach(([a, b], i) => {
-        lc.setXYZ(i * 2, col[a * 3]! * 0.7, col[a * 3 + 1]! * 0.7, col[a * 3 + 2]! * 0.7);
-        lc.setXYZ(i * 2 + 1, col[b * 3]! * 0.7, col[b * 3 + 1]! * 0.7, col[b * 3 + 2]! * 0.7);
+        const k = graph.edgeKinds[i] === "link" ? 1.6 : 0.75;
+        lc.setXYZ(i * 2, col[a * 3]! * k, col[a * 3 + 1]! * k, col[a * 3 + 2]! * k);
+        lc.setXYZ(i * 2 + 1, col[b * 3]! * k, col[b * 3 + 1]! * k, col[b * 3 + 2]! * k);
       });
       lc.needsUpdate = true;
     }

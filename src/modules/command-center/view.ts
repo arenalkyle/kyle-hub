@@ -55,6 +55,8 @@ export class CommandCenterView extends ItemView {
   private live: VitalsSample[] = [];
   /** The 3D brain lives in a persistent element that is re-attached on every repaint, so its WebGL context survives. */
   private brainHost: HTMLElement | undefined;
+  /** Scrolling layer above the brain backdrop; repainted on every refresh (the backdrop is not). */
+  private scroller: HTMLElement | undefined;
   private brainHandle: BrainHandle | undefined;
   private sensors = new SensorSampler(SENSOR_HISTORY, () => this.paintSystem());
 
@@ -74,8 +76,10 @@ export class CommandCenterView extends ItemView {
   override async onOpen(): Promise<void> {
     this.isOpen = true;
     this.contentEl.addClass("kh-command-center");
-    this.contentEl.createEl("h3", { text: "Command Center", cls: "kh-command-center-title" });
-    this.contentEl.createDiv({ text: "Loading…" });
+    this.mountBrainBackdrop();
+    this.scroller = this.contentEl.createDiv({ cls: "kh-command-center-scroll" });
+    this.scroller.createEl("h3", { text: "Command Center", cls: "kh-command-center-title" });
+    this.scroller.createDiv({ text: "Loading…" });
     const bump = (): void => void this.refresh();
     for (const ev of BUS_EVENTS) this.offs.push(this.hub.events.on(ev, bump));
     this.offs.push(this.hub.events.on("brain:access", (e) => this.onAccess(e)));
@@ -91,6 +95,8 @@ export class CommandCenterView extends ItemView {
     this.brainHandle = undefined;
     this.brainHost?.remove();
     this.brainHost = undefined;
+    this.scroller?.remove();
+    this.scroller = undefined;
     this.sensors.stop();
     this.offs.forEach((o) => o());
     this.offs = [];
@@ -115,14 +121,17 @@ export class CommandCenterView extends ItemView {
     } catch (e) {
       console.error("kyle-hub: command center refresh failed", e);
       if (!this.isOpen || seq !== this.seq) return;
-      this.contentEl.empty();
-      this.contentEl.createEl("h3", { text: "Command Center", cls: "kh-command-center-title" });
-      this.contentEl.createDiv({ text: `Failed to load: ${e instanceof Error ? e.message : String(e)}` });
+      const el = this.scroller;
+      if (!el) return;
+      el.empty();
+      el.createEl("h3", { text: "Command Center", cls: "kh-command-center-title" });
+      el.createDiv({ cls: "kh-command-center-card", text: `Failed to load: ${e instanceof Error ? e.message : String(e)}` });
     }
   }
 
   private paint(m: CommandCenterModel, inv: BrainInventory | undefined): void {
-    const el = this.contentEl;
+    const el = this.scroller;
+    if (!el) return;
     el.empty();
     el.createEl("h3", { text: "Command Center", cls: "kh-command-center-title" });
     const layout = el.createDiv({ cls: "kh-command-center-layout" });
@@ -168,8 +177,7 @@ export class CommandCenterView extends ItemView {
       }
     });
 
-    // Center: 3D brain, then spend
-    this.paintBrain3d(center);
+    // Center: a slim Spend strip on top; the rest of the column shows the brain backdrop.
     const spend = center.createDiv({ cls: "kh-command-center-spend kh-command-center-card" });
     spend.createEl("h4", { text: "Spend" });
     const st = tile("spend");
@@ -200,16 +208,14 @@ export class CommandCenterView extends ItemView {
     this.paintSystem();
   }
 
-  private paintBrain3d(center: HTMLElement): void {
-    const host = (this.brainHost ??= document.createElement("div"));
-    host.className = "kh-command-center-card kh-brain-host kh-brain-host-card";
-    center.prepend(host);
+  /** The 3D brain fills the whole view behind the cards; mounted once per open, never repainted. */
+  private mountBrainBackdrop(): void {
+    const host = (this.brainHost ??= this.contentEl.createDiv());
+    host.className = "kh-brain-host kh-brain-host-backdrop";
     if (this.brainHandle) return;
     const svc = this.hub.services.get("brainView");
-    if (svc) {
-      host.empty();
-      this.brainHandle = svc.mount(host);
-    } else if (host.childElementCount === 0) host.createDiv({ cls: "kh-command-center-empty", text: "3D brain: the Brain module is disabled." });
+    if (svc) this.brainHandle = svc.mount(host);
+    else host.createDiv({ cls: "kh-brain-empty", text: "3D brain: the Brain module is disabled." });
   }
 
   private onAccess(e: BrainAccessEvent): void {

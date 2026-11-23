@@ -1,7 +1,7 @@
 // CDP smoke for Command Center v2 (LOCK-61, PHASES 10-16). Read-only: runs "Open command center", checks the layout,
 // then opens the Brain tab (kh-brain-view) on a new leaf, checks its 3D host and Gaps panel, and detaches both leaves.
 // Writes nothing to the vault or log folders.
-// Checks: opened, tiles, columns, vitals, brain3d, retro (left column), brainTab.
+// Checks: opened, tiles, columns, vitals, brain3d (full-view backdrop), spendTop, retro (left column), brainTab.
 // Requires the commandCenter module enabled (settings tab) and Obsidian started with a debug port:
 //   Obsidian.exe --remote-debugging-port=9222   then   node scripts/cdp-command-center-smoke.mjs
 // Env: CDP_PORT (default 9222). Prints the result JSON, then PASS, or lists the failed checks and exits 1.
@@ -27,12 +27,13 @@ const EXPR = `(async () => {
   const ccLeaves = app.workspace.getLeavesOfType("${COMMAND_CENTER_VIEW_TYPE}");
   const ccEl = ccLeaves[0]?.view.contentEl ?? null; // view.ts puts .kh-command-center on contentEl itself
   const root = ccEl?.matches(".kh-command-center") ? ccEl : (ccEl?.querySelector(".kh-command-center") ?? null);
-  const panes = root ? [...root.querySelectorAll(":scope > .kh-command-center-layout > .kh-command-center-pane")] : [];
+  const panes = root ? [...root.querySelectorAll(":scope > .kh-command-center-scroll > .kh-command-center-layout > .kh-command-center-pane")] : [];
   const [left, center, right] = panes;
   const tiles = root ? root.querySelectorAll(".kh-command-center-tile").length : 0;
   const vitals = right?.querySelector(".kh-command-center-vitals-card") ?? null;
   const vitalsText = vitals?.textContent ?? "";
-  const brainHost = center?.querySelector(".kh-brain-host-card") ?? null;
+  const brainHost = root?.querySelector(":scope > .kh-brain-host-backdrop") ?? null; // full-view backdrop behind the cards
+  const spendFirst = center?.firstElementChild?.classList.contains("kh-command-center-spend") === true;
   const retroCard = [...(left?.querySelectorAll(".kh-command-center-card") ?? [])].find((c) => c.querySelector("h4")?.textContent === "Retro");
 
   const checks = {
@@ -40,7 +41,8 @@ const EXPR = `(async () => {
     tiles: tiles === ${EXPECTED_TILES},
     columns: panes.length === 3 && center?.classList.contains("kh-command-center-pane-main") === true,
     vitals: vitals !== null && (vitalsText.includes("module disabled") || ${JSON.stringify(VITALS_LABELS)}.every((l) => vitalsText.includes(l))),
-    brain3d: brainHost !== null && (brainHost.querySelector("canvas") !== null || (center?.textContent ?? "").includes("Brain module is disabled")),
+    brain3d: brainHost !== null && (brainHost.querySelector("canvas") !== null || (brainHost.textContent ?? "").includes("Brain module is disabled")),
+    spendTop: spendFirst,
     retro: retroCard !== undefined && left.contains(retroCard),
   };
   const details = { tiles, panes: panes.length, vitalsRows: ${JSON.stringify(VITALS_LABELS)}.filter((l) => vitalsText.includes(l)).length };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGraph } from "./brainGraph";
+import { buildGraph, frontmatterRefs, inFolder, nodeLabel, noteSnippet, parentFolder, withFolders } from "./brainGraph";
 import { forceLayout } from "./forceLayout";
 import { countReads, heatOf } from "./brainHeat";
 
@@ -9,6 +9,54 @@ describe("buildGraph", () => {
     expect(g.paths).toEqual(["a.md", "b.md", "c.md"]);
     expect(g.edges).toEqual([[0, 1]]);
     expect(g.degree).toEqual([1, 1, 0]);
+    expect(g.kinds).toEqual(["note", "note", "note"]);
+    expect(g.edgeKinds).toEqual(["link"]);
+  });
+});
+
+describe("withFolders", () => {
+  it("adds folder hubs and the root, and connects every note through tree edges", () => {
+    const g = withFolders(buildGraph(["top.md", "a/x.md", "a/b/y.md"], { "top.md": { "a/x.md": 1 } }));
+    expect(g.paths).toEqual(["a/b/y.md", "a/x.md", "top.md", "/", "a/", "a/b/"]);
+    expect(g.kinds).toEqual(["note", "note", "note", "folder", "folder", "folder"]);
+    const named = g.edges.map(([a, b], i) => `${g.paths[a]}-${g.paths[b]}:${g.edgeKinds[i]}`).sort();
+    expect(named).toEqual(["/-a/:tree", "a/-a/b/:tree", "a/b/y.md-a/b/:tree", "a/x.md-a/:tree", "a/x.md-top.md:link", "top.md-/:tree"]);
+    expect(g.degree[3]).toBe(2);
+  });
+  it("leaves an empty graph alone", () => {
+    expect(withFolders(buildGraph([], {})).paths).toEqual([]);
+  });
+});
+
+describe("graph helpers", () => {
+  it("parentFolder, inFolder and nodeLabel", () => {
+    expect(parentFolder("a/b/c.md")).toBe("a/b/");
+    expect(parentFolder("a/b/")).toBe("a/");
+    expect(parentFolder("a/")).toBe("/");
+    expect(parentFolder("c.md")).toBe("/");
+    expect(inFolder("a/b/c.md", "a/")).toBe(true);
+    expect(inFolder("ab/c.md", "a/")).toBe(false);
+    expect(inFolder("x.md", "/")).toBe(true);
+    expect(nodeLabel("a/b/Note.md")).toBe("Note");
+    expect(nodeLabel("a/b/")).toBe("b");
+    expect(nodeLabel("/")).toBe("Vault");
+  });
+  it("noteSnippet strips frontmatter and markdown and caps length", () => {
+    const text = ["---", "id: X", "title: T", "---", "# Heading", "See [[Other|the other]] and **bold** `code`.", "", "```js", "hidden()", "```", "End"].join("\n");
+    expect(noteSnippet(text)).toBe("Heading See the other and bold code. End");
+    expect(noteSnippet("x".repeat(300), 10)).toBe("xxxxxxxxxx…");
+    expect(noteSnippet("> quoted <num> text")).toBe("quoted <num> text");
+    expect(noteSnippet("---\nonly: frontmatter\n---\n")).toBe("");
+  });
+  it("frontmatterRefs resolves values that name notes and skips self keys", () => {
+    const notes: Record<string, string> = { "Test Project": "p/Test Project.md", "LOCK-9": "i/LOCK-9.md", Triage: "Triage.md" };
+    const refs = frontmatterRefs(
+      { id: "LOCK-10", status: "Triage", project: "Test Project", parent: "[[LOCK-9]]", related: ["LOCK-9", 3], title: "LOCK-10" },
+      "i/LOCK-10.md",
+      (t) => notes[t],
+    );
+    expect(refs).toEqual(["p/Test Project.md", "i/LOCK-9.md"]);
+    expect(frontmatterRefs(undefined, "a.md", () => "b.md")).toEqual([]);
   });
 });
 
