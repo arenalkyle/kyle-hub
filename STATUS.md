@@ -13,18 +13,18 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
   - kyle-hook lives in the vault's `.claude/settings.local.json` (9 events); removed from global `~/.claude/settings.json` (backup kept). `kh doctor` hooks ok.
   - Vault `Brain/conventions/agent.md` and `human.md` created from the shipped templates.
   - Old kyle-tickets and kyle-term plugins are disabled in the vault.
-  - Health: build passes, 995 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2357 KB (minified, three.js included) (limit 3072 KB).
-- **In progress**: verification in the real vault. The latest build is deployed but not yet confirmed there (Obsidian was closed at the last check); the terminal fixes were tested in throwaway vaults only. All 109 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
+  - Health: build passes, 1000 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2365 KB (minified, three.js included) (limit 3072 KB). Command Center CDP smoke passes 8/8 in the real vault.
+- **In progress**: verification in the real vault. Latest build (`af6e03e`) is deployed and running there; the terminal fixes were tested in throwaway vaults only. All 164 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
 - **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
-- **Command Center v2** (LOCK-61): all 13 tickets (LOCK-62–74) built, verified (build/test/lint/check-size) and Done; LOCK-61 closed. Deployed to the real vault; the v2 CDP smoke (`scripts/cdp-command-center-smoke.mjs`) passes 8/8 there. Follow-up after first live look: brain no longer renders white (bloom/clear-colour fix); brain is now a full-view backdrop behind translucent cards, Spend a slim top strip; folder hubs connect every note, frontmatter references count as links; hover card (title, folder, snippet), click opens, folder picker/focus, agent name tags. The v2 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are still unticked. Production `main.js` is minified.
+- **Command Center v2** (LOCK-61): all 13 tickets (LOCK-62–74) built, verified (build/test/lint/check-size) and Done; LOCK-61 closed. Deployed to the real vault. Post-review rework (done, pushed): brain no longer renders white (bloom/clear-colour fix); brain is a full-view backdrop behind translucent cards; Spend is a slim strip at the top; folder hubs connect every note and frontmatter references count as links; hover card (title, folder, snippet), click opens the note, folder picker/focus, agent name tags. Awaiting your review of the new look ("theme" assumed to mean the Hivemynd reference). v2 manual checks unticked.
 - **Next**
-  1. Work through the Command Center v2 manual checks (includes the 2,000-note frame-rate test).
-  1. Run the "Terminal tiling" manual checks.
-  2. Add repos to the repo map in kyle-hub settings, then check Queue launch and clear kyle-hub's brain findings.
-  3. Register the scheduled task (`kh schedule install --yes`; `kh doctor` reports it missing).
-  4. Set `cleanupPeriodDays` in Claude settings (`kh doctor` warns; the default is 30).
-  5. Finish the cutover: `kh import linear` (no imported tickets in the vault yet), then archive the kyle-term and kyle-tickets repos.
-  6. Run the remaining manual checks and CDP smoke scripts; calibrate usage caps against `/usage`.
+  1. Review the reworked brain/Command Center live, then work through the Command Center v2 manual checks (includes the 2,000-note frame-rate test; watch GPU load).
+  2. Run the "Terminal tiling" manual checks.
+  3. Add repos to the repo map in kyle-hub settings, then check Queue launch and clear kyle-hub's brain findings.
+  4. Register the scheduled task (`kh schedule install --yes`; `kh doctor` reports it missing).
+  5. Set `cleanupPeriodDays` in Claude settings (`kh doctor` warns; the default is 30).
+  6. Finish the cutover: `kh import linear` (no imported tickets in the vault yet), then archive the kyle-term and kyle-tickets repos.
+  7. Run the remaining manual checks and CDP smoke scripts; calibrate usage caps against `/usage`.
 - **Known gaps**
   - Tile layout is not persisted.
   - Sessions with no hook events (plain shells, other CLIs) can show working/finished on a focus or resize redraw after typing.
