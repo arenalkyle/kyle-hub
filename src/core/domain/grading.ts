@@ -17,6 +17,8 @@ export interface GradingConfig {
   largeFolderWords: number;
   /** Look-back for agent activity (reads, edits, searches). */
   windowDays: number;
+  /** Vault-relative globs for code the markers miss; skipped by Gaps and vault brain lint. */
+  exclude: string[];
   weights: {
     /** Points lost per day beyond the grace period, capped at `ageCap`. */
     agePerDay: number;
@@ -44,6 +46,7 @@ export const DEFAULT_GRADING: GradingConfig = {
   largeFolderMinNotes: 3,
   largeFolderWords: 400,
   windowDays: 30,
+  exclude: [],
   weights: {
     agePerDay: 0.1, ageCap: 30,
     rereadEach: 3, rereadCap: 30,
@@ -77,7 +80,10 @@ export function parseGradingConfig(text: string | undefined): { config: GradingC
     return { config: DEFAULT_GRADING, warning: `grading.json is not valid JSON (${(e as Error).message}); using defaults` };
   }
   if (!isObj(raw)) return { config: DEFAULT_GRADING, warning: "grading.json must be a JSON object; using defaults" };
-  return { config: overlay(DEFAULT_GRADING, raw) };
+  const config = overlay(DEFAULT_GRADING, raw);
+  if (raw.exclude === undefined) return { config };
+  if (Array.isArray(raw.exclude) && raw.exclude.every((g) => typeof g === "string")) return { config: { ...config, exclude: raw.exclude as string[] } };
+  return { config, warning: "grading.json `exclude` must be an array of glob strings; using the default (none)" };
 }
 
 export interface NoteGradeInput {

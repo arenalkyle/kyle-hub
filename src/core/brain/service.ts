@@ -8,6 +8,7 @@ import { checkRepo, lintVaultBrain, type ScanOptions } from "./scan";
 import type { Finding } from "./checks";
 import { DEFAULT_HEALTH_WEIGHTS, healthScore, sumCounts, type HealthCounts, type HealthWeights } from "./health";
 import { selectBrainDocs } from "./selectDocs";
+import { parseGradingConfig } from "../domain/grading";
 import { brainInventory, type BrainInventory } from "./inventory";
 
 export interface RepoEntry {
@@ -82,10 +83,19 @@ export function createBrainService(deps: BrainServiceDeps): BrainService {
   const lastScores = new Map<string, number>();
   let snapshot: BrainHealth | undefined;
 
+  /** `exclude` globs of the vault `grading.json` (the vault is the parent of `Brain/`). */
+  const vaultExclude = (brainDir: string): string[] => {
+    try {
+      return parseGradingConfig(fs.readFileSync(path.join(path.dirname(brainDir), ".kyle-hub", "grading.json"), "utf8")).config.exclude;
+    } catch {
+      return [];
+    }
+  };
+
   const vaultBrainCounts = (): HealthCounts => {
     const dir = deps.vaultBrainDir?.();
     if (!dir || !fs.existsSync(dir)) return { lintErrors: 0, lintWarnings: 0, stalenessIssues: 0 };
-    const issues = lintVaultBrain(dir);
+    const issues = lintVaultBrain(dir, vaultExclude(dir));
     return countsOf(issues, []);
   };
 
@@ -149,7 +159,7 @@ export function createBrainService(deps: BrainServiceDeps): BrainService {
         }
       }
       const vaultBrainDir = deps.vaultBrainDir?.();
-      return brainInventory({ repoRoots, repoDocs, ...(vaultBrainDir ? { vaultBrainDir } : {}) });
+      return brainInventory({ repoRoots, repoDocs, ...(vaultBrainDir ? { vaultBrainDir, vaultExclude: vaultExclude(vaultBrainDir) } : {}) });
     },
     selectDocs(ticket, project, budgetTokens = DOC_BUDGET_TOKENS) {
       const docs = selectBrainDocs({

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { computeGaps, type GapsReport, type NoteFact, type ReadFact, type SearchFact, type WriteFact } from "../domain/gaps";
 import { parseGradingConfig } from "../domain/grading";
+import { createCodeMatcher, createExcludeMatcher, findCodeRoots, hasCodeMarker, type DirListing } from "../domain/codeRoots";
 import { docMeta, proseLines } from "../brain/lint";
 import { splitFrontmatter } from "../domain/frontmatter";
 import type { LogService, Profile } from "../logs/types";
@@ -13,9 +14,14 @@ export const GRADING_FILE = path.join(".kyle-hub", "grading.json");
 const SKIP_DIRS = new Set([".obsidian", ".git", ".kyle-hub", ".trash", "node_modules"]);
 const WIKILINK = /!?\[\[([^\]\n]+)\]\]/g;
 
-/** Notes of the vault: every `.md` outside hidden tool folders, with word count, mtime, `reviewed` and wikilinks. */
-export function scanVaultNotes(vaultRoot: string): NoteFact[] {
+/**
+ * Notes of the vault: every `.md` outside hidden tool folders, with word count, mtime, `reviewed` and wikilinks.
+ * One directory walk also finds the code roots (folders with a marker, see `domain/codeRoots`); code roots and `exclude` globs are not entered.
+ */
+export function scanVaultNotes(vaultRoot: string, exclude: readonly string[] = []): { notes: NoteFact[]; codeRoots: string[] } {
   const out: NoteFact[] = [];
+  const listings: DirListing[] = [];
+  const excluded = createExcludeMatcher(exclude);
   const walk = (rel: string): void => {
     let entries: fs.Dirent[];
     try {
@@ -23,8 +29,12 @@ export function scanVaultNotes(vaultRoot: string): NoteFact[] {
     } catch {
       return;
     }
+    const names = entries.map((e) => e.name);
+    listings.push({ path: rel, names });
+    if (rel !== "" && hasCodeMarker(names)) return;
     for (const e of entries) {
       const child = rel === "" ? e.name : `${rel}/${e.name}`;
+      if (excluded(child)) continue;
       if (e.isDirectory()) {
         if (!SKIP_DIRS.has(e.name)) walk(child);
       } else if (e.isFile() && e.name.toLowerCase().endsWith(".md")) {
@@ -55,7 +65,7 @@ export function scanVaultNotes(vaultRoot: string): NoteFact[] {
     }
   };
   walk("");
-  return out;
+  return { notes: out, codeRoots: findCodeRoots(listings) };
 }
 
 export interface GatherOptions {
@@ -80,7 +90,8 @@ export async function gatherGaps(opts: GatherOptions): Promise<GapsReport> {
   const { config, warning } = parseGradingConfig(gradingText);
   const since = new Date(now.getTime() - config.windowDays * 86_400_000).toISOString();
 
-  const notes = scanVaultNotes(opts.vaultRoot);
+  const { notes, codeRoots } = scanVaultNotes(opts.vaultRoot, config.exclude);
+  const isCode = createCodeMatcher(codeRoots, config.exclude);
   const reads: ReadFact[] = [];
   const writes: WriteFact[] = [];
   const vaultSessions = new Set<string>();
@@ -101,11 +112,13 @@ export async function gatherGaps(opts: GatherOptions): Promise<GapsReport> {
     let hasSearch = false;
     for await (const r of opts.logs.records(run.runId)) {
       if (r.type === "file_read" && typeof r.vault === "string" && mine(r.vault)) {
+        if (typeof r.pathRel === "string" && isCode(r.pathRel)) continue;
         hasSearch = true;
         if (typeof r.durationMs === "number") readMs += r.durationMs;
         continue;
       }
       if (r.type !== "search" || typeof r.root !== "string" || !mine(typeof r.vault === "string" ? r.vault : undefined)) continue;
+      if (isCode(r.root)) continue;
       hasSearch = true;
       searches.push({
         root: r.root,
