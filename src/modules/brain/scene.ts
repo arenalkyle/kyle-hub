@@ -27,6 +27,7 @@ import { DEFAULT_FPS } from "../../core/domain/fps";
 import { RotationGate } from "../../core/domain/autoRotate";
 import { regionAnchors, shapeTargets, type RegionAnchor, type ShapeCache, type ShapeId } from "../../core/domain/brainShape";
 import { mixHex, nebulaColors, themeById, type BrainTheme } from "../../core/domain/brainTheme";
+import type { OrbitMode } from "../../core/domain/brainOrbit";
 import { AgentLayer, drift } from "./agents";
 
 export interface BrainOptions {
@@ -37,6 +38,10 @@ export interface BrainOptions {
   shape: ShapeId;
   /** Auto-rotation speed 0..1; 0 is off. */
   rotateSpeed: number;
+  /** Agent orbit mode, orbit line colour (`default`, `rainbow` or hex) and line opacity 0..1. */
+  orbitMode: OrbitMode;
+  orbitColor: string;
+  orbitOpacity: number;
 }
 
 /** Everything the scene needs from the vault and hub; supplied by the brain module so this file stays UI-only. */
@@ -465,7 +470,7 @@ export class BrainScene implements BrainHandle {
     const dt = this.lastT === 0 ? 0 : Math.min(0.1, Math.max(0, t - this.lastT));
     this.lastT = t;
     this.controls.update(dt);
-    this.agentLayer.frame(t);
+    this.agentLayer.frame(t, { mode: o.orbitMode, color: o.orbitColor, opacity: o.orbitOpacity });
     this.composer.render();
     this.paintLabels();
     this.paintRegions();

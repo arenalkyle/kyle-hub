@@ -1,8 +1,10 @@
 import type { BrainAccessEvent } from "../events";
 
-/** Idle time before an agent starts fading, and how long the fade lasts before it is removed. */
-export const AGENT_IDLE_MS = 120_000;
-export const AGENT_FADE_MS = 10_000;
+/**
+ * Sessions stay for their whole life (no idle fade). Sub-agents have no end event, so a moon is dropped after this long
+ * without an access (it comes back on the next one); it is also dropped with its parent.
+ */
+export const SUBAGENT_IDLE_MS = 90_000;
 
 /** What the terminal knows about a session; all optional (a session with no pane has none of it). */
 export interface AgentIdentity {
@@ -21,6 +23,8 @@ export interface Agent {
   color: string;
   /** Epoch ms of the last access or lifecycle event. */
   lastActive: number;
+  /** Stable orbit slot: among live sessions for a session, among its siblings for a sub-agent (moon). Never changes while the agent lives. */
+  slot: number;
   /** Vault-relative path of the last note read or written. */
   note?: string;
   noteKind?: "read" | "write";
@@ -36,6 +40,25 @@ function hash(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return h >>> 0;
+}
+
+/** First palette colour from the id's hash that no live agent uses; the hash colour when all are taken. */
+export function uniqueColor(sessionId: string, taken: ReadonlySet<string>): string {
+  const start = hash(sessionId) % PALETTE.length;
+  for (let i = 0; i < PALETTE.length; i++) {
+    const c = PALETTE[(start + i) % PALETTE.length]!;
+    if (!taken.has(c)) return c;
+  }
+  return PALETTE[start]!;
+}
+
+/** Lowest slot not used by `others`. */
+function freeSlot(others: Iterable<Agent>): number {
+  const used = new Set<number>();
+  for (const a of others) used.add(a.slot);
+  let n = 0;
+  while (used.has(n)) n++;
+  return n;
 }
 
 /** The same session id always maps to the same palette colour. */
@@ -67,11 +90,13 @@ function upsertSession(map: Map<string, Agent>, id: string, now: number, lookup:
   const found = lookup(id);
   const identity: AgentIdentity = { ...found, cwd: found?.cwd ?? cwd };
   const prev = map.get(id);
+  const others = [...map.values()].filter((a) => a.id !== id);
   const agent: Agent = {
     id,
     name: sessionName(id, identity),
-    color: identity.color ?? hashColor(id),
+    color: identity.color ?? prev?.color ?? uniqueColor(id, new Set(others.map((a) => a.color))),
     lastActive: now,
+    slot: prev?.slot ?? freeSlot(others.filter((a) => !a.parentId)),
     visits: prev?.visits ?? 0,
     ...(prev?.note !== undefined ? { note: prev.note } : {}),
     ...(prev?.noteKind ? { noteKind: prev.noteKind } : {}),
@@ -110,6 +135,7 @@ export function applyAccess(agents: Agents, e: BrainAccessEvent, now: number, lo
       name: `${parent.name} › ${e.agentType ?? "agent"}`,
       color: lighten(parent.color),
       lastActive: now,
+      slot: prev?.slot ?? freeSlot([...next.values()].filter((a) => a.parentId === parent.id)),
       visits: prev?.visits ?? 0,
       ...(prev?.note !== undefined ? { note: prev.note } : {}),
       ...(prev?.noteKind ? { noteKind: prev.noteKind } : {}),
@@ -124,28 +150,17 @@ export function applyAccess(agents: Agents, e: BrainAccessEvent, now: number, lo
   return next;
 }
 
-/** 1 while active, falling to 0 over the fade; 0 means the agent should be gone. */
-export function agentAlpha(a: Agent, now: number): number {
-  const idle = now - a.lastActive;
-  if (idle <= AGENT_IDLE_MS) return 1;
-  return Math.max(0, 1 - (idle - AGENT_IDLE_MS) / AGENT_FADE_MS);
+/** The zap an access event triggers: from the agent that did it (a moon for a sub-agent) to the note itself. Searches and path-less events zap nothing. */
+export function zapOf(e: BrainAccessEvent): { agentId: string; path: string; kind: "read" | "write" } | undefined {
+  if (!e.path || (e.kind !== "read" && e.kind !== "write")) return undefined;
+  return { agentId: e.sessionId, path: e.path, kind: e.kind };
 }
 
-/** Drops agents that have faded out (and sub-agents whose parent is gone). Returns the same map when nothing changed. */
+/** Drops sub-agents whose parent is gone or that have been idle too long. Sessions are never pruned. Returns the same map when nothing changed. */
 export function pruneAgents(agents: Agents, now: number): Agents {
   let next: Map<string, Agent> | undefined;
   for (const a of agents.values()) {
-    if (agentAlpha(a, now) <= 0 || (a.parentId !== undefined && !agents.has(a.parentId))) (next ??= new Map(agents)).delete(a.id);
+    if (a.parentId !== undefined && (!agents.has(a.parentId) || now - a.lastActive > SUBAGENT_IDLE_MS)) (next ??= new Map(agents)).delete(a.id);
   }
   return next ?? agents;
-}
-
-/** `[subAgentId, parentId]` pairs for lines between sub-agents and parents while both are active. */
-export function tethers(agents: Agents, now: number): Array<[string, string]> {
-  const out: Array<[string, string]> = [];
-  for (const a of agents.values()) {
-    const p = a.parentId ? agents.get(a.parentId) : undefined;
-    if (p && now - a.lastActive <= AGENT_IDLE_MS && now - p.lastActive <= AGENT_IDLE_MS) out.push([a.id, p.id]);
-  }
-  return out;
 }

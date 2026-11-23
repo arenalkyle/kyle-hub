@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BrainAccessEvent } from "../events";
 import {
-  AGENT_FADE_MS, AGENT_IDLE_MS, agentAlpha, applyAccess, endSession, hashColor, lighten, pruneAgents, sessionName, startSession, tethers,
+  SUBAGENT_IDLE_MS, applyAccess, endSession, hashColor, lighten, pruneAgents, sessionName, startSession, uniqueColor, zapOf,
   type Agents, type IdentityLookup,
 } from "./brainAgents";
 
@@ -43,11 +43,13 @@ describe("agents reducer", () => {
     expect(new Set([...agents.values()].map((a) => a.color)).size).toBe(5);
     expect(agents.get("s1")!.name).toBe("Build");
     expect(agents.get("free-9f9f1234")!.name).toBe("locked-away·1234");
-    expect(agents.get("free-9f9f1234")!.color).toBe(hashColor("free-9f9f1234"));
+    expect(agents.get("free-9f9f1234")!.color).toBe(uniqueColor("free-9f9f1234", new Set(["#e08a2c", "#a371f7"])));
     expect(agents.get("sub-a")!.name).toBe("Build › Explore");
     expect(agents.get("sub-a")!.color).toBe(lighten("#e08a2c"));
     expect(agents.get("sub-b")!.name).toBe("Docs › Plan");
-    expect(tethers(agents, 1000)).toEqual([["sub-a", "s1"], ["sub-b", "s2"]]);
+    const orbiters = [...agents.values()].filter((a) => !a.parentId), moons = [...agents.values()].filter((a) => a.parentId);
+    expect([orbiters.length, moons.length]).toEqual([3, 2]);
+    expect(moons.map((m) => [m.id, m.parentId])).toEqual([["sub-a", "s1"], ["sub-b", "s2"]]);
     expect(agents.get("s2")).toMatchObject({ note: "b.md", noteKind: "write", visits: 1 });
     expect(agents.get("sub-b")!.note).toBeUndefined();
   });
@@ -70,14 +72,64 @@ describe("agents reducer", () => {
     expect(endSession(a, "gone")).toBe(a);
   });
 
-  it("fades after 2 minutes idle, is pruned after the fade, and tethers drop when either side is idle", () => {
+  it("keeps a session that has been idle for 10 minutes; idle sub-agents are dropped, sessions never", () => {
     const a = run([ev({ sessionId: "s1" }), ev({ sessionId: "sub", parentSessionId: "s1" })], 0);
-    expect(agentAlpha(a.get("s1")!, AGENT_IDLE_MS)).toBe(1);
-    expect(agentAlpha(a.get("s1")!, AGENT_IDLE_MS + AGENT_FADE_MS / 2)).toBeCloseTo(0.5);
-    expect(pruneAgents(a, AGENT_IDLE_MS)).toBe(a);
-    expect(tethers(a, AGENT_IDLE_MS + 1)).toEqual([]);
-    expect(pruneAgents(a, AGENT_IDLE_MS + AGENT_FADE_MS).size).toBe(0);
-    const b = applyAccess(a, ev({ sessionId: "sub", parentSessionId: "s1" }), 100_000, lookup);
-    expect(pruneAgents(b, AGENT_IDLE_MS + AGENT_FADE_MS).size).toBe(2);
+    const tenMin = 10 * 60_000;
+    const pruned = pruneAgents(a, tenMin);
+    expect([...pruned.keys()]).toEqual(["s1"]);
+    expect(pruneAgents(a, SUBAGENT_IDLE_MS)).toBe(a);
+    const b = applyAccess(a, ev({ sessionId: "sub", parentSessionId: "s1" }), tenMin - 1000, lookup);
+    expect(pruneAgents(b, tenMin).size).toBe(2);
+  });
+
+  it("drops orphaned sub-agents", () => {
+    const a = run([ev({ sessionId: "sub", parentSessionId: "s1" })]);
+    const orphan = new Map(a);
+    orphan.delete("s1");
+    expect(pruneAgents(orphan, 1000).size).toBe(0);
+  });
+
+  it("assigns stable, reusable orbit slots and unique colours among live sessions", () => {
+    const ids = ["u1", "u2", "u3", "u4", "u5", "u6", "u7", "u8"];
+    let a: Agents = new Map();
+    for (const id of ids) a = applyAccess(a, ev({ sessionId: id }), 1, lookup);
+    expect(ids.map((id) => a.get(id)!.slot)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(new Set(ids.map((id) => a.get(id)!.color)).size).toBe(8);
+    a = applyAccess(a, ev({ sessionId: "u3", path: "x.md" }), 5, lookup);
+    expect(a.get("u3")!.slot).toBe(2);
+    a = endSession(a, "u2");
+    a = applyAccess(a, ev({ sessionId: "u9" }), 6, lookup);
+    expect(a.get("u9")!.slot).toBe(1);
+    expect(a.get("u4")!.slot).toBe(3);
+  });
+
+  it("synthetic stream: zap targets are the notes, and everything is removed on end", () => {
+    const stream = [
+      ev({ sessionId: "s1", path: "a.md" }),
+      ev({ sessionId: "s2", path: "b.md", kind: "write" }),
+      ev({ sessionId: "free-1", path: "c.md" }),
+      ev({ sessionId: "sub-a", parentSessionId: "s1", path: "d.md" }),
+      ev({ sessionId: "sub-b", parentSessionId: "s2", kind: "search", pattern: "x" }),
+    ];
+    expect(stream.map((e) => zapOf(e))).toEqual([
+      { agentId: "s1", path: "a.md", kind: "read" },
+      { agentId: "s2", path: "b.md", kind: "write" },
+      { agentId: "free-1", path: "c.md", kind: "read" },
+      { agentId: "sub-a", path: "d.md", kind: "read" },
+      undefined,
+    ]);
+    let a = run(stream);
+    expect(a.size).toBe(5);
+    for (const id of ["s1", "s2", "free-1"]) a = endSession(a, id);
+    expect(a.size).toBe(0);
+  });
+
+  it("numbers moons per parent", () => {
+    const a = run([
+      ev({ sessionId: "m1", parentSessionId: "s1" }),
+      ev({ sessionId: "m2", parentSessionId: "s1" }),
+      ev({ sessionId: "m3", parentSessionId: "s2" }),
+    ]);
+    expect([a.get("m1")!.slot, a.get("m2")!.slot, a.get("m3")!.slot]).toEqual([0, 1, 0]);
   });
 });
