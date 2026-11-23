@@ -178,7 +178,10 @@ export class BrainScene implements BrainHandle {
     host.addClass("kh-brain-canvas-host");
     this.renderer = new WebGLRenderer({ antialias: false, alpha: false, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(this.win.devicePixelRatio || 1, 2));
-    this.renderer.setClearColor(new Color(0.02, 0.03, 0.07), 1);
+    // Background via scene.background, not setClearColor: the clear colour is colour-space converted for whichever
+    // target is bound when it is set, so inside the composer it landed sRGB-encoded (0.15) in the linear buffer,
+    // crossed the bloom threshold and bloomed the whole canvas to white.
+    this.scene.background = new Color(0.02, 0.03, 0.07);
     const canvas = this.renderer.domElement;
     canvas.addClass("kh-brain-canvas");
     host.appendChild(canvas);
