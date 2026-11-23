@@ -11,11 +11,13 @@ import { PromoteModal } from "./promoteModal";
 import { BRAIN_VIEW_TYPE, BrainView } from "./view";
 import { BrainScene } from "./scene";
 import { createGapsService } from "./gaps";
-import { brainOptions, createBrainSource, DEFAULT_BLOOM, DEFAULT_NODE_SIZE } from "./source";
+import { DEFAULT_ROTATE_SPEED } from "../../core/domain/autoRotate";
+import { DEFAULT_THEME } from "../../core/domain/brainTheme";
+import { brainOptions, createBrainSource, DEFAULT_BLOOM, DEFAULT_NODE_SIZE, DEFAULT_SHAPE } from "./source";
 
 export const brainSettings: ModuleSettingsDef = {
   id: "brain",
-  defaults: { autoFindings: false, ignoreSymbols: {}, healthWeights: { ...DEFAULT_HEALTH_WEIGHTS }, bloomStrength: DEFAULT_BLOOM, nodeSize: DEFAULT_NODE_SIZE, layoutCache: {} },
+  defaults: { autoFindings: false, ignoreSymbols: {}, healthWeights: { ...DEFAULT_HEALTH_WEIGHTS }, bloomStrength: DEFAULT_BLOOM, nodeSize: DEFAULT_NODE_SIZE, layoutCache: {}, shapeCache: {}, theme: DEFAULT_THEME, shape: DEFAULT_SHAPE, rotateSpeed: DEFAULT_ROTATE_SPEED },
   enabledByDefault: false,
 };
 

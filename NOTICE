@@ -5,3 +5,7 @@ heart, ring, double helix and galaxy shape definitions) is adapted from Hivemynd
 Copyright (c) J Tansill, licensed under the Apache License, Version 2.0
 (http://www.apache.org/licenses/LICENSE-2.0). The shapes were rewritten in TypeScript; the brain
 shape and folder regions are original to kyle-hub.
+
+The ten brain colour themes in src/core/domain/brainTheme.ts (Multiverse, Inkblot, Violet Dusk,
+Aurora Moss, Copper Ember, Lifeblood, Matrix, Mycelium, Solar Ink, Tide Pulse) are adapted from
+Hivemynd palettes, Copyright (c) J Tansill, licensed under the Apache License, Version 2.0.

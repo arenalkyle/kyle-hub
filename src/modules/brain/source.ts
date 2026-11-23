@@ -3,6 +3,9 @@ import { frontmatterRefs, noteSnippet } from "../../core/domain/brainGraph";
 import type { Hub, ModuleContext } from "../../core";
 import { normalizeFps } from "../../core/domain/fps";
 import { vaultProfileOf } from "../../core/profile";
+import { rotateSpeedOf } from "../../core/domain/autoRotate";
+import { isThemeId, DEFAULT_THEME } from "../../core/domain/brainTheme";
+import { newShapeCache, SHAPES, type ShapeCache, type ShapeId } from "../../core/domain/brainShape";
 import type { BrainOptions, BrainSource } from "./scene";
 
 export const DEFAULT_BLOOM = 1.1;
@@ -13,8 +16,25 @@ type CacheStore = Record<string, Record<string, Pos>>;
 
 const clamp = (v: unknown, lo: number, hi: number, d: number): number => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 
+export const DEFAULT_SHAPE: ShapeId = "brain";
+
 export function brainOptions(settings: Record<string, unknown>): BrainOptions {
-  return { bloom: clamp(settings.bloomStrength, 0, 3, DEFAULT_BLOOM), nodeSize: clamp(settings.nodeSize, 0.4, 3, DEFAULT_NODE_SIZE) };
+  return {
+    bloom: clamp(settings.bloomStrength, 0, 3, DEFAULT_BLOOM),
+    nodeSize: clamp(settings.nodeSize, 0.4, 3, DEFAULT_NODE_SIZE),
+    theme: isThemeId(settings.theme) ? settings.theme : DEFAULT_THEME,
+    shape: SHAPES.find((s) => s.id === settings.shape)?.id ?? DEFAULT_SHAPE,
+    rotateSpeed: rotateSpeedOf(settings.rotateSpeed),
+  };
+}
+
+type ShapeStore = Record<string, { slots?: Record<string, number>; weights?: Record<string, number> }>;
+
+function loadShapeCache(raw: ShapeStore[string] | undefined): ShapeCache {
+  const c = newShapeCache();
+  for (const [k, v] of Object.entries(raw?.slots ?? {})) if (typeof v === "number") c.slots.set(k, v);
+  for (const [k, v] of Object.entries(raw?.weights ?? {})) if (typeof v === "number" && Number.isFinite(Number(k))) c.weights.set(Number(k), v);
+  return c;
 }
 
 /** Builds the vault-backed source for the 3D brain; layout positions are cached per vault in the brain module settings. */
@@ -25,11 +45,14 @@ export function createBrainSource(hub: Hub, ctx: ModuleContext): BrainSource {
   // Caches from before folder hubs (no `folder/` keys) are dropped once so notes re-cluster around their folders.
   const legacy = Object.keys(stored).length > 0 && !Object.keys(stored).some((k) => k.endsWith("/"));
   const layoutCache = new Map<string, Pos>(legacy ? [] : Object.entries(stored));
+  const shapeCache = loadShapeCache((ctx.settings.get<{ shapeCache?: ShapeStore }>().shapeCache ?? {})[vaultKey]);
   let saveTimer = 0;
   const saveNow = (): void => {
     const all = { ...(ctx.settings.get<{ layoutCache?: CacheStore }>().layoutCache ?? {}) };
     all[vaultKey] = Object.fromEntries(layoutCache);
-    void ctx.settings.update({ layoutCache: all });
+    const shapes = { ...(ctx.settings.get<{ shapeCache?: ShapeStore }>().shapeCache ?? {}) };
+    shapes[vaultKey] = { slots: Object.fromEntries(shapeCache.slots), weights: Object.fromEntries(shapeCache.weights) };
+    void ctx.settings.update({ layoutCache: all, shapeCache: shapes });
   };
   ctx.register(() => {
     if (saveTimer) {
@@ -85,6 +108,7 @@ export function createBrainSource(hub: Hub, ctx: ModuleContext): BrainSource {
       void app.workspace.openLinkText(path, "", split ? "split" : "tab");
     },
     layoutCache,
+    shapeCache,
     saveLayout() {
       window.clearTimeout(saveTimer);
       saveTimer = window.setTimeout(() => {

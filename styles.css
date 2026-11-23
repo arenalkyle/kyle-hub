@@ -750,6 +750,14 @@
 .kh-brain-host-backdrop .kh-brain-folders { top: auto; bottom: 14px; left: 50%; transform: translateX(-50%); }
 .kh-brain-labels { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
 .kh-brain-label { position: absolute; left: 0; top: 0; white-space: nowrap; padding: 1px 7px; border-radius: 9px; font-size: var(--font-smallest); font-weight: var(--font-semibold); color: var(--kh-brain-agent-color, var(--text-normal)); background: color-mix(in srgb, var(--background-primary) 65%, transparent); border: 1px solid var(--kh-brain-agent-color, var(--background-modifier-border)); will-change: transform; }
+.kh-brain-region { position: absolute; left: 0; top: 0; white-space: nowrap; padding: 0 6px; border-radius: 8px; font-size: var(--font-smallest); letter-spacing: 0.04em; text-transform: uppercase; color: var(--kh-brain-region-fg, var(--text-muted)); background: color-mix(in srgb, var(--kh-brain-region-bg, var(--background-primary)) 55%, transparent); cursor: pointer; pointer-events: auto; will-change: transform; }
+.kh-brain-region:hover { background: color-mix(in srgb, var(--kh-brain-region-bg, var(--background-primary)) 85%, transparent); }
+.kh-brain-region.is-static { cursor: default; pointer-events: none; }
+/* A light brain theme (Inkblot) sits behind the translucent cards: make them more opaque so Obsidian's text stays readable. */
+.kh-brain-bg-light .kh-command-center-scroll .kh-command-center-card,
+.kh-brain-bg-light .kh-command-center-scroll .kh-command-center-tile { background: color-mix(in srgb, var(--background-secondary) 90%, transparent); }
+.kh-brain-bg-light .kh-command-center-scroll .kh-command-center-count,
+.kh-brain-bg-light .kh-command-center-scroll .kh-command-center-chart { background: color-mix(in srgb, var(--background-primary) 80%, transparent); }
 .kh-brain-tip-name { font-weight: var(--font-semibold); }
 .kh-brain-tip-note { color: var(--text-muted); overflow-wrap: anywhere; }
 .kh-brain-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-muted); pointer-events: none; }
