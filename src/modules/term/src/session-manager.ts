@@ -246,7 +246,7 @@ export class SessionManager {
   title(s: Session): string {
     const fp = s.agent.firstPrompt?.replace(/\s+/g, " ").trim();
     const firstPrompt = fp && fp.length > TITLE_MAX ? `${fp.slice(0, TITLE_MAX - 1)}…` : fp;
-    return resolveTitle({ manual: s.manualTitle, osc: s.oscTitle, firstPrompt, profileName: this.profile(s.profileId).name });
+    return resolveTitle({ manual: s.manualTitle, osc: s.oscTitle, firstPrompt, profileName: this.profile(s.profileId).name, claude: s.kind === "claude" || !!s.agent.claudeSessionId || s.agent.hasHookEvents });
   }
 
   create(opts: CreateOptions): Session {

@@ -4,6 +4,8 @@ export interface TitleInputs {
   /** Phase 3 inserts the first prompt here (between terminal title and profile name). */
   firstPrompt?: string;
   profileName: string;
+  /** The pane runs Claude: the fallback is "Claude" instead of the shell profile name. */
+  claude?: boolean;
 }
 
 const clean = (s: string | undefined): string | undefined => {
@@ -11,9 +13,9 @@ const clean = (s: string | undefined): string | undefined => {
   return t ? t : undefined;
 };
 
-/** Title priority: manual name > terminal (OSC) title > first prompt > profile name. */
+/** Title priority: manual name > terminal (OSC) title > first prompt > Claude (when running Claude) > profile name. */
 export function resolveTitle(i: TitleInputs): string {
-  return clean(i.manual) ?? clean(i.osc) ?? clean(i.firstPrompt) ?? i.profileName;
+  return clean(i.manual) ?? clean(i.osc) ?? clean(i.firstPrompt) ?? (i.claude ? "Claude" : i.profileName);
 }
 
 /** Compact "time since" label: 5s, 12m, 3h, 2d. */

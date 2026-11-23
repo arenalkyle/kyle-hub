@@ -6,6 +6,7 @@ import {
   normalizeOrbitColor,
   normalizeOrbitMode,
   normalizeOrbitOpacity,
+  normalizeOrbitSpeed,
   normalizeToasts,
   ORBIT_MODES,
   orbitColorKind,
@@ -135,6 +136,8 @@ export class BrainPopover {
     this.select(el, "Shape", SHAPES.map((x) => [x.id, x.name]), shape, (v) => this.deps.saveBrain({ shape: v }));
     this.select(el, "Orbit mode", ORBIT_MODES.map((m) => [m, m]), normalizeOrbitMode(s.orbitMode), (v) => this.deps.saveBrain({ orbitMode: v }));
 
+    this.range(el, "Orbit speed", normalizeOrbitSpeed(s.orbitSpeed), (v) => this.deps.saveBrain({ orbitSpeed: v }), 2);
+
     const colour = normalizeOrbitColor(s.orbitColor);
     const hex = this.field(el, "Orbit colour").createEl("input", { type: "text", cls: "kh-command-center-brain-hex", attr: { placeholder: "#rrggbb", "aria-label": "Custom orbit colour", spellcheck: "false" } });
     hex.value = orbitColorKind(colour) === "custom" ? colour : "";
@@ -169,8 +172,8 @@ export class BrainPopover {
     return sel;
   }
 
-  private range(parent: HTMLElement, label: string, value: number, onChange: (v: number) => void): void {
-    const input = this.field(parent, label).createEl("input", { type: "range", attr: { min: "0", max: "1", step: "0.05", "aria-label": label } });
+  private range(parent: HTMLElement, label: string, value: number, onChange: (v: number) => void, max = 1): void {
+    const input = this.field(parent, label).createEl("input", { type: "range", attr: { min: "0", max: String(max), step: "0.05", "aria-label": label } });
     input.value = String(value);
     input.addEventListener("input", () => onChange(Number(input.value)));
   }

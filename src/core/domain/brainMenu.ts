@@ -6,6 +6,7 @@ export const DEFAULT_ORBIT_MODE: OrbitMode = "drift";
 export const DEFAULT_ORBIT_COLOR = "default";
 export const DEFAULT_ORBIT_OPACITY = 0.35;
 export const DEFAULT_TOASTS = true;
+export const DEFAULT_ORBIT_SPEED = 1;
 
 /** `"default"`, `"rainbow"`, or a lowercase `#rrggbb` string. */
 export type OrbitColor = string;
@@ -44,6 +45,11 @@ export const normalizeOrbitMode = (v: unknown): OrbitMode => (isOrbitMode(v) ? v
 
 export function normalizeOrbitOpacity(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : DEFAULT_ORBIT_OPACITY;
+}
+
+/** Orbit speed multiplier 0..2 (0 freezes orbits); non-numbers fall back to 1. */
+export function normalizeOrbitSpeed(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) ? Math.min(2, Math.max(0, v)) : DEFAULT_ORBIT_SPEED;
 }
 
 export const normalizeToasts = (v: unknown): boolean => (typeof v === "boolean" ? v : DEFAULT_TOASTS);

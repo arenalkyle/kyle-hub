@@ -4,7 +4,7 @@ import {
 } from "three";
 import type { BrainAccessEvent } from "../../core";
 import {
-  applyAccess, endSession, endSubagent, pruneAgents, startSession, startSubagent, zapOf, type Agent, type Agents, type IdentityLookup,
+  applyAccess, endSession, sessionName, endSubagent, pruneAgents, startSession, startSubagent, zapOf, type Agent, type Agents, type IdentityLookup,
 } from "../../core/domain/brainAgents";
 import { tagNames } from "../../core/domain/brainTags";
 import { moonPosition, orbitPath, orbitPosition, ORBIT_LINE_POINTS, type OrbitMode } from "../../core/domain/brainOrbit";
@@ -107,6 +107,8 @@ export interface OrbitOptions {
   color: string;
   /** Orbit line opacity 0..1. */
   opacity: number;
+  /** Orbit speed multiplier 0..2 (default 1). */
+  speed?: number;
 }
 
 const DEFAULT_ORBIT: OrbitOptions = { mode: "drift", color: "default", opacity: 0.35 };
@@ -134,6 +136,9 @@ export class AgentLayer {
   private readonly zapLines = new LineSegments(buffers(MAX_ZAPS * ZAP_STRANDS_MAX * ZAP_SEGMENTS, 2, false), this.lineMat);
   private readonly rings = new LineSegments(buffers(MAX_SESSIONS * RING_SEGMENTS, 2, false), this.lineMat);
   private lastT = 0;
+  /** Orbit clock: advances by dt * speed so changing the speed never makes agents jump. */
+  private orbitT = 0;
+  private lastRefresh = 0;
   private readonly tmp = new Vector3();
 
   constructor(private readonly scene: Scene, private readonly host: AgentLayerHost) {
@@ -162,11 +167,32 @@ export class AgentLayer {
     this.agents = kind === "started" ? startSession(this.agents, sessionId, Date.now(), this.host.identity) : endSession(this.agents, sessionId);
   }
 
+  /** Re-reads pane titles so a tag follows its session's title (first prompt, rename) after the session started. */
+  private refreshIdentities(): void {
+    let next: Map<string, Agent> | undefined;
+    for (const a of this.agents.values()) {
+      if (a.parentId) continue;
+      const found = this.host.identity(a.id);
+      if (!found) continue;
+      const name = sessionName(a.id, found);
+      const titled = !!found.title?.trim();
+      if (name === a.name && titled === a.titled) continue;
+      next ??= new Map(this.agents);
+      next.set(a.id, { ...a, name, titled });
+    }
+    if (next) this.agents = next;
+  }
+
   /** Rewrites the GPU buffers; `t` is scene time in seconds. */
   frame(t: number, orbit: OrbitOptions = DEFAULT_ORBIT): void {
     const now = Date.now();
     const dt = this.lastT === 0 ? 0.016 : Math.min(t - this.lastT, 0.25);
     this.lastT = t;
+    this.orbitT += dt * (orbit.speed ?? 1);
+    if (now - this.lastRefresh > 1000) {
+      this.lastRefresh = now;
+      this.refreshIdentities();
+    }
     this.agents = pruneAgents(this.agents, now);
     const target = Math.max(10, this.host.radius());
     this.shownRadius = this.shownRadius === 0 ? target : this.shownRadius + (target - this.shownRadius) * (1 - Math.exp(-dt * 3));
@@ -177,13 +203,13 @@ export class AgentLayer {
     const sessions: Agent[] = [], moons: Agent[] = [];
     for (const a of this.agents.values()) (a.parentId ? moons : sessions).push(a);
     for (const a of sessions) {
-      const p = orbitPosition(orbit.mode, a.slot, t, R);
+      const p = orbitPosition(orbit.mode, a.slot, this.orbitT, R);
       this.where.set(a.id, new Vector3(p[0], p[1], p[2]));
     }
     for (const a of moons) {
       const parent = this.where.get(a.parentId!);
       if (!parent) continue;
-      const p = moonPosition([parent.x, parent.y, parent.z], a.slot, t, R);
+      const p = moonPosition([parent.x, parent.y, parent.z], a.slot, this.orbitT, R);
       this.where.set(a.id, new Vector3(p[0], p[1], p[2]));
     }
 

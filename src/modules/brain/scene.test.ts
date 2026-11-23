@@ -21,8 +21,9 @@ describe("layoutFor", () => {
 
 describe("brainOptions", () => {
   it("clamps and defaults", () => {
-    expect(brainOptions({})).toEqual({ bloom: 1.1, nodeSize: 1, theme: "multiverse", shape: "brain", rotateSpeed: 0.3, orbitMode: "drift", orbitColor: "default", orbitOpacity: 0.35, toasts: true });
+    expect(brainOptions({})).toEqual({ bloom: 1.1, nodeSize: 1, theme: "multiverse", shape: "brain", rotateSpeed: 0.3, orbitMode: "drift", orbitColor: "default", orbitOpacity: 0.35, orbitSpeed: 1, toasts: true });
     expect(brainOptions({ orbitMode: "solar", orbitColor: "#aabbcc", orbitOpacity: 5 })).toMatchObject({ orbitMode: "solar", orbitColor: "#aabbcc", orbitOpacity: 1 });
+    expect(brainOptions({ orbitSpeed: 9 }).orbitSpeed).toBe(2);
     expect(brainOptions({ bloomStrength: 9, nodeSize: -1 })).toMatchObject({ bloom: 3, nodeSize: 0.4 });
     expect(brainOptions({ theme: "inkblot", shape: "galaxy", rotateSpeed: 7 })).toMatchObject({ theme: "inkblot", shape: "galaxy", rotateSpeed: 1 });
     expect(brainOptions({ theme: "x", shape: "x", rotateSpeed: "x" })).toMatchObject({ theme: "multiverse", shape: "brain", rotateSpeed: 0.3 });

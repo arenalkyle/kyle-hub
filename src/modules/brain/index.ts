@@ -17,6 +17,7 @@ import {
   DEFAULT_ORBIT_COLOR,
   DEFAULT_ORBIT_MODE,
   DEFAULT_ORBIT_OPACITY,
+  DEFAULT_ORBIT_SPEED,
   DEFAULT_TOASTS,
   isOrbitHex,
   normalizeOrbitColor,
@@ -45,6 +46,7 @@ export const brainSettings: ModuleSettingsDef = {
     orbitMode: DEFAULT_ORBIT_MODE,
     orbitColor: DEFAULT_ORBIT_COLOR,
     orbitOpacity: DEFAULT_ORBIT_OPACITY,
+    orbitSpeed: DEFAULT_ORBIT_SPEED,
     toasts: DEFAULT_TOASTS,
   },
   enabledByDefault: false,
@@ -150,6 +152,10 @@ export const brainModule: HubModule = {
         new Setting(el)
           .setName("Orbit mode")
           .addDropdown((d) => d.addOptions(Object.fromEntries(ORBIT_MODES.map((m) => [m, m]))).setValue(normalizeOrbitMode(raw.orbitMode)).onChange((v) => save({ orbitMode: v })));
+        new Setting(el)
+          .setName("Orbit speed")
+          .setDesc("0 freezes orbits, 2 is double speed. Applies live.")
+          .addSlider((sl) => sl.setLimits(0, 2, 0.05).setValue(cur.orbitSpeed).setDynamicTooltip().onChange((v) => save({ orbitSpeed: v })));
         new Setting(el)
           .setName("Orbit colour")
           .addDropdown((d) =>

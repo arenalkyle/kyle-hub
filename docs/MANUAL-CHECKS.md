@@ -289,11 +289,13 @@ Before you start: close Obsidian and run `npm run deploy` once, so the locked no
 - [ ] Each running session orbits the brain from start to end in its own colour; sub-agents appear as smaller moons.
 - [ ] A read or write zaps a lightning line to the note; writes are brighter; no flights or trails.
 - [ ] Orbit mode (drift, still, solar, atom) and orbit line colour and opacity settings apply live.
+- [ ] Orbit speed slider (0–2, default 1) changes orbit speed live without agents jumping; 0 freezes them.
 - [ ] A session idle for 10 minutes is still orbiting.
 - [ ] A sub-agent's moon stays while the sub-agent is quiet (for example, during a long command) and disappears when it finishes.
 
 ### 18.2 Name tags and toasts — LOCK-81
 
+- [ ] A Claude session's tag says Claude (or its first prompt / title), never the shell name.
 - [ ] Agent name tags are always visible; clashing titles show the short ID; sub-agent tags are smaller.
 - [ ] Toasts appear bottom-right in the Command Center only: one per agent, merged within 2 s, gone after 3 s, max 5 plus a faded 6th.
 - [ ] Hover pauses a toast; click opens its note; toasts can be turned off in settings.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CUSTOM_ORBIT_COLOR, DEFAULT_ORBIT_OPACITY, nextOrbitColor, normalizeOrbitColor, normalizeOrbitMode, normalizeOrbitOpacity, normalizeToasts, orbitColorKind, planBrainLeafMigration } from "./brainMenu";
+import { CUSTOM_ORBIT_COLOR, DEFAULT_ORBIT_OPACITY, nextOrbitColor, normalizeOrbitColor, normalizeOrbitMode, normalizeOrbitOpacity, normalizeOrbitSpeed, normalizeToasts, orbitColorKind, planBrainLeafMigration } from "./brainMenu";
 
 describe("normalizeOrbitColor", () => {
   it("keeps the named modes", () => {
@@ -67,5 +67,20 @@ describe("planBrainLeafMigration", () => {
   });
   it("closes every brain leaf when a Command Center is already open", () => {
     expect(planBrainLeafMigration(2, true)).toEqual({ convert: 0, close: 2 });
+  });
+});
+
+describe("normalizeOrbitSpeed", () => {
+  it("passes valid values and clamps to 0..2", () => {
+    expect(normalizeOrbitSpeed(0.5)).toBe(0.5);
+    expect(normalizeOrbitSpeed(0)).toBe(0);
+    expect(normalizeOrbitSpeed(-1)).toBe(0);
+    expect(normalizeOrbitSpeed(5)).toBe(2);
+  });
+  it("falls back to 1 for non-numbers and NaN", () => {
+    expect(normalizeOrbitSpeed(undefined)).toBe(1);
+    expect(normalizeOrbitSpeed("2")).toBe(1);
+    expect(normalizeOrbitSpeed(NaN)).toBe(1);
+    expect(normalizeOrbitSpeed(Infinity)).toBe(1);
   });
 });

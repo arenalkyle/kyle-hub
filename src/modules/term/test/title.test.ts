@@ -18,6 +18,19 @@ describe("resolveTitle", () => {
   });
 });
 
+describe("resolveTitle Claude fallback", () => {
+  const profileName = "PowerShell 5.1";
+  it("falls back to Claude instead of the profile name", () => {
+    expect(resolveTitle({ profileName, claude: true })).toBe("Claude");
+    expect(resolveTitle({ profileName, claude: false })).toBe(profileName);
+  });
+  it("keeps manual > osc > first prompt above the Claude fallback", () => {
+    expect(resolveTitle({ manual: "Mine", osc: "T", firstPrompt: "p", profileName, claude: true })).toBe("Mine");
+    expect(resolveTitle({ osc: "T", firstPrompt: "p", profileName, claude: true })).toBe("T");
+    expect(resolveTitle({ firstPrompt: "p", profileName, claude: true })).toBe("p");
+  });
+});
+
 describe("formatAge", () => {
   it("formats units", () => {
     expect(formatAge(5000)).toBe("5s");

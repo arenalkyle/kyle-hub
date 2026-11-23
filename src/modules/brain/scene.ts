@@ -41,6 +41,8 @@ export interface BrainOptions {
   rotateSpeed: number;
   /** Agent orbit mode, orbit line colour (`default`, `rainbow` or hex) and line opacity 0..1. */
   orbitMode: OrbitMode;
+  /** Orbit speed multiplier 0..2. */
+  orbitSpeed: number;
   orbitColor: string;
   orbitOpacity: number;
   /** Show agent activity toasts (Command Center). */
@@ -487,7 +489,7 @@ export class BrainScene implements BrainHandle {
     const dt = this.lastT === 0 ? 0 : Math.min(0.1, Math.max(0, t - this.lastT));
     this.lastT = t;
     this.controls.update(dt);
-    this.agentLayer.frame(t, { mode: o.orbitMode, color: o.orbitColor, opacity: o.orbitOpacity });
+    this.agentLayer.frame(t, { mode: o.orbitMode, color: o.orbitColor, opacity: o.orbitOpacity, speed: o.orbitSpeed });
     this.composer.render();
     this.paintLabels();
     this.paintRegions();

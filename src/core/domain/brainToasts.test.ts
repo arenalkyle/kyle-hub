@@ -136,6 +136,12 @@ describe("tagNames", () => {
     expect(n.get("1de333")).toBe("docs");
   });
 
+  it("splits two sessions that are both titled Claude", () => {
+    const n = tagNames(both([["3fa111", "Claude"], ["9b1222", "Claude"]]));
+    expect(n.get("3fa111")).toBe("Claude · 3fa");
+    expect(n.get("9b1222")).toBe("Claude · 9b1");
+  });
+
   it("uses folder plus ID for sessions with no pane", () => {
     const n = tagNames(build(["77a999", undefined]));
     expect(n.get("77a999")).toBe("kyle-hub · 77a");
