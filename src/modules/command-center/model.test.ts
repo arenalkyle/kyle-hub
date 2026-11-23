@@ -39,7 +39,8 @@ function fullReader(): Record<keyof CommandCenterReader, Record<string, unknown>
     tickets: { list: () => issues, queue: () => [issues[1]], statuses: () => STATUSES },
     sessions: { list: () => [{ id: "a", state: "working" }, { id: "b", state: "exited" }] },
     attention: { list: () => [{ sessionId: "a", ticketId: "T-2", runId: "r1", reason: "stalled", since: NOW.getTime() }] },
-    retro: { status: async () => ({ sessionsSince: 4, nudgeAt: 10, lastRetroAt: "2026-11-15T10:00:00Z" }) },
+    retro: { status: async () => ({ sessionsSince: 4, nudgeAt: 10, lastRetroAt: "2026-11-15T10:00:00Z" }), perform: async () => ({ created: [], seenAgain: [], skipped: [], recurred: [], resolved: [] }) },
+    gaps: { read: () => undefined, onChange: () => () => undefined },
     brain: { health: () => ({ vault: { score: 87 }, repos: {} }) },
     usage: { snapshot: async () => [] },
     logs: {

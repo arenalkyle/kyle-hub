@@ -1,6 +1,7 @@
-import { ItemView, type WorkspaceLeaf } from "obsidian";
-import type { BrainAccessEvent, BrainHandle, Hub } from "../../core";
+import { ItemView, Notice, type WorkspaceLeaf } from "obsidian";
+import type { BrainAccessEvent, BrainHandle, Hub, RetroStatus } from "../../core";
 import type { BrainInventory } from "../../core/brain/inventory";
+import { DEFAULT_GAPS_CUTOFF, noteName, worstFirst } from "../../core/domain/gapsRank";
 import { METRICS, SensorSampler, sparkPoints } from "./sensors";
 import {
   activeAgentCount,
@@ -59,6 +60,8 @@ export class CommandCenterView extends ItemView {
   private scroller: HTMLElement | undefined;
   private brainHandle: BrainHandle | undefined;
   private sensors = new SensorSampler(SENSOR_HISTORY, () => this.paintSystem());
+  /** Latest retro status read on refresh; the Retro card paints from it. */
+  private retro: Part<RetroStatus> | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -82,6 +85,8 @@ export class CommandCenterView extends ItemView {
     this.scroller.createDiv({ text: "Loading…" });
     const bump = (): void => void this.refresh();
     for (const ev of BUS_EVENTS) this.offs.push(this.hub.events.on(ev, bump));
+    const gaps = this.hub.services.get("gaps");
+    if (gaps) this.offs.push(gaps.onChange(bump));
     this.offs.push(this.hub.events.on("brain:access", (e) => this.onAccess(e)));
     this.offs.push(this.hub.events.on("brain:human-open", (e) => this.addLive({ at: Date.parse(e.t), kind: "human", path: e.path })));
     this.timer = window.setInterval(bump, REFRESH_MS);
@@ -110,6 +115,7 @@ export class CommandCenterView extends ItemView {
     try {
       const data = await loadCommandCenterData(this.reader(), now);
       if (!this.isOpen || seq !== this.seq) return;
+      this.retro = data.retro;
       if (data.vitals.state === "ok") this.live = mergeVitalsSamples(this.live, data.vitals.value, now.getTime());
       let inv: BrainInventory | undefined;
       try {
@@ -153,13 +159,7 @@ export class CommandCenterView extends ItemView {
         li.addEventListener("click", () => void this.focusTicket(r.ticketId));
       }
     });
-    const retro = tile("retro");
-    if (retro) {
-      const c = left.createDiv({ cls: "kh-command-center-card" });
-      c.createEl("h4", { text: "Retro" });
-      c.createDiv({ text: retro.value });
-      if (retro.detail) c.createDiv({ cls: "kh-command-center-empty", text: retro.detail });
-    }
+    this.paintRetro(left);
     this.paintSection(left, "Recent runs", m.recentRuns, (list, rows) => {
       if (rows.length === 0) list.createEl("li", { text: "No runs yet" });
       for (const r of rows) {
@@ -327,8 +327,67 @@ export class CommandCenterView extends ItemView {
     if (t.detail) card.createDiv({ cls: "kh-command-center-tile-detail", text: t.detail });
   }
 
+  /** Retro card: Perform Retro (needs the term module), the last-retro marker and nudge, then one scrolling box with last results and doc gaps. */
+  private paintRetro(el: HTMLElement): void {
+    const card = el.createDiv({ cls: "kh-command-center-card kh-command-center-capped kh-command-center-retro" });
+    card.createEl("h4", { text: "Retro" });
+    const svc = this.reader().retro;
+    if (svc) {
+      const btn = card.createEl("button", { text: "Perform Retro", cls: "kh-command-center-retro-btn", attr: { "data-kh-retro": "perform" } });
+      btn.onclick = () => {
+        btn.disabled = true;
+        void svc
+          .perform()
+          .then((r) => new Notice(`Retro done. ${r.created.length} new ticket${r.created.length === 1 ? "" : "s"}${r.seenAgain.length > 0 ? `, ${r.seenAgain.length} seen again` : ""}.`, 8000))
+          .catch((e: unknown) => new Notice(`Retro failed: ${(e as Error).message}`, 10000))
+          .finally(() => {
+            btn.disabled = false;
+            void this.refresh();
+          });
+      };
+    }
+    const st = this.retro;
+    const r = st?.state === "ok" ? st.value : undefined;
+    if (st?.state === "disabled" || !svc) card.createDiv({ cls: "kh-command-center-empty", text: "module disabled" });
+    else if (st?.state === "error") card.createDiv({ cls: "kh-command-center-empty", text: "unavailable" });
+    else if (r) {
+      card.createDiv({ cls: "kh-command-center-retro-marker", text: `Last retro: ${r.lastRetroAt === undefined ? "never" : ageText(Date.now() - Date.parse(r.lastRetroAt))}` });
+      card.createDiv({ cls: `kh-command-center-retro-since${r.sessionsSince >= r.nudgeAt ? " is-nudge" : ""}`, text: `${r.sessionsSince} sessions since last retro` });
+    }
+    const box = card.createDiv({ cls: "kh-command-center-retro-box" });
+    box.createDiv({ cls: "kh-command-center-sub", text: "Last retro results" });
+    const last = r?.lastRetro;
+    if (!last || last.ticketIds.length + last.clusters.length === 0) box.createDiv({ cls: "kh-command-center-empty", text: "No retro results yet." });
+    else {
+      for (const c of last.clusters) box.createDiv({ cls: "kh-command-center-empty", text: `Cluster: ${c}` });
+      const list = box.createEl("ul", { cls: "kh-command-center-list" });
+      for (const id of last.ticketIds) {
+        const li = list.createEl("li", { cls: "kh-command-center-row", text: id });
+        li.addEventListener("click", (e) => this.hub.services.get("tickets")?.open?.(id, e.ctrlKey || e.metaKey));
+      }
+    }
+    box.createDiv({ cls: "kh-command-center-sub", text: "Doc gaps" });
+    const gaps = this.reader().gaps;
+    const report = gaps?.read();
+    const cutoff = this.hub.settings.module("commandCenter").gapsCutoff;
+    if (!gaps) box.createDiv({ cls: "kh-command-center-empty", text: "module disabled" });
+    else if (report === undefined) box.createDiv({ cls: "kh-command-center-empty", text: "No gaps data yet. Run `kh maintain`." });
+    else {
+      const rows = worstFirst(report.grades, typeof cutoff === "number" ? cutoff : DEFAULT_GAPS_CUTOFF);
+      if (rows.length === 0) box.createDiv({ cls: "kh-command-center-empty", text: "No notes under the cutoff." });
+      const list = box.createEl("ul", { cls: "kh-command-center-list" });
+      for (const g of rows) {
+        const li = list.createEl("li", { cls: "kh-command-center-row kh-command-center-gap", attr: { title: g.path } });
+        li.createSpan({ cls: `kh-command-center-gap-grade kh-command-center-gap-${g.grade}`, text: g.grade });
+        li.createSpan({ cls: "kh-command-center-gap-name", text: noteName(g.path) });
+        li.createDiv({ cls: "kh-command-center-gap-reason", text: `${g.score} · ${g.reasons}` });
+        li.addEventListener("click", () => void this.app.workspace.openLinkText(g.path, "", "tab"));
+      }
+    }
+  }
+
   private paintSection<T>(el: HTMLElement, title: string, p: Part<T[]>, fill: (list: HTMLElement, rows: T[]) => void): void {
-    const card = el.createDiv({ cls: "kh-command-center-card" });
+    const card = el.createDiv({ cls: "kh-command-center-card kh-command-center-capped" });
     card.createEl("h4", { text: title });
     if (p.state !== "ok") {
       card.createDiv({ cls: "kh-command-center-empty", text: degradedText(p) });
@@ -336,6 +395,14 @@ export class CommandCenterView extends ItemView {
     }
     fill(card.createEl("ul", { cls: "kh-command-center-list" }), p.value);
   }
+}
+
+/** "just now", "12 min ago", "3 h ago", "2 d ago". */
+function ageText(ms: number): string {
+  if (ms < 60_000) return "just now";
+  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)} min ago`;
+  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)} h ago`;
+  return `${Math.floor(ms / 86_400_000)} d ago`;
 }
 
 function degradedText(p: Part<unknown>): string {

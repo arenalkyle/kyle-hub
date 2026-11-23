@@ -58,16 +58,25 @@ export function createRetroService(deps: RetroServiceDeps): RetroService {
     async status(): Promise<RetroStatus> {
       const logs = need(deps.logs(), "Logs");
       let last: string | undefined;
+      let lastEntry: RetroStatus["lastRetro"];
       let since = 0;
       for (const profile of [vaultProfile()]) {
         const s = readRetroState(stateFile(profile));
         if (s.lastRetroAt !== undefined && (last === undefined || s.lastRetroAt > last)) last = s.lastRetroAt;
+        const latest = s.history.at(-1);
+        if (latest !== undefined && (lastEntry === undefined || latest.at > lastEntry.at)) lastEntry = { at: latest.at, clusters: latest.clusters, ticketIds: latest.ticketIds };
         const runs = (await logs.runs({ since: s.watermark })).filter((r) => r.profile === profile);
         since += sessionsSinceRetro(runs, s.watermark);
       }
       const t = deps.tickets();
       const gapProposals = t === undefined ? 0 : countWaitingGapProposals(t.list(), t.statuses());
-      return { ...(last !== undefined ? { lastRetroAt: last } : {}), sessionsSince: since, nudgeAt: settings().nudgeAt, gapProposals };
+      return {
+        ...(last !== undefined ? { lastRetroAt: last } : {}),
+        ...(lastEntry !== undefined ? { lastRetro: lastEntry } : {}),
+        sessionsSince: since,
+        nudgeAt: settings().nudgeAt,
+        gapProposals,
+      };
     },
 
     async perform() {

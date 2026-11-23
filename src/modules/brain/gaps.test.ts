@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { GapsService } from "../../core";
 import { GAPS_VERSION, type GapsReport, type GradedNote } from "../../core/domain/gaps";
 import { createGapsService, readGapsReport } from "./gaps";
-import { noteName, worstFirst } from "./gapsPanel";
+import { noteName, worstFirst } from "../../core/domain/gapsRank";
 
 const note = (p: string, score: number): GradedNote => ({
   path: p, grade: "F", score, reasons: "1,900 words", words: 1900, ageDays: 140, maxReadsInSession: 9, undoneEdits: 0, emptySearchesNearby: 0,

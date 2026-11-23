@@ -1,7 +1,5 @@
 import { ItemView, Menu, Modal, Notice, setIcon, type WorkspaceLeaf } from "obsidian";
-import type { GapsReport } from "../../../core/domain/gaps";
 import { COLORS } from "./colors";
-import { gapRows } from "./gapsRows";
 import type TermHost from "./main";
 import type { Session, SessionManager } from "./session-manager";
 import { formatAge } from "./title";
@@ -18,8 +16,8 @@ const STATE_LABEL: Record<AgentState, string> = {
 
 export const VIEW_TYPE = "kh-term-view";
 
-const QUEUE_TABS: readonly (readonly [QueueTabKey, string])[] = [["triage", "Triage"], ["todo", "Todo"], ["gaps", "Gaps"]];
-type QueueTabKey = "triage" | "todo" | "gaps";
+const QUEUE_TABS: readonly (readonly [QueueTabKey, string])[] = [["triage", "Triage"], ["todo", "Todo"]];
+type QueueTabKey = "triage" | "todo";
 
 class ConfirmModal extends Modal {
   constructor(app: TermHost["app"], private message: string, private onYes: () => void) {
@@ -39,7 +37,6 @@ export class TermView extends ItemView {
   private mgr: SessionManager | null = null;
   private unsub: (() => void) | null = null;
   private unsubMute: (() => void) | null = null;
-  private unsubRetro: (() => void) | null = null;
   private ro: ResizeObserver | null = null;
   private sidebar!: HTMLElement;
   private list!: HTMLElement;
@@ -47,7 +44,7 @@ export class TermView extends ItemView {
   private queuePanel!: HTMLElement;
   private queueBody!: HTMLElement;
   private unsubCounts: (() => void) | null = null;
-  /** Tears down the selected tab's content: the tickets React root, or the Gaps subscription. */
+  /** Tears down the selected tab's content: the tickets React root. */
   private unmountQueue: (() => void) | null = null;
   private wrap: HTMLElement | null = null;
   private renamingId: string | null = null;
@@ -133,7 +130,6 @@ export class TermView extends ItemView {
       void this.plugin.saveSettings();
       this.applySidebar();
     };
-    this.buildRetroPanel();
     this.list = this.sidebar.createDiv({ cls: "kh-term-list" });
 
     resizer.addEventListener("pointerdown", (e) => {
@@ -164,7 +160,7 @@ export class TermView extends ItemView {
     else this.refresh();
   }
 
-  /** Right-hand sidebar, same width as the session sidebar and collapsible. Tabs: Triage / Todo (tickets), Gaps (brain). */
+  /** Right-hand sidebar, same width as the session sidebar and collapsible. Tabs: Triage / Todo (tickets). */
   private buildQueuePanel(root: HTMLElement): void {
     this.queuePanel = root.createDiv({ cls: "kh-term-queue-panel" });
     const header = this.queuePanel.createDiv({ cls: "kh-term-header kh-term-queue-header" });
@@ -216,43 +212,9 @@ export class TermView extends ItemView {
       el.toggleClass("is-active", on);
       el.setAttribute("aria-selected", String(on));
     });
-    if (tab === "gaps") {
-      const gaps = this.plugin.hub.services.get("gaps");
-      if (!gaps) {
-        this.queueBody.createDiv({ cls: "kh-term-message", text: "Brain module is disabled. Turn it on in the kyle-hub settings to see gaps." });
-        return;
-      }
-      const list = this.queueBody.createDiv({ cls: "kh-term-gaps" });
-      const render = (): void => this.renderGaps(list, gaps.read());
-      render();
-      this.unmountQueue = gaps.onChange(render);
-      return;
-    }
     const svc = this.plugin.hub.services.get("queuePanel");
     if (svc) this.unmountQueue = svc.mount(this.queueBody, tab);
     else this.queueBody.createDiv({ cls: "kh-term-message", text: "Tickets module is disabled. Turn it on in the kyle-hub settings to see Triage and Todo." });
-  }
-
-  /** Worst-first notes under the cutoff. Click opens the note in a new tab, keeping the terminal view. */
-  private renderGaps(list: HTMLElement, report: GapsReport | undefined): void {
-    list.empty();
-    if (!report) {
-      list.createDiv({ cls: "kh-term-message", text: "No gaps data yet. Run `kh maintain`." });
-      return;
-    }
-    const rows = gapRows(report);
-    if (rows.length === 0) {
-      list.createDiv({ cls: "kh-term-message", text: "No notes under the cutoff." });
-      return;
-    }
-    for (const row of rows) {
-      const item = list.createDiv({ cls: "kh-term-gap", attr: { role: "button", tabindex: "0", title: row.path } });
-      item.onclick = () => void this.app.workspace.openLinkText(row.path, "", "tab");
-      const top = item.createDiv({ cls: "kh-term-gap-top" });
-      top.createSpan({ cls: "kh-term-gap-grade", text: row.grade });
-      top.createSpan({ cls: "kh-term-gap-name", text: row.name });
-      item.createDiv({ cls: "kh-term-gap-reason", text: row.reason });
-    }
   }
 
   private applyQueue(): void {
@@ -274,53 +236,7 @@ export class TermView extends ItemView {
     for (const [k, v] of Object.entries(vars)) this.wrap.style.setProperty(k, v);
   }
 
-  /** Perform Retro button with the watermark and the sessions-since nudge. */
-  private buildRetroPanel(): void {
-    const panel = this.sidebar.createDiv({ cls: "kh-term-retro" });
-    const btn = panel.createEl("button", { text: "Perform Retro", cls: "kh-term-retro-btn", attr: { "data-kh-retro": "perform" } });
-    const last = panel.createDiv({ cls: "kh-term-retro-last", attr: { "data-kh-retro": "last" } });
-    const since = panel.createDiv({ cls: "kh-term-retro-since", attr: { "data-kh-retro": "since" } });
-    const svc = () => this.plugin.retroService();
-    const refresh = async (): Promise<void> => {
-      try {
-        const s = await svc().status();
-        last.setText(`Last retro: ${s.lastRetroAt === undefined ? "never" : Date.now() - Date.parse(s.lastRetroAt) < 60000 ? "just now" : `${formatAge(Date.now() - Date.parse(s.lastRetroAt))} ago`}`);
-        since.setText(`${s.sessionsSince} sessions since last retro`);
-        since.toggleClass("is-nudge", s.sessionsSince >= s.nudgeAt);
-      } catch {
-        last.setText("Last retro: unavailable");
-        since.setText("");
-      }
-    };
-    btn.onclick = () => {
-      btn.disabled = true;
-      void svc()
-        .perform()
-        .then((r) => {
-          const lines = r.created.map((c) => `${c.id} (${c.type}): ${c.title}`);
-          new Notice(
-            `Retro done. ${r.created.length} new ticket${r.created.length === 1 ? "" : "s"}${r.seenAgain.length > 0 ? `, ${r.seenAgain.length} seen again` : ""}.${lines.length > 0 ? "\n" + lines.join("\n") : ""}`,
-            10000,
-          );
-        })
-        .catch((e: unknown) => new Notice(`Retro failed: ${(e as Error).message}`, 10000))
-        .finally(() => {
-          btn.disabled = false;
-          void refresh();
-        });
-    };
-    void refresh();
-    const off = svc().subscribe(() => void refresh());
-    const timer = window.setInterval(() => void refresh(), 60000);
-    this.unsubRetro = () => {
-      off();
-      window.clearInterval(timer);
-    };
-  }
-
   override async onClose(): Promise<void> {
-    this.unsubRetro?.();
-    this.unsubRetro = null;
     this.unsubCounts?.();
     this.unsubCounts = null;
     this.unmountQueue?.();

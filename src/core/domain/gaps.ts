@@ -1,6 +1,6 @@
 /**
  * Vault gaps report (LOCK-68). Pure: the gatherer (`core/gaps`) supplies facts, this computes grades and gaps.
- * `GapsReport` is the schema of `<vault>/.kyle-hub/gaps/latest.json`, read by Retro detectors, the Brain tab and the terminal sidebar.
+ * `GapsReport` is the schema of `<vault>/.kyle-hub/gaps/latest.json`, read by Retro detectors and the Command Center Retro card.
  */
 import { DEFAULT_GRADING, gradeNote, type Grade, type GradingConfig } from "./grading";
 

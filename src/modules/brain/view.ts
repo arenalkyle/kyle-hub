@@ -1,13 +1,11 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { BrainHandle, Hub } from "../../core";
-import { GapsPanel } from "./gapsPanel";
 
 export const BRAIN_VIEW_TYPE = "kh-brain-view";
 
-/** Full-size 3D brain beside a Gaps side panel (LOCK-72). */
+/** Full-size 3D brain. Doc gaps live in the Command Center Retro card (LOCK-80). */
 export class BrainView extends ItemView {
   private handle: BrainHandle | undefined;
-  private gaps: GapsPanel | undefined;
 
   constructor(leaf: WorkspaceLeaf, private readonly hub: Hub) {
     super(leaf);
@@ -19,21 +17,13 @@ export class BrainView extends ItemView {
 
   override async onOpen(): Promise<void> {
     this.contentEl.addClass("kh-brain-view");
-    const split = this.contentEl.createDiv({ cls: "kh-brain-split" });
-    const host = split.createDiv({ cls: "kh-brain-host kh-brain-host-full" });
+    const host = this.contentEl.createDiv({ cls: "kh-brain-host kh-brain-host-full" });
     const svc = this.hub.services.get("brainView");
     if (!svc) host.createDiv({ cls: "kh-brain-empty", text: "3D brain unavailable." });
     else this.handle = svc.mount(host);
-    this.gaps = new GapsPanel(split.createDiv({ cls: "kh-brain-gaps" }), this.hub.services.get("gaps"), {
-      select: (p) => this.handle?.highlight(p),
-      open: (p) => void this.app.workspace.openLinkText(p, "", "tab"),
-    });
-    this.gaps.mount();
   }
 
   override async onClose(): Promise<void> {
-    this.gaps?.dispose();
-    this.gaps = undefined;
     this.handle?.dispose();
     this.handle = undefined;
   }

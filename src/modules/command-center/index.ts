@@ -1,5 +1,6 @@
 import type { Hub, HubModule, ModuleSettingsDef, ServiceRegistry } from "../../core";
 import { DEFAULT_FPS, FPS_CHOICES, normalizeFps } from "../../core/domain/fps";
+import { DEFAULT_GAPS_CUTOFF } from "../../core/domain/gapsRank";
 import { Setting } from "obsidian";
 import { scopeLogs } from "../../core/logs/scoped";
 import { vaultProfileOf } from "../../core/profile";
@@ -13,6 +14,7 @@ const readerFrom = (s: ServiceRegistry, profile: () => ReturnType<typeof vaultPr
   sessions: s.get("sessions"),
   attention: s.get("attention"),
   retro: s.get("retro"),
+  gaps: s.get("gaps"),
   brain: s.get("brain"),
   usage: s.get("usage"),
   logs: ((l) => (l ? scopeLogs(l, profile()) : undefined))(s.get("logs")),
@@ -28,7 +30,7 @@ async function openCommandCenter(hub: Hub): Promise<void> {
 /** `rateUnit` is the Brain Vitals header choice; `fps` is shared with the 3D brain (LOCK-67). */
 export const commandCenterSettings: ModuleSettingsDef = {
   id: "commandCenter",
-  defaults: { rateUnit: "hour", fps: DEFAULT_FPS },
+  defaults: { rateUnit: "hour", fps: DEFAULT_FPS, gapsCutoff: DEFAULT_GAPS_CUTOFF },
   enabledByDefault: false,
 };
 

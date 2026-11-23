@@ -121,6 +121,8 @@ export interface AttentionService {
 export interface RetroStatus {
   /** Latest retro across profiles (ISO), if any. */
   lastRetroAt?: string;
+  /** Clusters and tickets (created or seen again) of the latest retro in this vault profile. */
+  lastRetro?: { at: string; clusters: string[]; ticketIds: string[] };
   sessionsSince: number;
   nudgeAt: number;
   /** Gap proposals (LOCK-71) in triage, waiting for a decision. */
@@ -232,7 +234,7 @@ export interface PromoteService {
 
 import type { GapsReport } from "./domain/gaps";
 
-/** Published by the brain module (LOCK-72): reads and watches .kyle-hub/gaps/latest.json. Shared with the terminal Gaps tab (LOCK-73). */
+/** Published by the brain module (LOCK-72): reads and watches .kyle-hub/gaps/latest.json. Read by the Command Center Retro card (LOCK-80). */
 export interface GapsService {
   /** The latest valid report, or undefined when the file is missing or invalid. */
   read(): GapsReport | undefined;

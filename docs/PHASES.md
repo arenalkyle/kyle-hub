@@ -114,7 +114,7 @@ Accounts + usage (Phase 9) come last: they need the ingest index (4), the launch
 
 ## Phase 10–16 — Command Center v2 (parent LOCK-61)
 
-Brain view, vitals and gaps. Almost all deterministic: scripts compute every number; a model only runs when a Retro proposal is accepted. Hivemynd (installed in the vault) is visual reference only; no code copied, no dependency on its bridge. Tickets carry full acceptance criteria; this is the summary.
+Brain view, vitals and gaps. Almost all deterministic: scripts compute every number; a model only runs when a Retro proposal is accepted. Hivemynd (installed in the vault) is visual reference only until Phases 17–19, which allow copying its palettes, shape formulas and orbit maths as data or small functions, with credit in `NOTICE`. Still no dependency on its bridge. Tickets carry full acceptance criteria; this is the summary.
 
 **10.1 Layout (H, LOCK-62)**: outer columns at half width, Spend shrinks to a strip, Usage tile removed, Retro moves to the left column, header tabs `Command Center | Tickets | Terminal | Brain` (Brain view placeholder).
 

@@ -1,4 +1,4 @@
-import type { AttentionInfo, AttentionService, BrainService, LogService, RetroService, RetroStatus, SessionInfo, SessionService, TicketService, UsageService } from "../../core";
+import type { AttentionInfo, AttentionService, BrainService, LogService, GapsService, RetroService, RetroStatus, SessionInfo, SessionService, TicketService, UsageService } from "../../core";
 import { formatCountdown, type AccountUsage } from "../../core/domain/usage";
 import type { BrainHealth } from "../../core/brain/service";
 import type { Issue, StatusDef } from "../../core/domain/types";
@@ -10,7 +10,8 @@ export interface CommandCenterReader {
   tickets?: Pick<TicketService, "list" | "queue" | "statuses">;
   sessions?: Pick<SessionService, "list">;
   attention?: Pick<AttentionService, "list">;
-  retro?: Pick<RetroService, "status">;
+  retro?: Pick<RetroService, "status" | "perform">;
+  gaps?: Pick<GapsService, "read" | "onChange">;
   brain?: Pick<BrainService, "health" | "inventory">;
   logs?: Pick<LogService, "runs" | "spendByDay" | "accessSince" | "humanOpensSince">;
   usage?: Pick<UsageService, "snapshot">;

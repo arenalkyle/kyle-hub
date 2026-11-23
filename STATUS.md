@@ -54,4 +54,4 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
 | 16 Templates | 16.1 · 16.2 · 16.3 | LOCK-64 · LOCK-69 · LOCK-74 | H · S · S | Done |
 | 17 Brain shape + look | 17.1 · 17.2 | LOCK-76 · LOCK-77 | S · S | Backlog |
 | 18 Orbiting agents | 18.1 · 18.2 | LOCK-78 · LOCK-81 | S · S | Backlog |
-| 19 Command Center tidy | 19.1 · 19.2 | LOCK-79 · LOCK-80 | H · H | Backlog |
+| 19 Command Center tidy | 19.1 · 19.2 | LOCK-79 · LOCK-80 | H · H | Backlog · 19.2 Done |

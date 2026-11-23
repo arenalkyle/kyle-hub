@@ -27,7 +27,7 @@ export interface TermSettings {
   sidebarCollapsed: boolean;
   queueCollapsed: boolean;
   /** Selected right-sidebar tab. */
-  queueTab: "triage" | "todo" | "gaps";
+  queueTab: "triage" | "todo";
   sounds: SoundSettings;
   appearance: AppearanceSettings;
 }
