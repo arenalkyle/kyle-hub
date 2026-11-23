@@ -24,7 +24,11 @@ import {
   type VitalsSample,
 } from "./model";
 
+import { BrainPopover, brainIconButton } from "./brainPopover";
+
 export const COMMAND_CENTER_VIEW_TYPE = "kh-command-center-view";
+/** View type of the removed Brain tab; saved workspaces still reference it until migrated (LOCK-79). */
+export const LEGACY_BRAIN_VIEW_TYPE = "kh-brain-view";
 const REFRESH_MS = 60_000;
 const SENSOR_HISTORY = 90;
 
@@ -59,6 +63,8 @@ export class CommandCenterView extends ItemView {
   /** Scrolling layer above the brain backdrop; repainted on every refresh (the backdrop is not). */
   private scroller: HTMLElement | undefined;
   private brainHandle: BrainHandle | undefined;
+  /** Brain Vitals menu; lives on the view root so the card repaints don't close it. */
+  private menu: BrainPopover | undefined;
   private sensors = new SensorSampler(SENSOR_HISTORY, () => this.paintSystem());
   /** Latest retro status read on refresh; the Retro card paints from it. */
   private retro: Part<RetroStatus> | undefined;
@@ -80,7 +86,22 @@ export class CommandCenterView extends ItemView {
     this.isOpen = true;
     this.contentEl.addClass("kh-command-center");
     this.mountBrainBackdrop();
-    this.scroller = this.contentEl.createDiv({ cls: "kh-command-center-scroll" });
+    this.menu = new BrainPopover({
+      host: this.contentEl,
+      brain: () => this.hub.settings.module("brain"),
+      rateUnit: () => normalizeRateUnit(this.hub.settings.module("commandCenter").rateUnit),
+      setRateUnit: (unit) => {
+        this.hub.settings.module("commandCenter").rateUnit = unit;
+        void this.hub.save();
+        this.paintBrain();
+      },
+      saveBrain: (patch) => {
+        Object.assign(this.hub.settings.module("brain"), patch);
+        void this.hub.save();
+      },
+      handle: () => this.brainHandle,
+    });
+    this.scroller =this.contentEl.createDiv({ cls: "kh-command-center-scroll" });
     this.scroller.createEl("h3", { text: "Command Center", cls: "kh-command-center-title" });
     this.scroller.createDiv({ text: "Loading…" });
     const bump = (): void => void this.refresh();
@@ -96,6 +117,8 @@ export class CommandCenterView extends ItemView {
 
   override async onClose(): Promise<void> {
     this.isOpen = false;
+    this.menu?.dispose();
+    this.menu = undefined;
     this.brainHandle?.dispose();
     this.brainHandle = undefined;
     this.brainHost?.remove();
@@ -236,14 +259,14 @@ export class CommandCenterView extends ItemView {
     const head = box.createDiv({ cls: "kh-command-center-vitals-head" });
     head.createEl("h4", { text: "Brain Vitals" });
     const { bt, inv } = this.brainState;
-    if (!bt || bt.state === "disabled") return void box.createDiv({ cls: "kh-command-center-empty", text: "module disabled" });
+    const enabled = !!bt && bt.state !== "disabled";
+    if (enabled) {
+      const icon = brainIconButton(head);
+      icon.addEventListener("click", () => this.menu?.toggle(icon));
+      this.menu?.setAnchor(icon);
+    } else this.menu?.close(false);
+    if (!bt || !enabled) return void box.createDiv({ cls: "kh-command-center-empty", text: "module disabled" });
     const unit = normalizeRateUnit(this.hub.settings.module("commandCenter").rateUnit);
-    const toggle = head.createEl("button", { cls: "kh-command-center-unit", text: unit === "minute" ? "per min" : "per hour", attr: { title: "Switch the notes-read rate unit" } });
-    toggle.addEventListener("click", () => {
-      this.hub.settings.module("commandCenter").rateUnit = unit === "minute" ? "hour" : "minute";
-      void this.hub.save();
-      this.paintBrain();
-    });
     box.createDiv({ cls: "kh-command-center-brain-score", text: bt.state === "ok" ? `${bt.value} / 100` : bt.value });
     if (inv) {
       const counts = box.createDiv({ cls: "kh-command-center-counts" });

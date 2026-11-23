@@ -18,7 +18,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import type { BrainAccessEvent, BrainHandle } from "../../core";
+import type { BrainAccessEvent, BrainFolderChoice, BrainHandle } from "../../core";
 import type { IdentityLookup } from "../../core/domain/brainAgents";
 import { buildGraph, inFolder, nodeLabel, parentFolder, ROOT_FOLDER, withFolders, type BrainGraph } from "../../core/domain/brainGraph";
 import { countReads, heatOf, type ReadAccess, type ReadCounts } from "../../core/domain/brainHeat";
@@ -188,7 +188,6 @@ export class BrainScene implements BrainHandle {
   private hovered: number | undefined;
   private hoverToken = 0;
   private time = 0;
-  private folderSelect: HTMLSelectElement;
   private labels: HTMLElement;
   private readonly labelEls = new Map<string, HTMLElement>();
   private mtimes: number[] = [];
@@ -288,8 +287,6 @@ export class BrainScene implements BrainHandle {
     this.labels = host.createDiv({ cls: "kh-brain-labels" });
     this.tip = host.createDiv({ cls: "kh-brain-tip" });
     this.tip.hide();
-    this.folderSelect = host.createEl("select", { cls: "dropdown kh-brain-folders", attr: { "aria-label": "Focus a folder" } });
-    this.folderSelect.addEventListener("change", () => this.focusFolder(this.folderSelect.value || null));
     const onMove = (ev: PointerEvent): void => {
       const r = canvas.getBoundingClientRect();
       const x = ev.clientX - r.left, y = ev.clientY - r.top;
@@ -404,7 +401,6 @@ export class BrainScene implements BrainHandle {
     this.agentLayer.dispose();
     this.tip.remove();
     this.labels.remove();
-    this.folderSelect.remove();
     this.nebulaMat.dispose();
     this.nodeMat.dispose();
     this.lineMat.dispose();
@@ -712,9 +708,8 @@ export class BrainScene implements BrainHandle {
   }
 
   /** Dims everything outside `folder` and flies the camera to it; null shows the whole vault. */
-  private focusFolder(folder: string | null): void {
+  focusFolder(folder: string | null): void {
     this.focus = folder === ROOT_FOLDER ? null : folder;
-    this.folderSelect.value = this.focus ?? "";
     this.gate.input(performance.now());
     this.applyAttributes();
     if (this.graph.paths.length === 0) return;
@@ -739,18 +734,20 @@ export class BrainScene implements BrainHandle {
     };
   }
 
-  private fillFolderSelect(): void {
-    const sel = this.folderSelect;
-    sel.empty();
-    sel.createEl("option", { text: "All folders", value: "" });
-    const folders = this.graph.paths.filter((p, i) => this.graph.kinds[i] === "folder" && p !== ROOT_FOLDER);
-    for (const f of folders) {
-      const n = this.graph.paths.filter((p, i) => this.graph.kinds[i] === "note" && inFolder(p, f)).length;
-      const depth = f.split("/").length - 2;
-      sel.createEl("option", { text: `${"\u00A0\u00A0".repeat(depth)}${nodeLabel(f)} (${n})`, value: f });
-    }
-    sel.value = this.focus ?? "";
-    sel.toggle(folders.length > 0);
+  /** Folders of the current graph (root excluded), outermost first, for the focus picker. */
+  folderChoices(): BrainFolderChoice[] {
+    return this.graph.paths
+      .filter((p, i) => this.graph.kinds[i] === "folder" && p !== ROOT_FOLDER)
+      .map((f) => ({
+        path: f,
+        name: nodeLabel(f),
+        depth: f.split("/").length - 2,
+        notes: this.graph.paths.filter((p, i) => this.graph.kinds[i] === "note" && inFolder(p, f)).length,
+      }));
+  }
+
+  focused(): string | null {
+    return this.focus;
   }
 
   /** Name tags that follow each agent on screen. */
@@ -820,7 +817,6 @@ export class BrainScene implements BrainHandle {
     }
     const n = graph.paths.length;
     this.hovered = undefined;
-    this.fillFolderSelect();
     if (this.focus && !graph.paths.includes(this.focus)) this.focus = null;
     if (n === 0) return;
     this.targets.clear();

@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { Hub, HubModule, ModuleSettingsDef } from "../../core";
+import type { HubModule, ModuleSettingsDef } from "../../core";
 import { createBrainService, type RepoEntry } from "../../core/brain/service";
 import { DEFAULT_HEALTH_WEIGHTS, type HealthWeights } from "../../core/brain/health";
 import { createConventionDocs } from "./conventions";
@@ -8,28 +8,51 @@ import { Notice, Setting, TFile } from "obsidian";
 import { planPromote, promoteEligible, scrubOptionsFrom } from "../../core/domain/promote";
 import { vaultProfileOf } from "../../core/profile";
 import { PromoteModal } from "./promoteModal";
-import { BRAIN_VIEW_TYPE, BrainView } from "./view";
 import { BrainScene } from "./scene";
 import { createGapsService } from "./gaps";
 import { DEFAULT_ROTATE_SPEED } from "../../core/domain/autoRotate";
-import { DEFAULT_THEME } from "../../core/domain/brainTheme";
+import { BRAIN_THEMES, DEFAULT_THEME } from "../../core/domain/brainTheme";
+import { SHAPES } from "../../core/domain/brainShape";
+import {
+  DEFAULT_ORBIT_COLOR,
+  DEFAULT_ORBIT_MODE,
+  DEFAULT_ORBIT_OPACITY,
+  DEFAULT_TOASTS,
+  isOrbitHex,
+  normalizeOrbitColor,
+  normalizeOrbitMode,
+  normalizeOrbitOpacity,
+  normalizeToasts,
+  nextOrbitColor,
+  ORBIT_MODES,
+  orbitColorKind,
+} from "../../core/domain/brainMenu";
 import { brainOptions, createBrainSource, DEFAULT_BLOOM, DEFAULT_NODE_SIZE, DEFAULT_SHAPE } from "./source";
 
 export const brainSettings: ModuleSettingsDef = {
   id: "brain",
-  defaults: { autoFindings: false, ignoreSymbols: {}, healthWeights: { ...DEFAULT_HEALTH_WEIGHTS }, bloomStrength: DEFAULT_BLOOM, nodeSize: DEFAULT_NODE_SIZE, layoutCache: {}, shapeCache: {}, theme: DEFAULT_THEME, shape: DEFAULT_SHAPE, rotateSpeed: DEFAULT_ROTATE_SPEED },
+  defaults: {
+    autoFindings: false,
+    ignoreSymbols: {},
+    healthWeights: { ...DEFAULT_HEALTH_WEIGHTS },
+    bloomStrength: DEFAULT_BLOOM,
+    nodeSize: DEFAULT_NODE_SIZE,
+    layoutCache: {},
+    shapeCache: {},
+    theme: DEFAULT_THEME,
+    shape: DEFAULT_SHAPE,
+    rotateSpeed: DEFAULT_ROTATE_SPEED,
+    orbitMode: DEFAULT_ORBIT_MODE,
+    orbitColor: DEFAULT_ORBIT_COLOR,
+    orbitOpacity: DEFAULT_ORBIT_OPACITY,
+    toasts: DEFAULT_TOASTS,
+  },
   enabledByDefault: false,
 };
-
-async function openBrain(hub: Hub): Promise<void> {
-  await hub.app.workspace.getLeaf(false).setViewState({ type: BRAIN_VIEW_TYPE, active: true });
-}
 
 export const brainModule: HubModule = {
   id: "brain",
   load(hub, ctx) {
-    ctx.registerView(BRAIN_VIEW_TYPE, (leaf) => new BrainView(leaf, hub));
-    ctx.addNavItem({ id: "brain", label: "Brain", icon: "brain", viewType: BRAIN_VIEW_TYPE, order: 30, open: () => void openBrain(hub) });
     // The human's own note opens feed the vitals human line (LOCK-65); written through the logs service.
     ctx.registerEvent(hub.app.workspace.on("file-open", (f) => {
       if (!(f instanceof TFile) || f.extension !== "md") return;
@@ -109,6 +132,59 @@ export const brainModule: HubModule = {
           .setName("Brain node size")
           .setDesc("Size multiplier for notes in the 3D brain. Applies live.")
           .addSlider((sl) => sl.setLimits(0.4, 3, 0.1).setValue(cur.nodeSize).setDynamicTooltip().onChange((v) => void ctx.settings.update({ nodeSize: v })));
+        const raw = ctx.settings.get<{ orbitMode?: unknown; orbitColor?: unknown; orbitOpacity?: unknown; toasts?: unknown }>();
+        const save = (patch: Record<string, unknown>): void => void ctx.settings.update(patch);
+        const colour = normalizeOrbitColor(raw.orbitColor);
+        new Setting(el)
+          .setName("Brain theme")
+          .setDesc("Colours of the 3D brain. Applies live.")
+          .addDropdown((d) => d.addOptions(Object.fromEntries(BRAIN_THEMES.map((t) => [t.id, t.name]))).setValue(cur.theme).onChange((v) => save({ theme: v })));
+        new Setting(el)
+          .setName("Brain shape")
+          .setDesc("Applies live.")
+          .addDropdown((d) => d.addOptions(Object.fromEntries(SHAPES.map((s) => [s.id, s.name]))).setValue(cur.shape).onChange((v) => save({ shape: v })));
+        new Setting(el)
+          .setName("Rotation speed")
+          .setDesc("0 stops the auto-rotation. Applies live.")
+          .addSlider((sl) => sl.setLimits(0, 1, 0.05).setValue(cur.rotateSpeed).setDynamicTooltip().onChange((v) => save({ rotateSpeed: v })));
+        new Setting(el)
+          .setName("Orbit mode")
+          .addDropdown((d) => d.addOptions(Object.fromEntries(ORBIT_MODES.map((m) => [m, m]))).setValue(normalizeOrbitMode(raw.orbitMode)).onChange((v) => save({ orbitMode: v })));
+        new Setting(el)
+          .setName("Orbit colour")
+          .addDropdown((d) =>
+            d
+              .addOptions({ default: "Default", rainbow: "Rainbow", custom: "Custom hex" })
+              .setValue(orbitColorKind(colour))
+              .onChange((v) => save({ orbitColor: nextOrbitColor(v as "default" | "rainbow" | "custom", colour) })),
+          )
+          .addText((t) =>
+            t
+              .setPlaceholder("#rrggbb")
+              .setValue(orbitColorKind(colour) === "custom" ? colour : "")
+              .onChange((v) => {
+                if (isOrbitHex(v)) save({ orbitColor: normalizeOrbitColor(v) });
+              }),
+          );
+        new Setting(el)
+          .setName("Orbit opacity")
+          .addSlider((sl) => sl.setLimits(0, 1, 0.05).setValue(normalizeOrbitOpacity(raw.orbitOpacity)).setDynamicTooltip().onChange((v) => save({ orbitOpacity: v })));
+        new Setting(el)
+          .setName("Notifications")
+          .setDesc("Toast notices from the brain.")
+          .addToggle((t) => t.setValue(normalizeToasts(raw.toasts)).onChange((v) => save({ toasts: v })));
+        new Setting(el)
+          .setName("Notes-read rate")
+          .setDesc("Unit for the Brain Vitals notes-read rate.")
+          .addDropdown((d) =>
+            d
+              .addOptions({ hour: "Per hour", minute: "Per min" })
+              .setValue(hub.settings.module("commandCenter").rateUnit === "minute" ? "minute" : "hour")
+              .onChange((v) => {
+                hub.settings.module("commandCenter").rateUnit = v === "minute" ? "minute" : "hour";
+                void hub.save();
+              }),
+          );
       },
     });
     ctx.addCommand({

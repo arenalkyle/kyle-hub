@@ -179,13 +179,26 @@ export interface Services {
 }
 
 /** A mounted 3D brain. `dispose` frees the WebGL context and every listener. */
+export interface BrainFolderChoice {
+  /** Folder id with a trailing slash, as the brain graph names it. */
+  path: string;
+  name: string;
+  depth: number;
+  notes: number;
+}
+
 export interface BrainHandle {
   /** Emphasises the node for a vault-relative note path for a few seconds (no-op when unknown). */
   highlight(path: string): void;
+  /** Dims everything outside `folder` and flies to it; null shows the whole vault. */
+  focusFolder(folder: string | null): void;
+  /** Folder focus target: the folder currently focused, or null for the whole vault. */
+  focused(): string | null;
+  folderChoices(): BrainFolderChoice[];
   dispose(): void;
 }
 
-/** Published by the brain module: mounts the 3D brain into an element (Command Center middle column, Brain tab). */
+/** Published by the brain module: mounts the 3D brain into an element (Command Center backdrop). */
 export interface BrainViewService {
   mount(el: HTMLElement): BrainHandle;
 }

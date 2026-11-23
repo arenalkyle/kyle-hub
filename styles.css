@@ -733,21 +733,24 @@
 
 /* Brain Vitals (kh-command-center-vitals-, LOCK-66) */
 .kh-command-center-vitals-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.kh-command-center-unit { font-size: var(--font-ui-smaller); padding: 2px 8px; }
+.kh-command-center-brain-btn { margin-left: auto; }
+.kh-command-center-brain-menu { position: fixed; z-index: 30; width: 260px; max-height: calc(100vh - 24px); overflow-y: auto; padding: 10px 12px; border-radius: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); box-shadow: var(--shadow-s); color: var(--text-normal); font-size: var(--font-ui-small); }
+.kh-command-center-brain-menu h5 { margin: 0 0 8px; color: var(--text-muted); font-size: var(--font-ui-smaller); text-transform: uppercase; letter-spacing: 0.04em; }
+.kh-command-center-brain-menu-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.kh-command-center-brain-menu-row select, .kh-command-center-brain-menu-row input[type="text"] { max-width: 150px; }
+.kh-command-center-brain-hex { width: 84px; font-family: var(--font-monospace); font-size: var(--font-ui-smaller); }
+.kh-command-center-brain-hex.is-invalid { border-color: var(--text-error); color: var(--text-error); }
+.kh-command-center-brain-menu-row input[type="range"] { width: 120px; }
 .kh-command-center-vitals { display: grid; gap: 10px; margin-top: 12px; }
 .kh-command-center-vital-human { color: var(--text-faint); font-size: var(--font-ui-smaller); }
 
 /* 3D brain (kh-brain-) */
-.kh-brain-view { padding: 0; overflow: hidden; }
 .kh-brain-host { position: relative; overflow: hidden; background: var(--background-primary); }
-.kh-brain-host-full { width: 100%; height: 100%; }
 .kh-brain-canvas { display: block; width: 100%; height: 100%; }
 .kh-brain-tip { position: absolute; z-index: 4; pointer-events: none; width: max-content; max-width: 270px; padding: 6px 10px; border-radius: 6px; background: color-mix(in srgb, var(--background-secondary) 92%, transparent); border: 1px solid var(--background-modifier-border); color: var(--text-normal); font-size: var(--font-smallest); box-shadow: var(--shadow-s); }
 .kh-brain-tip-folder { color: var(--text-faint); margin-bottom: 4px; overflow-wrap: anywhere; }
 .kh-brain-tip-snippet { color: var(--text-muted); line-height: 1.35; overflow-wrap: anywhere; }
 .kh-brain-tip-hint { color: var(--text-faint); margin-top: 4px; }
-.kh-brain-folders { position: absolute; z-index: 3; top: 10px; left: 10px; max-width: 240px; font-size: var(--font-ui-smaller); }
-.kh-brain-host-backdrop .kh-brain-folders { top: auto; bottom: 14px; left: 50%; transform: translateX(-50%); }
 .kh-brain-labels { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
 .kh-brain-label { position: absolute; left: 0; top: 0; white-space: nowrap; padding: 1px 7px; border-radius: 9px; font-size: var(--font-smallest); font-weight: var(--font-semibold); color: var(--kh-brain-agent-color, var(--text-normal)); background: color-mix(in srgb, var(--background-primary) 65%, transparent); border: 1px solid var(--kh-brain-agent-color, var(--background-modifier-border)); will-change: transform; }
 .kh-brain-region { position: absolute; left: 0; top: 0; white-space: nowrap; padding: 0 6px; border-radius: 8px; font-size: var(--font-smallest); letter-spacing: 0.04em; text-transform: uppercase; color: var(--kh-brain-region-fg, var(--text-muted)); background: color-mix(in srgb, var(--kh-brain-region-bg, var(--background-primary)) 55%, transparent); cursor: pointer; pointer-events: auto; will-change: transform; }
