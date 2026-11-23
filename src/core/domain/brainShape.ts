@@ -84,7 +84,7 @@ export function brainSdf(x: number, y: number, z: number): number {
   h = smin(h, temporal, 0.03);
   h = Math.max(h, 0.045 - capsule(ax, y, z, [0.92, -0.17, 0.5], [0.7, 0.12, -0.35], 0.0) * 1.0);
   // Deep longitudinal fissure: carve a slab down the middle of the cerebrum, not through the cerebellum.
-  const fissure = Math.max(ax - 0.06, -(y + 0.14));
+  const fissure = Math.max(ax - 0.016, -(y + 0.14));
   h = Math.max(h, -fissure);
   // Gyri and sulci: winding grooves that only cut a thin layer near the surface.
   const groove = 1 - Math.min(1, Math.abs(noise3(x * 6, y * 6 + 3, z * 6)) / 0.2);
