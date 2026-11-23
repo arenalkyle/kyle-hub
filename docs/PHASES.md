@@ -156,6 +156,6 @@ Brain that looks like a brain, Hivemynd themes and shapes, agents that always or
 
 **19.1 No Brain tab; brain menu (H, LOCK-79)**: remove the Brain view, nav item and command; swap saved Brain tabs for the Command Center. A brain icon in the Brain Vitals title row opens folder focus, theme, shape, orbit mode, colour and opacity, rotation, toasts, and the per-min/per-hour switch. The settings tab offers the same options.
 
-**19.2 Retro card and scrolling lists (H, LOCK-80)**: Perform Retro moves from the terminal sidebar to the Retro card; a scrollable box shows last-retro results, then doc gaps (the Gaps side panel is removed). Every Command Center list is a capped-height card that scrolls inside itself. Docs updated.
+**19.2 Retro card and scrolling lists (H, LOCK-80)**: Perform Retro moves from the terminal sidebar to the Retro card; a scrollable box shows last-retro results, then doc gaps (the Gaps side panel and the terminal sidebar Gaps tab are removed). Every Command Center list is a capped-height card that scrolls inside itself. Docs updated.
 
 Order: 17.1 → 17.2 → 18.1 → 18.2. 19.2 can run beside 17.1. 19.1 touches `scene.ts` (folder select), so it runs after 17.2 or in its own worktree with a rebase.
