@@ -167,3 +167,97 @@ Steps that need someone using Obsidian. One section per ticket, appended as each
 - [ ] Stack, expand and restore panes with a long conversation open: no repeated content; the mouse wheel and PgUp/PgDn scroll Claude, including in a pane without focus.
 - [ ] Drag-select + Ctrl+C copies and right-click pastes once.
 - [ ] Open several sessions: each gets its own colour on the sidebar stripe and, when split, on its pane header; right-click → Colour tag still overrides it.
+
+## Command Center v2 — LOCK-61 (Phases 10–16)
+
+Before you start: close Obsidian and run `npm run deploy` once, so the locked node-pty files are refreshed too. Then start Obsidian with `--remote-debugging-port=9222` and run `node scripts/cdp-command-center-smoke.mjs`. It has never run against the v2 build.
+
+### 10.1 Layout — LOCK-62
+
+- [ ] At 1920px: side columns are about half their old width; the middle column takes the rest. Under 1000px it collapses to one column.
+- [ ] Spend shows its title, big number and a ~40px strip with no empty space below. System sparklines are still full height (56px). No Usage tile.
+- [ ] Retro sits in the left column under Needs attention.
+- [ ] Header tabs read `Command Center | Tickets | Terminal | Brain`; Brain opens in the same leaf.
+- [ ] `npm run smoke:usage` passes (chip and picker lines only now).
+
+### 11.1 Vault-scoped hooks — LOCK-63
+
+- [ ] Run "Install hooks": first dialog says vault `.claude/settings.local.json`; accept. Second dialog says global `~/.claude/settings.json` removal; accept. Cancel at the first dialog and the second never appears.
+- [ ] Run it again: "already installed" notice, no dialogs.
+- [ ] `kh doctor` and the settings "Run doctor" button report kyle-hook ok (in the vault, not global).
+- [ ] A Claude session inside the vault shows status lights; one outside the vault does not (intended).
+- [ ] A Read/Grep in the vault adds hook spool lines with `access` (path, pattern, hits) and no file contents; a sub-agent's lines carry `parentSessionId`.
+
+### 11.2 History capture — LOCK-65
+
+- [ ] After `kh maintain`, a vault session's run records include `search` records (pattern, root, hits, durationMs); an old session shows no hits field (unknown), not 0.
+- [ ] Opening notes in Obsidian writes `<profile>/human/<day>.jsonl` lines with only `{type, t, path}`.
+
+### 12.1 Brain Vitals — LOCK-66
+
+- [ ] Right column shows Brain Vitals: health score, Docs/Scripts/Skills/Agents counts, Notes read (agent line and dimmer "You:" line), Writes, Searches, Active agents with sparklines.
+- [ ] Per min / per hour toggle switches and is remembered after reload (default per hour).
+- [ ] Agent reads and your own note opens move the numbers within seconds (no 60s wait).
+- [ ] Brain module off: card shows "module disabled".
+- [ ] Settings → Brain FPS (10/20/30/60) changes the 3D brain's frame rate without reload.
+
+### 13.1 3D brain — LOCK-67
+
+- [ ] Command Center middle column and Brain tab both show the 3D brain: teal nodes and links, glow, nebula, slow drift, orphans visible, no auto-rotate.
+- [ ] Mouse zoom, rotate and pan work.
+- [ ] With ~2,000 notes, frame rate holds the FPS cap on the RTX 3070 (DevTools → Rendering → FPS meter). First open lays out in about a second or less.
+- [ ] Recently/often-read notes are gold and larger; notes untouched for 30–90 days are dim.
+- [ ] Bloom strength and node size sliders (Brain settings) change the look live; the defaults (1.1, 1.0) look right.
+- [ ] Create, rename and delete a note: the graph updates within a second.
+- [ ] Switch to another tab or minimise: GPU use drops (rendering paused). Close the Brain tab and Command Center: no "too many WebGL contexts" warning after reopening several times.
+
+### 13.2 Agents on the brain — LOCK-70
+
+- [ ] Start three Claude sessions in the vault (one outside a terminal pane if possible) and trigger sub-agents: each session is a glowing point in its pane colour; the paneless one is named `folder·abcd`.
+- [ ] Sub-agents are a lighter shade, named `parent › agent-type`, tethered while both are active.
+- [ ] Agents fly to notes they read or write, leaving a short trail; reads flash, writes pulse harder.
+- [ ] Hover shows name and current note. Idle agents fade after 2 minutes; ending a session removes it.
+
+### 14.1 Grading and `kh gaps` — LOCK-68
+
+- [ ] `kh gaps` writes `<vault>/.kyle-hub/gaps/latest.json` for each vault in `KYLE_HUB_VAULTS`; `--vault <path>` limits to one; `kh maintain` runs it.
+- [ ] `.kyle-hub/gaps/` is in the vault `.gitignore` (added once).
+- [ ] Spot-check five grades: reasons read like `F 42: 1,900 words, not reviewed for 140 days, re-read 9×` and match the notes.
+- [ ] Put invalid JSON in `.kyle-hub/grading.json`: report still written, with a `warning`.
+
+### 14.2 Retro gap proposals — LOCK-71
+
+- [ ] Run Perform Retro with a gaps report present: at most 5 gap proposals (split note, write note, review note, split folder) appear as triage findings.
+- [ ] Reject one and run Retro again: it doesn't come back until the gap gets worse.
+- [ ] Command Center Retro card shows "N gap proposals waiting".
+
+### 15.1 Gaps on the Brain tab — LOCK-72
+
+- [ ] Brain tab shows the Gaps panel beside the full-size brain: worst first, cutoff 70, slider changes it and the "Under N" label.
+- [ ] Row click highlights the note on the brain without navigating; clicking the note name or double-clicking opens it in a new tab and the Brain tab stays.
+- [ ] Sub-lists: empty searches, missing notes (linkedFrom links open), folders to split, search-time share.
+- [ ] Delete `latest.json`: "No gaps data yet. Run `kh maintain`." Run `kh gaps`: panel refreshes on its own.
+
+### 15.2 Terminal sidebar tabs — LOCK-73
+
+- [ ] Sidebar shows Triage n / Todo n / Gaps tabs (no "Queue" label); counts update when a ticket changes status.
+- [ ] Last tab is remembered after reload; collapse hides the tab strip and still works; the strip fits the sidebar.
+- [ ] Gaps tab: compact worst-first rows; click opens the note in a new tab, the terminal stays.
+- [ ] Tickets module off: Triage/Todo show a disabled message, no counts. Brain module off: Gaps shows a disabled message.
+
+### 16.1 Editable templates — LOCK-64
+
+- [ ] Settings → Templates (main tab, shown whichever modules are on) lists six templates.
+- [ ] Edit and Save one: `<vault>/.kyle-hub/templates/<id>.md` appears. Reset deletes it and shows the default again.
+- [ ] Edit the vault file directly: settings and `kh templates show <id>` show the change without reload.
+
+### 16.2 Default templates — LOCK-69
+
+- [ ] `kh templates show <id>` for all six reads well; each has `reviewed` frontmatter and a valid doctype (`ticket`, `reminder`, `proposal`, `overview`).
+- [ ] Add this line to the vault's `Brain/conventions/agent.md` (the shipped template already has it): `- Templates for agents live in `.kyle-hub/templates/` (vault root). You may edit them to fit the work.`
+- [ ] A note made from each template shows no brain lint errors.
+
+### 16.3 Code in the vault — LOCK-74
+
+- [ ] Put a code repo (with `.git` or `package.json`) in the vault: `kh gaps` grades none of its notes, and no gaps or brain lint issues mention it. It may still appear on the 3D brain.
+- [ ] Add a folder to `exclude` in `.kyle-hub/grading.json`: it drops out of the next `kh gaps` run.
