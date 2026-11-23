@@ -10,14 +10,15 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
   - Phases 1–9 (LOCK-43…60) built and pushed; all 18 tickets are Done in Linear.
   - Queue sidebar: Triage/Todo tabs, parent progress, launch button, Shift for account picker.
   - Tiled terminals (up to 4 columns x 2 stacked): drag to split, expand, state outlines. Splitting doesn't duplicate Claude's screen (bundled ConPTY, [term ADR-0003](src/modules/term/docs/ADR/0003-bundled-conpty.md)), the wheel scrolls Claude, bright white is readable. Each new session gets a unique colour tag, shown on its sidebar stripe and pane header.
-  - kyle-hub's Claude hooks are installed globally (9 events, incl. SessionEnd); pending move to the vault file (see above).
+  - kyle-hook lives in the vault's `.claude/settings.local.json` (9 events); removed from global `~/.claude/settings.json` (backup kept). `kh doctor` hooks ok.
+  - Vault `Brain/conventions/agent.md` and `human.md` created from the shipped templates.
   - Old kyle-tickets and kyle-term plugins are disabled in the vault.
   - Health: build passes, 995 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2357 KB (minified, three.js included) (limit 3072 KB).
 - **In progress**: verification in the real vault. The latest build is deployed but not yet confirmed there (Obsidian was closed at the last check); the terminal fixes were tested in throwaway vaults only. All 109 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
 - **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
-- **Command Center v2** (LOCK-61): all 13 tickets (LOCK-62–74) built, verified (build/test/lint/check-size) and Done; LOCK-61 closed. None of it has been seen in a live Obsidian yet: the v2 CDP smoke (`scripts/cdp-command-center-smoke.mjs`) failed to connect because Obsidian wasn't started with `--remote-debugging-port=9222`, and the v2 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked. Production `main.js` is now minified. Re-run "Install hooks" to move kyle-hook into the vault file.
+- **Command Center v2** (LOCK-61): all 13 tickets (LOCK-62–74) built, verified (build/test/lint/check-size) and Done; LOCK-61 closed. Deployed to the real vault; the v2 CDP smoke (`scripts/cdp-command-center-smoke.mjs`) passes 7/7 there. The v2 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are still unticked. Production `main.js` is minified.
 - **Next**
-  1. Close Obsidian, `npm run deploy`, restart with `--remote-debugging-port=9222`, run `node scripts/cdp-command-center-smoke.mjs`, then "Install hooks" and the Command Center v2 manual checks.
+  1. Work through the Command Center v2 manual checks (includes the 2,000-note frame-rate test).
   1. Run the "Terminal tiling" manual checks.
   2. Add repos to the repo map in kyle-hub settings, then check Queue launch and clear kyle-hub's brain findings.
   3. Register the scheduled task (`kh schedule install --yes`; `kh doctor` reports it missing).

@@ -25,7 +25,8 @@ const EXPR = `(async () => {
   await app.commands.executeCommandById("kyle-hub:command-center-open");
   await sleep(1500);
   const ccLeaves = app.workspace.getLeavesOfType("${COMMAND_CENTER_VIEW_TYPE}");
-  const root = ccLeaves[0]?.view.contentEl.querySelector(".kh-command-center") ?? null;
+  const ccEl = ccLeaves[0]?.view.contentEl ?? null; // view.ts puts .kh-command-center on contentEl itself
+  const root = ccEl?.matches(".kh-command-center") ? ccEl : (ccEl?.querySelector(".kh-command-center") ?? null);
   const panes = root ? [...root.querySelectorAll(":scope > .kh-command-center-layout > .kh-command-center-pane")] : [];
   const [left, center, right] = panes;
   const tiles = root ? root.querySelectorAll(".kh-command-center-tile").length : 0;
