@@ -4,3 +4,4 @@ main.js
 bin/*.js
 .env.local
 *.log
+.claude/worktrees/

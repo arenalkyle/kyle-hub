@@ -19,7 +19,7 @@ const crossModule = (self) => ({
 
 export default tseslint.config(
   { linterOptions: { reportUnusedDisableDirectives: "off" } },
-  { ignores: ["main.js", "node_modules/**", "dist/**", "**/*.mjs", "bin/**", "src/modules/term/helper/**", "src/modules/term/hooks/**"] },
+  { ignores: [".claude/**", "main.js", "node_modules/**", "dist/**", "**/*.mjs", "bin/**", "src/modules/term/helper/**", "src/modules/term/hooks/**"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
