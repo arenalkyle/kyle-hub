@@ -141,3 +141,21 @@ Brain view, vitals and gaps. Almost all deterministic: scripts compute every num
 **16.2 Default templates (S, LOCK-69)**: Linear ticket out, Linear ticket in, repo note, daily reminder, skill proposal, script proposal. Short, specific notes with `reviewed` frontmatter.
 
 Order: 10 → 11 → (12, 13, 14) → 15; 16 is independent.
+
+## Phase 17–19 — Brain v3 (parent LOCK-75)
+
+Brain that looks like a brain, Hivemynd themes and shapes, agents that always orbit with permanent name tags, and a tidier Command Center. Hivemynd (Apache 2.0) theme palettes, shape formulas and orbit maths may be copied as data or small functions, with credit in the root `NOTICE`. This replaces the "visual reference only" rule above. Tickets carry full acceptance criteria; this is the summary.
+
+**17.1 Brain shape and regions (S, LOCK-76)**: in `core/domain`: an anatomical Brain shape (hemispheres, gap down the middle, lobes, cerebellum, brainstem, folds) plus the Hivemynd shape library (Default, Sphere, Cube, Diamond, Pyramid, Star, Heart, Ring, Helix, Galaxy; no Cerebrum). Top-level folders map to regions (by size, "other" beyond about 8, root near the brainstem, saved so nothing jumps). Force layout held inside each region or shape.
+
+**17.2 Scene shapes, themes, rotation (S, LOCK-77)**: shape switching with a 1 s morph; 10 themes on the brain only (cards keep Obsidian vars); heat runs from the theme's node colour to its accent; region labels replace folder hubs, tree edges hidden; auto-rotate from 0 to 1 (default 0.3), pauses on input and resumes after 5 s.
+
+**18.1 Orbiting agents (S, LOCK-78)**: agents orbit outside the brain from session start to end (drift, still, solar, atom); no flights or trails; a lightning zap to the note on read/write (writes brighter); sub-agents as moons; a colour per session; orbit lines for solar and atom (default, rainbow or custom colour, plus opacity).
+
+**18.2 Name tags and toasts (S, LOCK-81)**: tags always on (pane title, short ID when titles clash; folder plus ID for sessions with no pane; sub-agents smaller). Bottom-right toasts in the Command Center only: one per agent, merged within 2 s, 3 s life, 5 visible plus a 6th faded, 1–2 lines, hover pauses, click opens, can be turned off.
+
+**19.1 No Brain tab; brain menu (H, LOCK-79)**: remove the Brain view, nav item and command; swap saved Brain tabs for the Command Center. A brain icon in the Brain Vitals title row opens folder focus, theme, shape, orbit mode, colour and opacity, rotation, toasts, and the per-min/per-hour switch. The settings tab offers the same options.
+
+**19.2 Retro card and scrolling lists (H, LOCK-80)**: Perform Retro moves from the terminal sidebar to the Retro card; a scrollable box shows last-retro results, then doc gaps (the Gaps side panel is removed). Every Command Center list is a capped-height card that scrolls inside itself. Docs updated.
+
+Order: 17.1 → 17.2 → 18.1 → 18.2. 19.2 can run beside 17.1. 19.1 touches `scene.ts` (folder select), so it runs after 17.2 or in its own worktree with a rebase.

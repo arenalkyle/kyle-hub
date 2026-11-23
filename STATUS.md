@@ -4,7 +4,7 @@ _Last updated: 2026-11-22_
 
 Plan: [docs/PLAN.md](docs/PLAN.md) · Phases: [docs/PHASES.md](docs/PHASES.md) · ADRs: [docs/adr/](docs/adr/) · Glossary: [GLOSSARY.md](GLOSSARY.md) · Manual checks: [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md)
 
-Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1–9) · [LOCK-61](https://linear.app/divinity/issue/LOCK-61) Command Center v2 (Phases 10–16)
+Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1–9) · [LOCK-61](https://linear.app/divinity/issue/LOCK-61) Command Center v2 (Phases 10–16) · [LOCK-75](https://linear.app/divinity/issue/LOCK-75) Brain v3 (Phases 17–19)
 
 - **Done**
   - Phases 1–9 (LOCK-43…60) built and pushed; all 18 tickets are Done in Linear.
@@ -17,6 +17,7 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
 - **In progress**: verification in the real vault. Latest build (`af6e03e`) is deployed and running there; the terminal fixes were tested in throwaway vaults only. All 164 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
 - **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
 - **Command Center v2** (LOCK-61): all 13 tickets (LOCK-62–74) built, verified (build/test/lint/check-size) and Done; LOCK-61 closed. Deployed to the real vault. Post-review rework (done, pushed): brain no longer renders white (bloom/clear-colour fix); brain is a full-view backdrop behind translucent cards; Spend is a slim strip at the top; folder hubs connect every note and frontmatter references count as links; hover card (title, folder, snippet), click opens the note, folder picker/focus, agent name tags. Awaiting your review of the new look ("theme" assumed to mean the Hivemynd reference). v2 manual checks unticked.
+- **Planned: Brain v3** (LOCK-75): six tickets LOCK-76–81 in Backlog (brain shape and regions, themes and shapes, orbiting agents, name tags and toasts, Brain tab removal and brain menu, Retro card and scrolling lists). See PHASES.md Phases 17–19.
 - **Next**
   1. Review the reworked brain/Command Center live, then work through the Command Center v2 manual checks (includes the 2,000-note frame-rate test; watch GPU load).
   2. Run the "Terminal tiling" manual checks.
@@ -51,3 +52,6 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
 | 14 Gaps | 14.1 · 14.2 | LOCK-68 · LOCK-71 | S · H | Done |
 | 15 Gaps UI | 15.1 · 15.2 | LOCK-72 · LOCK-73 | H · H | Done |
 | 16 Templates | 16.1 · 16.2 · 16.3 | LOCK-64 · LOCK-69 · LOCK-74 | H · S · S | Done |
+| 17 Brain shape + look | 17.1 · 17.2 | LOCK-76 · LOCK-77 | S · S | Backlog |
+| 18 Orbiting agents | 18.1 · 18.2 | LOCK-78 · LOCK-81 | S · S | Backlog |
+| 19 Command Center tidy | 19.1 · 19.2 | LOCK-79 · LOCK-80 | H · H | Backlog |
