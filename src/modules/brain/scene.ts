@@ -19,6 +19,7 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import type { BrainAccessEvent, BrainFolderChoice, BrainHandle } from "../../core";
+import { ToastHost } from "./toasts";
 import type { IdentityLookup } from "../../core/domain/brainAgents";
 import { buildGraph, inFolder, nodeLabel, parentFolder, ROOT_FOLDER, withFolders, type BrainGraph } from "../../core/domain/brainGraph";
 import { countReads, heatOf, type ReadAccess, type ReadCounts } from "../../core/domain/brainHeat";
@@ -42,6 +43,8 @@ export interface BrainOptions {
   orbitMode: OrbitMode;
   orbitColor: string;
   orbitOpacity: number;
+  /** Show agent activity toasts (Command Center). */
+  toasts: boolean;
 }
 
 /** Everything the scene needs from the vault and hub; supplied by the brain module so this file stays UI-only. */
@@ -196,6 +199,7 @@ export class BrainScene implements BrainHandle {
   private hoverToken = 0;
   private time = 0;
   private labels: HTMLElement;
+  private toasts: ToastHost;
   private readonly labelEls = new Map<string, HTMLElement>();
   private mtimes: number[] = [];
   private counts = new Map<string, ReadCounts>();
@@ -292,6 +296,7 @@ export class BrainScene implements BrainHandle {
       identity: (id) => src.identity(id),
     });
     this.labels = host.createDiv({ cls: "kh-brain-labels" });
+    this.toasts = new ToastHost(host, (path) => src.open(path, false));
     this.tip = host.createDiv({ cls: "kh-brain-tip" });
     this.tip.hide();
     const onMove = (ev: PointerEvent): void => {
@@ -333,6 +338,13 @@ export class BrainScene implements BrainHandle {
       canvas.removeEventListener("pointerup", onUp);
     });
     this.cleanups.push(src.onAccess((e) => this.agentLayer.access(e)));
+    this.cleanups.push(
+      src.onAccess((e) => {
+        if (!src.options().toasts || (e.kind !== "read" && e.kind !== "write") || !e.path) return;
+        const tag = this.agentLayer.tagOf(e.sessionId);
+        if (tag) this.toasts.push({ agentId: e.sessionId, name: tag.name, color: tag.color, kind: e.kind, path: e.path });
+      }),
+    );
     this.cleanups.push(src.onSession((k, id) => this.agentLayer.session(k, id)));
     this.cleanups.push(src.onSubagent((k, s, a, t) => this.agentLayer.subagent(k, s, a, t)));
 
@@ -409,6 +421,7 @@ export class BrainScene implements BrainHandle {
     this.agentLayer.dispose();
     this.tip.remove();
     this.labels.remove();
+    this.toasts.dispose();
     this.nebulaMat.dispose();
     this.nodeMat.dispose();
     this.lineMat.dispose();
@@ -451,6 +464,7 @@ export class BrainScene implements BrainHandle {
 
   private frame(t: number): void {
     const o = this.src.options();
+    this.toasts.setEnabled(o.toasts);
     if (o.theme !== this.themeId) this.applyTheme(o.theme);
     if (o.shape !== this.shape) this.setShape(o.shape);
     // No bloom on light themes: it would wash the paper out; dark themes keep the glow.
@@ -770,7 +784,8 @@ export class BrainScene implements BrainHandle {
         this.labelEls.set(l.id, el);
       }
       if (el.textContent !== l.name) el.setText(l.name);
-      el.setCssProps({ transform: `translate(${Math.round(l.x + 9)}px, ${Math.round(l.y - 9)}px)`, opacity: String(l.alpha), "--kh-brain-agent-color": l.color });
+      el.toggleClass("is-moon", l.moon);
+      el.setCssProps({ transform: `translate(${Math.round(l.x + 9)}px, ${Math.round(l.y - 9)}px)`, "--kh-brain-agent-color": l.color });
     }
     for (const [id, el] of this.labelEls) {
       if (seen.has(id)) continue;

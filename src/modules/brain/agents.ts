@@ -6,6 +6,7 @@ import type { BrainAccessEvent } from "../../core";
 import {
   applyAccess, endSession, endSubagent, pruneAgents, startSession, startSubagent, zapOf, type Agent, type Agents, type IdentityLookup,
 } from "../../core/domain/brainAgents";
+import { tagNames } from "../../core/domain/brainTags";
 import { moonPosition, orbitPath, orbitPosition, ORBIT_LINE_POINTS, type OrbitMode } from "../../core/domain/brainOrbit";
 
 const MAX_SESSIONS = 24;
@@ -342,15 +343,22 @@ export class AgentLayer {
     return best;
   }
 
-  /** Screen positions (pixels inside the canvas) of every visible agent, for name tags. */
-  labels(camera: PerspectiveCamera, width: number, height: number): { id: string; name: string; color: string; x: number; y: number; alpha: number }[] {
-    const out: { id: string; name: string; color: string; x: number; y: number; alpha: number }[] = [];
+  /** Name tag text and colour for a session or sub-agent id (the same names the tags use); undefined when it is not live. */
+  tagOf(id: string): { name: string; color: string } | undefined {
+    const a = this.agents.get(id);
+    return a ? { name: tagNames(this.agents).get(id) ?? a.name, color: a.color } : undefined;
+  }
+
+  /** Screen positions (pixels inside the canvas) of every agent in front of the camera and on screen, for name tags. */
+  labels(camera: PerspectiveCamera, width: number, height: number): { id: string; name: string; color: string; x: number; y: number; moon: boolean }[] {
+    const out: { id: string; name: string; color: string; x: number; y: number; moon: boolean }[] = [];
+    const names = tagNames(this.agents);
     for (const a of this.agents.values()) {
       const at = this.where.get(a.id);
       if (!at) continue;
       this.tmp.copy(at).project(camera);
       if (this.tmp.z > 1 || Math.abs(this.tmp.x) > 1.05 || Math.abs(this.tmp.y) > 1.05) continue;
-      out.push({ id: a.id, name: a.name, color: a.color, x: (this.tmp.x * 0.5 + 0.5) * width, y: (-this.tmp.y * 0.5 + 0.5) * height, alpha: 1 });
+      out.push({ id: a.id, name: names.get(a.id) ?? a.name, color: a.color, x: (this.tmp.x * 0.5 + 0.5) * width, y: (-this.tmp.y * 0.5 + 0.5) * height, moon: !!a.parentId });
     }
     return out;
   }

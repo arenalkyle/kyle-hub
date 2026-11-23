@@ -4,7 +4,7 @@ import type { Hub, ModuleContext } from "../../core";
 import { normalizeFps } from "../../core/domain/fps";
 import { vaultProfileOf } from "../../core/profile";
 import { rotateSpeedOf } from "../../core/domain/autoRotate";
-import { normalizeOrbitColor, normalizeOrbitMode, normalizeOrbitOpacity } from "../../core/domain/brainMenu";
+import { normalizeOrbitColor, normalizeOrbitMode, normalizeOrbitOpacity, normalizeToasts } from "../../core/domain/brainMenu";
 import { isThemeId, DEFAULT_THEME } from "../../core/domain/brainTheme";
 import { newShapeCache, SHAPES, type ShapeCache, type ShapeId } from "../../core/domain/brainShape";
 import type { BrainOptions, BrainSource } from "./scene";
@@ -29,6 +29,7 @@ export function brainOptions(settings: Record<string, unknown>): BrainOptions {
     orbitMode: normalizeOrbitMode(settings.orbitMode),
     orbitColor: normalizeOrbitColor(settings.orbitColor),
     orbitOpacity: normalizeOrbitOpacity(settings.orbitOpacity),
+    toasts: normalizeToasts(settings.toasts),
   };
 }
 

@@ -20,6 +20,12 @@ export interface Agent {
   id: string;
   parentId?: string;
   name: string;
+  /** True when `name` is a pane title (false: derived from the working folder). */
+  titled?: boolean;
+  /** Working folder name, for sessions without a pane. */
+  folder?: string;
+  /** Sub-agent type (moons only). */
+  agentType?: string;
   color: string;
   /** Epoch ms of the last access or lifecycle event. */
   lastActive: number;
@@ -76,7 +82,7 @@ export function lighten(hex: string, amount = 0.45): string {
 }
 
 const folderOf = (cwd: string | undefined): string => {
-  const parts = (cwd ?? "").split(/[\/]+/).filter(Boolean);
+  const parts = (cwd ?? "").split(/[\\/]+/).filter(Boolean);
   return parts[parts.length - 1] ?? "claude";
 };
 
@@ -94,6 +100,8 @@ function upsertSession(map: Map<string, Agent>, id: string, now: number, lookup:
   const agent: Agent = {
     id,
     name: sessionName(id, identity),
+    titled: !!identity.title?.trim(),
+    folder: folderOf(identity.cwd),
     color: identity.color ?? prev?.color ?? uniqueColor(id, new Set(others.map((a) => a.color))),
     lastActive: now,
     slot: prev?.slot ?? freeSlot(others.filter((a) => !a.parentId)),
@@ -129,6 +137,7 @@ function upsertSub(next: Map<string, Agent>, id: string, parentId: string, agent
     id,
     parentId: parent.id,
     name: `${parent.name} › ${agentType ?? "agent"}`,
+    agentType: agentType ?? "agent",
     color: lighten(parent.color),
     lastActive: now,
     slot: prev?.slot ?? freeSlot([...next.values()].filter((a) => a.parentId === parent.id)),
