@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BrainAccessEvent } from "../events";
 import {
-  SUBAGENT_IDLE_MS, applyAccess, endSession, hashColor, lighten, pruneAgents, sessionName, startSession, uniqueColor, zapOf,
+  SUBAGENT_IDLE_MS, applyAccess, endSession, hashColor, lighten, pruneAgents, sessionName, startSession, startSubagent, endSubagent, uniqueColor, zapOf,
   type Agents, type IdentityLookup,
 } from "./brainAgents";
 
@@ -72,14 +72,33 @@ describe("agents reducer", () => {
     expect(endSession(a, "gone")).toBe(a);
   });
 
-  it("keeps a session that has been idle for 10 minutes; idle sub-agents are dropped, sessions never", () => {
+  it("keeps a session idle for an hour; only the safety fallback drops a silent moon", () => {
     const a = run([ev({ sessionId: "s1" }), ev({ sessionId: "sub", parentSessionId: "s1" })], 0);
-    const tenMin = 10 * 60_000;
-    const pruned = pruneAgents(a, tenMin);
-    expect([...pruned.keys()]).toEqual(["s1"]);
+    const hour = 60 * 60_000;
+    expect([...pruneAgents(a, hour).keys()]).toEqual(["s1"]);
     expect(pruneAgents(a, SUBAGENT_IDLE_MS)).toBe(a);
-    const b = applyAccess(a, ev({ sessionId: "sub", parentSessionId: "s1" }), tenMin - 1000, lookup);
-    expect(pruneAgents(b, tenMin).size).toBe(2);
+    const b = applyAccess(a, ev({ sessionId: "sub", parentSessionId: "s1" }), hour - 1000, lookup);
+    expect(pruneAgents(b, hour).size).toBe(2);
+  });
+
+  it("a moon persists across 5 minutes of silence, with the same slot", () => {
+    let a = startSubagent(new Map(), "s1", "sub", "Explore", 0, lookup);
+    const slot = a.get("sub")!.slot;
+    expect(a.get("sub")).toMatchObject({ parentId: "s1", name: "Build › Explore" });
+    a = pruneAgents(a, 5 * 60_000);
+    expect(a.has("sub")).toBe(true);
+    a = applyAccess(a, ev({ sessionId: "sub", parentSessionId: "s1", path: "n.md" }), 5 * 60_000, lookup);
+    expect(a.get("sub")!.slot).toBe(slot);
+  });
+
+  it("subagent:ended removes only that moon; parent end removes all its moons", () => {
+    let a = startSubagent(new Map(), "s1", "m1", "Explore", 0, lookup);
+    a = startSubagent(a, "s1", "m2", "Plan", 0, lookup);
+    expect(endSubagent(a, "s1")).toBe(a);
+    expect(endSubagent(a, "nope")).toBe(a);
+    const b = endSubagent(a, "m1");
+    expect([...b.keys()].sort()).toEqual(["m2", "s1"]);
+    expect(endSession(a, "s1").size).toBe(0);
   });
 
   it("drops orphaned sub-agents", () => {

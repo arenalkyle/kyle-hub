@@ -137,6 +137,13 @@ export function createBrainSource(hub: Hub, ctx: ModuleContext): BrainSource {
       const offs = [hub.events.on("session:started", (e) => cb("started", e.sessionId)), hub.events.on("session:ended", (e) => cb("ended", e.sessionId))];
       return () => offs.forEach((off) => off());
     },
+    onSubagent(cb) {
+      const offs = [
+        hub.events.on("subagent:started", (e) => cb("started", e.sessionId, e.agentId, e.agentType)),
+        hub.events.on("subagent:ended", (e) => cb("ended", e.sessionId, e.agentId)),
+      ];
+      return () => offs.forEach((off) => off());
+    },
     identity(sessionId) {
       const s = hub.services.get("sessions")?.get(sessionId);
       return s ? { title: s.title, color: s.color, cwd: s.cwd, kind: s.kind } : undefined;

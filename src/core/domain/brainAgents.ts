@@ -1,10 +1,10 @@
 import type { BrainAccessEvent } from "../events";
 
 /**
- * Sessions stay for their whole life (no idle fade). Sub-agents have no end event, so a moon is dropped after this long
- * without an access (it comes back on the next one); it is also dropped with its parent.
+ * Sessions stay for their whole life (no idle fade). A moon is removed on `subagent:ended`; this is only a safety net for a missed stop event: dropped after this long
+ * without an access (it comes back on the next one). It is also dropped with its parent.
  */
-export const SUBAGENT_IDLE_MS = 90_000;
+export const SUBAGENT_IDLE_MS = 10 * 60_000;
 
 /** What the terminal knows about a session; all optional (a session with no pane has none of it). */
 export interface AgentIdentity {
@@ -122,28 +122,45 @@ export function endSession(agents: Agents, sessionId: string): Agents {
   return next;
 }
 
+function upsertSub(next: Map<string, Agent>, id: string, parentId: string, agentType: string | undefined, now: number, lookup: IdentityLookup, cwd?: string): Agent {
+  const parent = upsertSession(next, parentId, now, lookup, cwd);
+  const prev = next.get(id);
+  const agent: Agent = {
+    id,
+    parentId: parent.id,
+    name: `${parent.name} › ${agentType ?? "agent"}`,
+    color: lighten(parent.color),
+    lastActive: now,
+    slot: prev?.slot ?? freeSlot([...next.values()].filter((a) => a.parentId === parent.id)),
+    visits: prev?.visits ?? 0,
+    ...(prev?.note !== undefined ? { note: prev.note } : {}),
+    ...(prev?.noteKind ? { noteKind: prev.noteKind } : {}),
+  };
+  next.set(id, agent);
+  return agent;
+}
+
+/** A sub-agent started (`subagent:started`): its moon appears around the parent straight away. */
+export function startSubagent(agents: Agents, parentId: string, agentId: string, agentType: string | undefined, now: number, lookup: IdentityLookup): Agents {
+  const next = new Map(agents);
+  upsertSub(next, agentId, parentId, agentType, now, lookup);
+  return next;
+}
+
+/** A sub-agent finished (`subagent:ended`): its moon is removed. */
+export function endSubagent(agents: Agents, agentId: string): Agents {
+  if (!agents.get(agentId)?.parentId) return agents;
+  const next = new Map(agents);
+  next.delete(agentId);
+  return next;
+}
+
 /** A `brain:access` event: creates or refreshes the agent, and its parent when it is a sub-agent. */
 export function applyAccess(agents: Agents, e: BrainAccessEvent, now: number, lookup: IdentityLookup): Agents {
   const next = new Map(agents);
-  let agent: Agent;
-  if (e.parentSessionId) {
-    const parent = upsertSession(next, e.parentSessionId, now, lookup, e.cwd);
-    const prev = next.get(e.sessionId);
-    agent = {
-      id: e.sessionId,
-      parentId: parent.id,
-      name: `${parent.name} › ${e.agentType ?? "agent"}`,
-      color: lighten(parent.color),
-      lastActive: now,
-      slot: prev?.slot ?? freeSlot([...next.values()].filter((a) => a.parentId === parent.id)),
-      visits: prev?.visits ?? 0,
-      ...(prev?.note !== undefined ? { note: prev.note } : {}),
-      ...(prev?.noteKind ? { noteKind: prev.noteKind } : {}),
-    };
-    next.set(agent.id, agent);
-  } else {
-    agent = upsertSession(next, e.sessionId, now, lookup, e.cwd);
-  }
+  const agent = e.parentSessionId
+    ? upsertSub(next, e.sessionId, e.parentSessionId, e.agentType, now, lookup, e.cwd)
+    : upsertSession(next, e.sessionId, now, lookup, e.cwd);
   if (e.path && (e.kind === "read" || e.kind === "write")) {
     next.set(agent.id, { ...agent, note: e.path, noteKind: e.kind, visits: agent.visits + 1 });
   }

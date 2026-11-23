@@ -4,7 +4,7 @@ import {
 } from "three";
 import type { BrainAccessEvent } from "../../core";
 import {
-  applyAccess, endSession, pruneAgents, startSession, zapOf, type Agent, type Agents, type IdentityLookup,
+  applyAccess, endSession, endSubagent, pruneAgents, startSession, startSubagent, zapOf, type Agent, type Agents, type IdentityLookup,
 } from "../../core/domain/brainAgents";
 import { moonPosition, orbitPath, orbitPosition, ORBIT_LINE_POINTS, type OrbitMode } from "../../core/domain/brainOrbit";
 
@@ -151,6 +151,10 @@ export class AgentLayer {
     this.agents = applyAccess(this.agents, e, Date.now(), this.host.identity);
     const z = zapOf(e);
     if (z && this.agents.has(z.agentId)) this.zaps = [...this.zaps, { ...z, born: Date.now(), flashed: false }].slice(-MAX_ZAPS);
+  }
+
+  subagent(kind: "started" | "ended", parentId: string, agentId: string, agentType?: string): void {
+    this.agents = kind === "started" ? startSubagent(this.agents, parentId, agentId, agentType, Date.now(), this.host.identity) : endSubagent(this.agents, agentId);
   }
 
   session(kind: "started" | "ended", sessionId: string): void {

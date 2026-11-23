@@ -86,7 +86,8 @@ export default class TermHost {
     const server = new HookServer((m) => {
       this.sessions?.handleHook(m.session, m.event, m.payload);
       this.watcher?.onHook(m.session, m.event, m.payload, m.env);
-      forwardHookToLogs(this.hub.services, m, { vaultRoot: this.vaultRoot(), emitAccess: (e) => this.hub.events.emit("brain:access", e) });
+      forwardHookToLogs(this.hub.services, m, { vaultRoot: this.vaultRoot(), emitAccess: (e) => this.hub.events.emit("brain:access", e),
+        emitSubagent: (e) => (e.kind === "started" ? this.hub.events.emit("subagent:started", { sessionId: e.sessionId, agentId: e.agentId, ...(e.agentType ? { agentType: e.agentType } : {}) }) : this.hub.events.emit("subagent:ended", { sessionId: e.sessionId, agentId: e.agentId })) });
     });
     try {
       await server.start();

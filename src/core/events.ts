@@ -36,6 +36,9 @@ export interface HubEvents {
   "usage:threshold": { accountId: string; window: UsageWindowName; percent: number; windowStart: string };
   /** A Claude agent read, wrote or searched the vault (paths vault-relative; never contents). `sessionId` is the sub-agent id when `parentSessionId` is set. */
   "brain:access": BrainAccessEvent;
+  /** A sub-agent started or stopped (`sessionId` is the parent terminal session, `agentId` matches the sub-agent id of `brain:access`). */
+  "subagent:started": { sessionId: string; agentId: string; agentType?: string };
+  "subagent:ended": { sessionId: string; agentId: string };
   "brain:health-changed": { scope: "repo" | "vault"; key: string; score: number; previous?: number };
   /** The user opened a vault note (`t` ISO, vault-relative `path`); emitted with the human spool record (LOCK-66). */
   "brain:human-open": { t: string; path: string };

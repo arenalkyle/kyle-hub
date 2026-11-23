@@ -71,6 +71,8 @@ export interface BrainSource {
   onAccess(cb: (e: BrainAccessEvent) => void): () => void;
   /** Terminal session start / end. */
   onSession(cb: (kind: "started" | "ended", sessionId: string) => void): () => void;
+  /** Sub-agent start / stop (`sessionId` is the parent session, `agentId` the sub-agent id used by access events). */
+  onSubagent(cb: (kind: "started" | "ended", sessionId: string, agentId: string, agentType?: string) => void): () => void;
   /** Pane title, colour and folder for a session id; undefined for sessions with no terminal pane. */
   identity: IdentityLookup;
 }
@@ -332,6 +334,7 @@ export class BrainScene implements BrainHandle {
     });
     this.cleanups.push(src.onAccess((e) => this.agentLayer.access(e)));
     this.cleanups.push(src.onSession((k, id) => this.agentLayer.session(k, id)));
+    this.cleanups.push(src.onSubagent((k, s, a, t) => this.agentLayer.subagent(k, s, a, t)));
 
     const size = new Vector2(Math.max(host.clientWidth, 1), Math.max(host.clientHeight, 1));
     this.composer = new EffectComposer(this.renderer);

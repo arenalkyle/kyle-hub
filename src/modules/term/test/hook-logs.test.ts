@@ -36,6 +36,19 @@ describe("forwardHookToLogs", () => {
     expect(line).toMatchObject({ sessionId: "sess-1", name: "PostToolUse", ticketId: "LOCK-50", runId: "run-7" });
   });
 
+  it("emits subagent start and stop with the parent session and sub-agent id", () => {
+    const seen: unknown[] = [];
+    const emitSubagent = (e: unknown): void => void seen.push(e);
+    const base = { session: "sess-1", payload: { agent_id: "ag-1", agent_type: "Explore" } };
+    forwardHookToLogs(new ServiceRegistry(), { ...base, event: "SubagentStart" }, { emitSubagent });
+    forwardHookToLogs(new ServiceRegistry(), { ...base, event: "SubagentStop" }, { emitSubagent });
+    forwardHookToLogs(new ServiceRegistry(), { ...base, event: "PostToolUse" }, { emitSubagent });
+    expect(seen).toEqual([
+      { kind: "started", sessionId: "sess-1", agentId: "ag-1", agentType: "Explore" },
+      { kind: "ended", sessionId: "sess-1", agentId: "ag-1", agentType: "Explore" },
+    ]);
+  });
+
   it("is a no-op and does not throw when the logs service is absent", () => {
     const services = new ServiceRegistry();
     expect(() => forwardHookToLogs(services, msg())).not.toThrow();
