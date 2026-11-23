@@ -426,6 +426,51 @@ function regionAt(regions: readonly Region[], x: number, y: number, z: number): 
   return bands[k]!;
 }
 
+/** Notes keep this far (unit space) from a region border, so they don't pile into lines against it. Borders stay hard. */
+const REGION_INSET = 0.03;
+/** Pull toward the region centre; keeps notes from piling against the region walls. */
+const REGION_GRAVITY = 0.25;
+
+/** Whether the point lies in region `r` and at least `REGION_INSET` away from its borders along each axis. */
+function inRegion(regions: readonly Region[], r: number, x: number, y: number, z: number): boolean {
+  const d = REGION_INSET;
+  return (
+    regionAt(regions, x, y, z) === r &&
+    // The midline is a hard border but not inset (it would widen the fissure).
+    (Math.sign(x + d) !== Math.sign(x) || regionAt(regions, x + d, y, z) === r) &&
+    (Math.sign(x - d) !== Math.sign(x) || regionAt(regions, x - d, y, z) === r) &&
+    regionAt(regions, x, y + d, z) === r &&
+    regionAt(regions, x, y - d, z) === r &&
+    regionAt(regions, x, y, z + d) === r &&
+    regionAt(regions, x, y, z - d) === r
+  );
+}
+
+const SOFTEN = 0.08;
+const DIRS: readonly Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+
+/**
+ * Spreads notes that the clamp pressed against a wall: a note within `SOFTEN` of a wall moves a random distance
+ * away from it (only if it stays valid), so walls show a diffuse band instead of a dense sheet. The midline is
+ * not softened, so the fissure stays narrow.
+ */
+function soften(pos: Float32Array, n: number, inside: Inside, scale: number, rand: () => number): void {
+  for (let i = 0; i < n; i++) {
+    for (const [dx, dy, dz] of DIRS) {
+      const x = pos[i * 3]! / scale, y = pos[i * 3 + 1]! / scale, z = pos[i * 3 + 2]! / scale;
+      if (dx !== 0 && Math.sign(x + dx * SOFTEN) !== Math.sign(x)) continue;
+      if (inside(x + dx * SOFTEN, y + dy * SOFTEN, z + dz * SOFTEN)) continue;
+      const t = rand() * SOFTEN;
+      const nx = x - dx * t, ny = y - dy * t, nz = z - dz * t;
+      if (inside(nx, ny, nz)) {
+        pos[i * 3] = nx * scale;
+        pos[i * 3 + 1] = ny * scale;
+        pos[i * 3 + 2] = nz * scale;
+      }
+    }
+  }
+}
+
 function buildRegions(graph: BrainGraph, cache: ShapeCache): Region[] {
   const infos = assignRegions(graph, cache);
   const raw = infos.map((i) => (i.slot < 0 ? Math.max(1, i.count) : cache.weights.get(i.slot) ?? 1));
@@ -521,6 +566,7 @@ export function shapeTargets(shapeId: ShapeId, graph: BrainGraph, cache: ShapeCa
       seed,
       iterations,
       linkLength: LINK,
+      gravity: shapeId === "brain" ? REGION_GRAVITY : undefined,
       center: [center[0] * scale, center[1] * scale, center[2] * scale],
       initial: () => {
         const p = sampleIn(def, inside, rand, start);
@@ -528,6 +574,7 @@ export function shapeTargets(shapeId: ShapeId, graph: BrainGraph, cache: ShapeCa
       },
       accept: (_i, x, y, z) => ok(x, y, z),
     });
+    if (shapeId === "brain") soften(pos, members.length, inside, scale, rand);
     members.forEach((g, l) => out.set(pos.subarray(l * 3, l * 3 + 3), g * 3));
   };
 
@@ -542,7 +589,7 @@ export function shapeTargets(shapeId: ShapeId, graph: BrainGraph, cache: ShapeCa
     ids.forEach((id, i) => {
       if (id === reg.info.id) members.push(i);
     });
-    place(members, (x, y, z) => brainCortex(x, y, z) && regionAt(regions, x, y, z) === r, 101 + r, reg.anchor, reg.anchor);
+    place(members, (x, y, z) => brainCortex(x, y, z) && inRegion(regions, r, x, y, z), 101 + r, reg.anchor, reg.anchor);
   });
   return out;
 }

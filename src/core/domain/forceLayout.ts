@@ -12,6 +12,9 @@ export interface LayoutOptions {
   accept?: (i: number, x: number, y: number, z: number) => boolean;
   /** Point the weak gravity pulls toward (default: origin). */
   center?: readonly [number, number, number];
+  /** Strength of the pull toward `center` (default 0.02). */
+  gravity?: number;
+  /** Strength of the pull toward `center` (default 0.02). */
 }
 
 function rng(seed: number): () => number {
@@ -114,7 +117,7 @@ export function forceLayout(n: number, edges: readonly (readonly [number, number
       const d: [number, number, number] = [0, 0, 0];
       for (let c = 0; c < 3; c++) {
         // Gravity toward the centre keeps disconnected components together.
-        const f = (force[o + c]! - (pos[o + c]! - (opts.center?.[c] ?? 0)) * 0.02) * 0.3;
+        const f = (force[o + c]! - (pos[o + c]! - (opts.center?.[c] ?? 0)) * (opts.gravity ?? 0.02)) * 0.3;
         d[c] = Math.max(-maxStep, Math.min(maxStep, f));
       }
       let t = 1;
