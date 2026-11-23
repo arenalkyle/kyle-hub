@@ -252,20 +252,25 @@ export function worldScale(id: ShapeId, noteCount: number): number {
 export const OTHER_SLOT = 8;
 export const MAX_FOLDER_REGIONS = 8;
 
-/** Region slots on the brain, in the order they are handed out (front and back first, so few folders split cleanly). */
-const SLOT_ANCHORS: readonly Vec3[] = [
-  [0.4, 0.1, 0.62], // frontal right
-  [-0.34, 0.12, -0.62], // occipital left
-  [-0.4, 0.1, 0.62], // frontal left
-  [0.34, 0.12, -0.62], // occipital right
-  [0.52, -0.3, 0.12], // temporal right
-  [-0.4, 0.4, -0.05], // parietal left
-  [-0.52, -0.3, 0.12], // temporal left
-  [0.4, 0.4, -0.05], // parietal right
-  [0, -0.52, -0.7], // other: cerebellum
+type Side = "right" | "left" | "mid";
+type Lobe = "frontal" | "parietal" | "occipital" | "temporal";
+
+/** Region slots on the brain, in the order they are handed out (front and back first, mirrored pairs together). */
+const SLOT_META: readonly { lobe: Lobe | "other"; side: Side; anchor: Vec3 }[] = [
+  { lobe: "frontal", side: "right", anchor: [0.4, 0.1, 0.62] },
+  { lobe: "frontal", side: "left", anchor: [-0.4, 0.1, 0.62] },
+  { lobe: "occipital", side: "right", anchor: [0.34, 0.1, -0.62] },
+  { lobe: "occipital", side: "left", anchor: [-0.34, 0.1, -0.62] },
+  { lobe: "parietal", side: "right", anchor: [0.4, 0.4, -0.05] },
+  { lobe: "parietal", side: "left", anchor: [-0.4, 0.4, -0.05] },
+  { lobe: "temporal", side: "right", anchor: [0.52, -0.3, 0.12] },
+  { lobe: "temporal", side: "left", anchor: [-0.52, -0.3, 0.12] },
+  { lobe: "other", side: "mid", anchor: [0, -0.5, -0.66] }, // cerebellum
 ];
+/** Which hemisphere a region slot belongs to (`mid` for the cerebellum "other" slot). */
+export const slotSide = (slot: number): Side => SLOT_META[slot]?.side ?? "mid";
 const ROOT_ANCHOR: Vec3 = [0, -0.78, -0.12];
-const SLOT_NAMES = ["frontal right", "occipital left", "frontal left", "occipital right", "temporal right", "parietal left", "temporal left", "parietal right", "other"];
+const SLOT_NAMES = SLOT_META.map((m) => (m.lobe === "other" ? "other" : `${m.lobe} ${m.side}`));
 
 /** Persisted by the scene next to the position cache: folder to region slot, and each slot's size weight (frozen when assigned). */
 export interface ShapeCache {
@@ -346,19 +351,79 @@ interface Region {
   w: number;
 }
 
-/** Weighted nearest anchor (bigger weight claims more volume). */
-function regionAt(regions: readonly Region[], x: number, y: number, z: number): number {
-  let best = 0;
-  let bestD = Infinity;
-  for (let r = 0; r < regions.length; r++) {
-    const a = regions[r]!.anchor;
-    const d = Math.hypot(x - a[0], y - a[1], z - a[2]) / regions[r]!.w;
-    if (d < bestD) {
-      bestD = d;
-      best = r;
+interface Zones {
+  /** Per side (0 right, 1 left): region indices of the active bands, front to back, with the z cut between each. */
+  bands: [number[], number[]];
+  cuts: [number[], number[]];
+  temporal: [number, number];
+  other: number;
+  root: number;
+}
+
+const zoneCache = new WeakMap<readonly Region[], Zones>();
+const BAND_ORDER: Lobe[] = ["frontal", "parietal", "occipital"];
+const Z_FRONT = 0.95;
+const Z_BACK = -0.95;
+
+function zonesOf(regions: readonly Region[]): Zones {
+  const hit = zoneCache.get(regions);
+  if (hit) return hit;
+  const z: Zones = { bands: [[], []], cuts: [[], []], temporal: [-1, -1], other: -1, root: -1 };
+  regions.forEach((r, i) => {
+    if (r.info.slot < 0) z.root = i;
+    else if (SLOT_META[r.info.slot]!.lobe === "other") z.other = i;
+  });
+  for (let side = 0; side < 2; side++) {
+    const mine = regions.map((r, i) => ({ r, i })).filter(({ r }) => r.info.slot >= 0 && SLOT_META[r.info.slot]!.side === (side === 0 ? "right" : "left"));
+    for (const lobe of BAND_ORDER) for (const { r, i } of mine) if (SLOT_META[r.info.slot]!.lobe === lobe) z.bands[side]!.push(i);
+    for (const { r, i } of mine) if (SLOT_META[r.info.slot]!.lobe === "temporal") z.temporal[side] = i;
+    // Bands split the front-to-back range in proportion to their weights.
+    const total = z.bands[side]!.reduce((a, i) => a + regions[i]!.w, 0);
+    let acc = 0;
+    for (const i of z.bands[side]!.slice(0, -1)) {
+      acc += regions[i]!.w;
+      z.cuts[side]!.push(Z_FRONT - (acc / total) * (Z_FRONT - Z_BACK));
     }
   }
+  zoneCache.set(regions, z);
+  return z;
+}
+
+const nearestAnchor = (regions: readonly Region[], x: number, y: number, z: number): number => {
+  let best = 0;
+  let bestD = Infinity;
+  regions.forEach((r, i) => {
+    const d = Math.hypot(x - r.anchor[0], y - r.anchor[1], z - r.anchor[2]);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
   return best;
+};
+
+/**
+ * Region index for a unit-space point. Lobe regions never cross the midline (x = 0 is a hard border); only the
+ * brainstem (root) and the cerebellum (other) are shared. Front/middle/back bands are cut by z (slanted slightly),
+ * temporal is the low lateral zone, and bigger folders get wider bands.
+ */
+function regionAt(regions: readonly Region[], x: number, y: number, z: number): number {
+  const zn = zonesOf(regions);
+  const side = x >= 0 ? 0 : 1;
+  if (zn.root >= 0 && y < -0.42 && Math.abs(x) < 0.24) return zn.root;
+  if (zn.other >= 0 && y < -0.26 && z < -0.34 && ell(x, y, z, [0, -0.42, -0.64], [0.52, 0.24, 0.32]) <= 0) return zn.other;
+  const bands = zn.bands[side]!;
+  const temporal = zn.temporal[side]!;
+  if (temporal >= 0 && y < -0.2 && z > -0.4 && z < 0.72 && Math.abs(x) > 0.18) return temporal;
+  if (bands.length === 0) {
+    if (temporal >= 0) return temporal;
+    return nearestAnchor(regions, x, y, z);
+  }
+  const zc = z - 0.2 * y;
+  const cuts = zn.cuts[side]!;
+  let k = 0;
+  while (k < cuts.length && zc < cuts[k]!) k++;
+  return bands[k]!;
 }
 
 function buildRegions(graph: BrainGraph, cache: ShapeCache): Region[] {
@@ -367,9 +432,9 @@ function buildRegions(graph: BrainGraph, cache: ShapeCache): Region[] {
   const max = Math.max(...raw, 1);
   return infos.map((info, k) => ({
     info,
-    anchor: info.slot < 0 ? ROOT_ANCHOR : SLOT_ANCHORS[info.slot]!,
-    // Volume grows with the weight, so distance scales by weight^(1/3); the floor keeps small folders visible.
-    w: Math.cbrt(Math.max(0.12, raw[k]! / max)),
+    anchor: info.slot < 0 ? ROOT_ANCHOR : SLOT_META[info.slot]!.anchor,
+    // Band width follows the weight; the floor keeps small folders visible.
+    w: Math.max(0.12, raw[k]! / max),
   }));
 }
 

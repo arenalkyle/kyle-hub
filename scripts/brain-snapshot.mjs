@@ -26,7 +26,7 @@ const notes = [];
 const byFolder = new Map();
 for (const [f, c] of folders) {
   const list = [];
-  for (let i = 0; i < c * Number(process.env.SCALE ?? 1); i++) list.push(`${f}/n${i}.md`);
+  for (let i = 0; i < (process.env.EQUAL ? 450 : c) * Number(process.env.SCALE ?? 1); i++) list.push(`${f}/n${i}.md`);
   byFolder.set(f, list);
   notes.push(...list);
 }
@@ -111,7 +111,7 @@ function render(name, project) {
         for (let k = 0; k < 3; k++) img[o + k] = Math.round(c[k] * shade);
       }
   }
-  const file = join(outDir, `brain-${name}.png`);
+  const file = join(outDir, `brain-${name}${process.env.EQUAL ? "-equal" : ""}.png`);
   writeFileSync(file, png(W, H, img));
   console.log(file);
 }

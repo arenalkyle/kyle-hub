@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildGraph, withFolders, type BrainGraph } from "./brainGraph";
-import { assignRegions, brainSdf, newShapeCache, regionAnchors, regionOf, shapeContains, shapeTargets, SHAPES, worldScale, type ShapeId } from "./brainShape";
+import { assignRegions, brainSdf, newShapeCache, regionAnchors, regionOf, shapeContains, shapeTargets, slotSide, SHAPES, worldScale, type ShapeId } from "./brainShape";
 
 function vault(folders: Record<string, number>, root = 0, withTree = true): BrainGraph {
   const notes: string[] = [];
@@ -69,6 +69,27 @@ describe("shapeTargets", () => {
   it("default is the plain force layout", () => {
     const g = vault({ A: 10 }, 0);
     expect(shapeTargets("default", g, newShapeCache()).length).toBe(g.paths.length * 3);
+  });
+});
+
+describe("hemisphere regions", () => {
+  it("never lets a left-hemisphere region cross to the right of the fissure, or the mirror", () => {
+    const g = vault({ A: 60, B: 50, C: 40, D: 40, E: 30, F: 30, G: 20, H: 20 }, 10);
+    const cache = newShapeCache();
+    const pos = shapeTargets("brain", g, cache);
+    const ids = regionOf(g, cache);
+    const sideOf = new Map<string, "right" | "left" | "mid">();
+    for (const [folder, slot] of cache.slots) sideOf.set(`folder:${folder}`, slotSide(slot));
+    let checked = 0;
+    ids.forEach((id, i) => {
+      const side = sideOf.get(id);
+      if (side !== "left" && side !== "right") return;
+      checked++;
+      const x = pos[i * 3]!;
+      if (side === "left") expect(x).toBeLessThanOrEqual(0);
+      else expect(x).toBeGreaterThanOrEqual(0);
+    });
+    expect(checked).toBeGreaterThan(200);
   });
 });
 
