@@ -1,5 +1,5 @@
 ---
-doctype: template
+doctype: ticket
 audience: agent
 reviewed: 2026-11-20
 ---

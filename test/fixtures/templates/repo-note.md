@@ -5,6 +5,8 @@ reviewed: 2026-11-20
 ---
 # kyle-hub
 
+## Summary
+
 Obsidian plugin for tickets, terminals, logs, retros and brain notes.
 
 ## Run

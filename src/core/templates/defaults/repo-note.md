@@ -5,6 +5,8 @@ reviewed: {{date}}
 ---
 # {{title}}
 
+## Summary
+
 One sentence: what the repo is for.
 
 ## Run

@@ -145,7 +145,7 @@ The module that holds the docs system and assembles context packs.
 _Avoid_: knowledge base, wiki, memory
 
 **Doc type**:
-The kind of doc: adr, glossary, plan, status, runbook, lesson or overview.
+The kind of doc: adr, glossary, plan, status, runbook, lesson, overview, ticket, reminder or proposal. A ticket doc is a vault copy of a ticket (no review deadline), a reminder is a short-lived to-do note (review within 7 days) and a proposal is a skill or script idea awaiting a decision (review within 30 days).
 _Avoid_: template, category
 
 **Lesson**:
