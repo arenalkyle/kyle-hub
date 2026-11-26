@@ -122,7 +122,25 @@ export const brainModule: HubModule = {
       },
     });
     const brainSource = createBrainSource(hub, ctx);
-    hub.services.register("brainView", { mount: (el) => new BrainScene(el, brainSource) });
+    hub.services.register("brainView", {
+      mount: (el) => {
+        try {
+          return new BrainScene(el, brainSource);
+        } catch (e) {
+          // No WebGL (e.g. Linux Obsidian under WSLg): keep the host view usable and show a flat fallback.
+          console.error("[kyle-hub] 3D brain unavailable", e);
+          el.empty();
+          el.createDiv({ cls: "kh-brain-empty", text: "3D brain unavailable (WebGL failed to start)." });
+          return {
+            highlight: () => undefined,
+            focusFolder: () => undefined,
+            focused: () => null,
+            folderChoices: () => [],
+            dispose: () => el.empty(),
+          };
+        }
+      },
+    });
     const gapsBase = (hub.app.vault.adapter as { getBasePath?: () => string }).getBasePath?.();
     const gaps = createGapsService(gapsBase);
     hub.services.register("gaps", gaps.service);
