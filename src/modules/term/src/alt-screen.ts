@@ -7,8 +7,10 @@ const MOUSE_MODES = new Set([9, 1000, 1002, 1003, 1005, 1006, 1015, 1016]);
 /** Tracking modes whose protocol includes the wheel (9 is press-only). */
 const WHEEL_MODES = [1000, 1002, 1003] as const;
 const SGR_ENCODING = 1006;
-/** Below a mouse notch (100 px, less when zoomed), so each notch is one report and trackpad deltas add up to one. */
-const WHEEL_STEP_PX = 40;
+/** Pixels of wheel travel per report: a 100 px mouse notch is 3 lines, and trackpad deltas add up proportionally. */
+const WHEEL_STEP_PX = 33;
+/** Reports per wheel event, so one huge delta can't flood the app. */
+const MAX_REPORTS = 15;
 const DOM_DELTA_PIXEL = 0;
 const ENTER_ALT = "\x1b[?1049h\x1b[H";
 
@@ -18,7 +20,7 @@ export const WHEEL_REPORT = /^\x1b\[<6[45];\d+;\d+M$/;
 
 /**
  * Apps that ask for the mouse get it, so clicks reach them (Claude expands a tool call when it is clicked). Shift-drag
- * (Option-drag on macOS) still selects text. The wheel is sent here, one report per notch, to full-screen apps that
+ * (Option-drag on macOS) still selects text. The wheel is sent here, proportional reports, to full-screen apps that
  * asked for the mouse; in other full-screen apps it does nothing: xterm's default there is Up/Down, which would cycle
  * prompt history.
  */
@@ -49,8 +51,10 @@ export function keepMouseLocal(term: Terminal): void {
     if (Math.sign(e.deltaY) !== Math.sign(travel)) travel = 0;
     // Line and page deltas are always whole notches.
     travel += e.deltaMode === DOM_DELTA_PIXEL ? e.deltaY : Math.sign(e.deltaY) * WHEEL_STEP_PX;
-    if (Math.abs(travel) < WHEEL_STEP_PX) return false;
-    travel = 0;
+    const count = Math.min(MAX_REPORTS, Math.floor(Math.abs(travel) / WHEEL_STEP_PX));
+    if (count === 0) return false;
+    // Keep the remainder so the distance scrolled matches the distance asked for.
+    travel = Math.abs(travel) >= MAX_REPORTS * WHEEL_STEP_PX ? 0 : travel - Math.sign(travel) * count * WHEEL_STEP_PX;
 
     const cell = cellAt(term, e.clientX, e.clientY);
     if (!cell) return false;
