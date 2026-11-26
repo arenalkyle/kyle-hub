@@ -8,6 +8,7 @@ import { keepMouseLocal, serializeFlat } from "./alt-screen";
 import { decideKey } from "./keys";
 import { clampFont, type XtermTheme } from "./appearance";
 import { imageFrom, quotePaths, saveImage } from "./paste-file";
+import { cleanCopy } from "./copy-text";
 
 export interface TermLook {
   theme: XtermTheme;
@@ -56,6 +57,13 @@ export class XtermSession implements TermLike {
       e.preventDefault();
       this.pasteClipboard();
     });
+    // Cmd+C (macOS) and menu copy: same cleanup as Ctrl+C.
+    this.el.addEventListener("copy", (e) => {
+      if (!term.hasSelection() || !e.clipboardData) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.clipboardData.setData("text/plain", cleanCopy(term.getSelection()));
+    }, true);
     // Cmd+V (macOS) and menu paste arrive as a paste event; xterm only takes text, so an image becomes a file path.
     this.el.addEventListener("paste", (e) => {
       const img = imageFrom(e.clipboardData);
@@ -80,7 +88,7 @@ export class XtermSession implements TermLike {
         return false;
       }
       if (action === "copy") {
-        void navigator.clipboard.writeText(term.getSelection());
+        void navigator.clipboard.writeText(cleanCopy(term.getSelection()));
         term.clearSelection();
         return false;
       }
