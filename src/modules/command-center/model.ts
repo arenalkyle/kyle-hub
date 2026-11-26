@@ -1,4 +1,4 @@
-import type { AttentionInfo, AttentionService, BrainService, LogService, GapsService, RetroService, RetroStatus, SessionInfo, SessionService, TicketService, UsageService } from "../../core";
+import type { AttentionInfo, AttentionService, BrainService, LogService, GapsService, RetroService, RetroStatus, RetroSummary, SessionInfo, SessionService, TicketService, UsageService } from "../../core";
 import { formatCountdown, type AccountUsage } from "../../core/domain/usage";
 import type { BrainHealth } from "../../core/brain/service";
 import type { Issue, StatusDef } from "../../core/domain/types";
@@ -328,4 +328,17 @@ export function activeAgentCount(samples: readonly VitalsSample[], now: number):
   const ids = new Set<string>();
   for (const s of samples) if (s.kind !== "human" && s.sessionId !== undefined && s.at > now - ACTIVE_IDLE_MS && s.at <= now) ids.add(s.sessionId);
   return ids.size;
+}
+
+/** One line for the Retro card after Perform Retro, including the "nothing found" case. */
+export function retroSummaryText(r: RetroSummary): string {
+  const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const parts = [
+    r.created.length > 0 ? plural(r.created.length, "new ticket") : "",
+    r.seenAgain.length > 0 ? `${r.seenAgain.length} seen again` : "",
+    r.recurred.length > 0 ? `${r.recurred.length} recurred` : "",
+    r.resolved.length > 0 ? `${r.resolved.length} resolved` : "",
+  ].filter(Boolean);
+  const skipped = r.skipped.length > 0 ? ` (${r.skipped.length} skipped)` : "";
+  return parts.length === 0 ? `Retro done: nothing new found${skipped}.` : `Retro done: ${parts.join(", ")}${skipped}.`;
 }

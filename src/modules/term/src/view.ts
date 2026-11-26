@@ -3,6 +3,7 @@ import { COLORS } from "./colors";
 import type TermHost from "./main";
 import type { Session, SessionManager } from "./session-manager";
 import { formatAge } from "./title";
+import { osPathOf, quotePaths, saveImage } from "./paste-file";
 import { runningCount, SUBAGENT_FADE_MS, type AgentState } from "./agent-state";
 import { applyDrop, ids as layoutIds, nextExpand, remove as removeFromLayout, resolveZone, type ExpandLevel, type Layout, type Zone } from "./tile-layout";
 
@@ -102,7 +103,18 @@ export class TermView extends ItemView {
       e.stopPropagation();
       const s = this.mgr?.active;
       if (!s || s.status !== "running") return;
-      const text = this.plugin.resolveDrop(e.dataTransfer, s.cwd);
+      const dt = e.dataTransfer;
+      const files = Array.from(dt?.files ?? []);
+      if (files.length > 0) {
+        // From Explorer/Finder (or an image dragged out of a browser): type the paths, like any terminal.
+        void Promise.all(files.map((f) => osPathOf(f) ?? (f.type.startsWith("image/") ? saveImage(f) : null)))
+          .then((paths) => {
+            const text = quotePaths(paths.filter((p): p is string => !!p));
+            if (text) this.mgr?.sendText(s.id, text);
+          }, () => {});
+        return;
+      }
+      const text = this.plugin.resolveDrop(dt, s.cwd);
       if (text) this.mgr?.sendText(s.id, text);
     }, true);
     this.applyBackground(this.plugin.bgVars(true));

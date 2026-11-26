@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Issue, StatusDef } from "../../core/domain/types";
 import {
+  retroSummaryText,
   activeAgentCount,
   activeSeries,
   buildCommandCenterModel,
@@ -220,5 +221,17 @@ describe("brain vitals", () => {
     expect(accessSince).toHaveBeenCalledWith(new Date(NOW_MS - 60 * MIN).toISOString());
     expect(d.vitals).toMatchObject({ state: "ok", value: [{ kind: "read", path: "a.md" }] });
     expect((await loadCommandCenterData({}, NOW)).vitals.state).toBe("disabled");
+  });
+});
+
+describe("retroSummaryText", () => {
+  const base = { created: [], seenAgain: [], skipped: [], recurred: [], resolved: [] };
+  it("says when nothing was found", () => {
+    expect(retroSummaryText(base)).toBe("Retro done: nothing new found.");
+    expect(retroSummaryText({ ...base, skipped: ["a"] })).toBe("Retro done: nothing new found (1 skipped).");
+  });
+  it("lists what changed", () => {
+    expect(retroSummaryText({ ...base, created: [{ id: "T-1", title: "x", type: "rule" }, { id: "T-2", title: "y", type: "rule" }], seenAgain: ["T-0"] }))
+      .toBe("Retro done: 2 new tickets, 1 seen again.");
   });
 });

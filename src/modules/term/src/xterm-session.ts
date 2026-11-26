@@ -7,6 +7,7 @@ import type { TermHandlers, TermLike } from "./session-manager";
 import { keepMouseLocal, serializeFlat } from "./alt-screen";
 import { decideKey } from "./keys";
 import { clampFont, type XtermTheme } from "./appearance";
+import { imageFrom, quotePaths, saveImage } from "./paste-file";
 
 export interface TermLook {
   theme: XtermTheme;
@@ -55,6 +56,14 @@ export class XtermSession implements TermLike {
       e.preventDefault();
       this.pasteClipboard();
     });
+    // Cmd+V (macOS) and menu paste arrive as a paste event; xterm only takes text, so an image becomes a file path.
+    this.el.addEventListener("paste", (e) => {
+      const img = imageFrom(e.clipboardData);
+      if (!img) return;
+      e.preventDefault();
+      e.stopPropagation();
+      void this.pasteImage(img);
+    }, true);
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== "keydown") return true;
       const k = e.key.toLowerCase();
@@ -91,8 +100,23 @@ export class XtermSession implements TermLike {
 
   paste(text: string): void { this.term.paste(text); }
 
+  /** Text pastes as text; a copied image (a screenshot) is saved to a temp file and its path is pasted. */
   private pasteClipboard(): void {
-    void navigator.clipboard.readText().then((t) => { if (t) this.term.paste(t); }, () => {});
+    void (async () => {
+      const text = await navigator.clipboard.readText().catch(() => "");
+      if (text) return this.term.paste(text);
+      const items = await navigator.clipboard.read().catch(() => [] as ClipboardItem[]);
+      for (const item of items) {
+        const type = item.types.find((t) => t.startsWith("image/"));
+        if (type) return this.pasteImage(await item.getType(type));
+      }
+    })();
+  }
+
+  private async pasteImage(blob: Blob): Promise<void> {
+    try {
+      this.term.paste(quotePaths([await saveImage(blob)]));
+    } catch { /* temp dir not writable: nothing to paste */ }
   }
 
   /** Re-read theme/font from settings (keeps this session's zoom) and re-fit. */

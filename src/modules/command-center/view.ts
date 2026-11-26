@@ -17,6 +17,7 @@ import {
   SPARKLINE_HEIGHT,
   SPARKLINE_WIDTH,
   sparklinePath,
+  retroSummaryText,
   type CommandCenterModel,
   type CommandCenterReader,
   type Part,
@@ -68,6 +69,8 @@ export class CommandCenterView extends ItemView {
   private sensors = new SensorSampler(SENSOR_HISTORY, () => this.paintSystem());
   /** Latest retro status read on refresh; the Retro card paints from it. */
   private retro: Part<RetroStatus> | undefined;
+  /** Perform Retro progress shown in the card; kept across repaints. */
+  private retroRun: { state: "running" | "done" | "error"; text: string } | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -237,8 +240,8 @@ export class CommandCenterView extends ItemView {
     host.className = "kh-brain-host kh-brain-host-backdrop";
     if (this.brainHandle) return;
     const svc = this.hub.services.get("brainView");
+    // Brain module off: the backdrop stays a plain flat surface.
     if (svc) this.brainHandle = svc.mount(host);
-    else host.createDiv({ cls: "kh-brain-empty", text: "3D brain: the Brain module is disabled." });
   }
 
   private onAccess(e: BrainAccessEvent): void {
@@ -356,18 +359,26 @@ export class CommandCenterView extends ItemView {
     card.createEl("h4", { text: "Retro" });
     const svc = this.reader().retro;
     if (svc) {
-      const btn = card.createEl("button", { text: "Perform Retro", cls: "kh-command-center-retro-btn", attr: { "data-kh-retro": "perform" } });
+      const running = this.retroRun?.state === "running";
+      const btn = card.createEl("button", { text: running ? "Running retro…" : "Perform Retro", cls: "kh-command-center-retro-btn", attr: { "data-kh-retro": "perform" } });
+      btn.disabled = running;
       btn.onclick = () => {
-        btn.disabled = true;
+        if (this.retroRun?.state === "running") return;
+        this.retroRun = { state: "running", text: "Reading recent sessions…" };
+        void this.refresh();
         void svc
           .perform()
-          .then((r) => new Notice(`Retro done. ${r.created.length} new ticket${r.created.length === 1 ? "" : "s"}${r.seenAgain.length > 0 ? `, ${r.seenAgain.length} seen again` : ""}.`, 8000))
-          .catch((e: unknown) => new Notice(`Retro failed: ${(e as Error).message}`, 10000))
-          .finally(() => {
-            btn.disabled = false;
-            void this.refresh();
-          });
+          .then((r) => {
+            this.retroRun = { state: "done", text: retroSummaryText(r) };
+            new Notice(this.retroRun.text, 8000);
+          })
+          .catch((e: unknown) => {
+            this.retroRun = { state: "error", text: `Retro failed: ${e instanceof Error ? e.message : String(e)}` };
+            new Notice(this.retroRun.text, 10000);
+          })
+          .finally(() => void this.refresh());
       };
+      if (this.retroRun) card.createDiv({ cls: `kh-command-center-retro-run is-${this.retroRun.state}`, text: this.retroRun.text });
     }
     const st = this.retro;
     const r = st?.state === "ok" ? st.value : undefined;
