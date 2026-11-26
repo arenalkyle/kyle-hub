@@ -3,6 +3,7 @@ import { SessionManager, type PtyLike, type TermHandlers, type TermLike } from "
 import type { SessionListener, SpawnOptions } from "../src/pty-manager";
 import type { ShellProfile } from "../src/shells";
 import { initialAgent } from "../src/agent-state";
+import { parsePersisted } from "../src/persist";
 
 const profiles: ShellProfile[] = [
   { id: "powershell", name: "PowerShell 5.1", shell: "powershell.exe", args: ["-NoLogo"] },
@@ -186,6 +187,57 @@ describe("create", () => {
     pty.listeners.get("p1")!.onData("PS> ");
     vi.advanceTimersByTime(10000);
     expect(pty.written).toEqual([]);
+  });
+});
+
+describe("WSL vault", () => {
+  const vault = String.raw`\\wsl.localhost\Ubuntu\home\pepzii\locked-away`;
+  const wslProfiles: ShellProfile[] = [
+    { id: "wsl", name: "WSL (Ubuntu)", shell: "wsl.exe", args: ["-d", "Ubuntu", "--cd", "/home/pepzii/locked-away"], distro: "Ubuntu" },
+    ...profiles,
+  ];
+  let wm: SessionManager;
+  beforeEach(() => {
+    wm = new SessionManager({
+      pty,
+      profiles: () => wslProfiles,
+      makeTerm: (h) => { const t = new MockTerm(h); terms.push(t); return t; },
+      now: () => clock,
+      env: () => ({ KYLE_TERM_PORT: "5", KYLE_TERM_TOKEN: "t" }),
+      fallbackCwd: () => vault,
+      resumeCommand: (id) => `claude --resume ${id}`,
+    });
+  });
+
+  it("starts wsl.exe in the session's folder, converted to a Linux path", () => {
+    wm.create({ kind: "shell", profileId: "wsl", cwd: `${vault}\\Projects\\a` });
+    expect(pty.spawned[0]!.opts).toMatchObject({ shell: "wsl.exe", args: ["-d", "Ubuntu", "--cd", "/home/pepzii/locked-away/Projects/a"] });
+    expect(pty.spawned[0]!.opts.env).toMatchObject({ KYLE_TERM_PORT: "5", KYLE_TERM_TOKEN: "t" });
+    expect(pty.spawned[0]!.opts.env!.KYLE_TERM_SESSION).toBeTruthy();
+  });
+  it("a Windows cwd under a WSL profile starts in the vault root", () => {
+    const s = wm.create({ kind: "shell", profileId: "wsl", cwd: String.raw`C:\Development\locked-away\Projects` });
+    expect(s.cwd).toBe(vault);
+    expect(pty.spawned[0]!.opts.args).toEqual(["-d", "Ubuntu", "--cd", "/home/pepzii/locked-away"]);
+  });
+  it("types `claude` into the WSL shell (Linux claude, not the Windows one)", () => {
+    wm.create({ kind: "claude", profileId: "wsl", cwd: vault, command: "claude" });
+    vi.advanceTimersByTime(5000);
+    expect(pty.spawned[0]!.opts.shell).toBe("wsl.exe");
+    expect(pty.written).toEqual([{ id: "p1", data: "claude\r" }]);
+  });
+  it("resume types `claude --resume <id>` into a new WSL shell in the same folder", () => {
+    wm.restore(parsePersisted([{ id: "s1", kind: "claude", profileId: "wsl", cwd: `${vault}\\Projects`, command: "claude", claudeSessionId: "c-1", lastOutputAt: 1, savedAt: 2 }]), () => undefined);
+    const s = wm.get("s1")!;
+    expect(wm.canResume(s)).toBe(true);
+    wm.resume("s1");
+    vi.advanceTimersByTime(5000);
+    expect(pty.spawned[0]!.opts).toMatchObject({ shell: "wsl.exe", args: ["-d", "Ubuntu", "--cd", "/home/pepzii/locked-away/Projects"] });
+    expect(pty.written.at(-1)).toEqual({ id: "p1", data: "claude --resume c-1\r" });
+  });
+  it("a Windows profile is unchanged", () => {
+    wm.create({ kind: "shell", profileId: "powershell", cwd: "C:\\v" });
+    expect(pty.spawned[0]!.opts).toMatchObject({ shell: "powershell.exe", args: ["-NoLogo"], cwd: "C:\\v" });
   });
 });
 

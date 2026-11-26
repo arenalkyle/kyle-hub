@@ -1,4 +1,5 @@
 import type { NetworkInterfaceInfo } from "node:os";
+import type { ShellProfile } from "./shells";
 
 /** True for a vault opened through the WSL file share (`\\wsl$\<distro>\...` or `\\wsl.localhost\<distro>\...`). */
 export function isWslUncPath(p: string): boolean {
@@ -32,4 +33,48 @@ export function wslAdapterAddress(ifaces: NodeJS.Dict<NetworkInterfaceInfo[]>): 
     if (v4) return v4.address;
   }
   return undefined;
+}
+
+/** `\\wsl.localhost\Ubuntu\home\me\v` -> `{ distro: "Ubuntu", linuxPath: "/home/me/v" }`; null for any other path. */
+export function parseWslUnc(p: string): { distro: string; linuxPath: string } | null {
+  const m = /^[\\/]{2}wsl(?:\$|\.localhost)[\\/]([^\\/]+)([\\/].*)?$/i.exec(p);
+  if (!m) return null;
+  const rest = (m[2] ?? "").replace(/\\/g, "/").replace(/\/+/g, "/").replace(/(.)\/$/, "$1");
+  return { distro: m[1]!, linuxPath: rest || "/" };
+}
+
+export const WSL_PROFILE_ID = "wsl";
+
+/** Shell profile that opens the vault's distro in the vault folder; null when the vault is not on the WSL share. */
+export function wslProfile(vaultRoot: string): ShellProfile | null {
+  const w = parseWslUnc(vaultRoot);
+  if (!w) return null;
+  return { id: WSL_PROFILE_ID, name: `WSL (${w.distro})`, shell: "wsl.exe", args: ["-d", w.distro, "--cd", w.linuxPath], distro: w.distro };
+}
+
+/** Arguments for one spawn: a WSL profile cds into the session's folder (converted to Linux); others are unchanged. */
+export function spawnArgs(p: ShellProfile, cwd: string): string[] {
+  if (!p.distro) return p.args;
+  const w = parseWslUnc(cwd);
+  return w ? ["-d", w.distro, "--cd", w.linuxPath] : p.args;
+}
+
+/**
+ * Profile for a new session: a folder on the WSL share opens in WSL (so Claude is the Linux `claude` with Linux
+ * `~/.claude`); any other folder uses the saved default among the non-WSL profiles.
+ */
+export function chooseProfileId(cwd: string, saved: string, profiles: ShellProfile[]): string {
+  const wsl = profiles.find((p) => p.distro);
+  if (wsl && isWslUncPath(cwd)) return wsl.id;
+  const native = profiles.filter((p) => !p.distro);
+  return native.some((p) => p.id === saved) ? saved : (native[0] ?? profiles[0]!).id;
+}
+
+/**
+ * Saved sessions in a vault on the WSL share all reopen in WSL; one saved with a folder outside the share (the old
+ * Windows copy of the vault) restarts in the vault root. No-op for any other vault.
+ */
+export function adaptRestored<T extends { profileId: string; cwd: string }>(sessions: T[], vaultRoot: string): T[] {
+  if (!isWslUncPath(vaultRoot)) return sessions;
+  return sessions.map((s) => ({ ...s, profileId: WSL_PROFILE_ID, cwd: isWslUncPath(s.cwd) ? s.cwd : vaultRoot }));
 }

@@ -2,6 +2,7 @@ import type { ShellProfile } from "./shells";
 import { resolveTitle } from "./title";
 import { initialAgent, reduceAgent, SUBAGENT_FADE_MS, type AgentEvent, type AgentInfo, type AgentState } from "./agent-state";
 import { WHEEL_REPORT } from "./alt-screen";
+import { isWslUncPath, spawnArgs } from "./wsl";
 import { nextColor } from "./colors";
 import { dimScrollback, dividerLine, serializeSessions, type PersistedSession } from "./persist";
 import type { SessionListener, SpawnOptions } from "./pty-manager";
@@ -295,6 +296,11 @@ export class SessionManager {
       if (prevAgent.firstPrompt) s.agent.firstPrompt = prevAgent.firstPrompt;
       if (keep.claudeSessionId && prevAgent.claudeSessionId) s.agent.claudeSessionId = prevAgent.claudeSessionId;
     }
+    // A WSL profile can only cd into a folder on the WSL share; anything else (a Windows path) starts in the vault root.
+    if (p.distro && !isWslUncPath(s.cwd)) {
+      const root = this.deps.fallbackCwd?.();
+      if (root && isWslUncPath(root)) s.cwd = root;
+    }
     if (this.deps.cwdExists && !this.deps.cwdExists(s.cwd)) {
       const root = this.deps.fallbackCwd?.();
       if (root) {
@@ -309,7 +315,7 @@ export class SessionManager {
     this.clearTimers(rt);
     rt.ptyId = this.deps.pty.spawnSession(
       {
-        shell: p.shell, args: p.args, cwd: s.cwd, cols: rt.term.cols, rows: rt.term.rows,
+        shell: p.shell, args: spawnArgs(p, s.cwd), cwd: s.cwd, cols: rt.term.cols, rows: rt.term.rows,
         env: { ...this.deps.env?.(), ...rt.extraEnv, KYLE_TERM_SESSION: s.id },
       },
       {

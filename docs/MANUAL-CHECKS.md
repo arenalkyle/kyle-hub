@@ -319,8 +319,14 @@ Before you start: close Obsidian and run `npm run deploy` once, so the locked no
 
 ## WSL2 vault (ADR-0014)
 
-Setup: vault at `/home/<user>/<vault>` in WSL2, opened in Windows Obsidian as `\\wsl$\<distro>\...` (or `\\wsl.localhost\...`), with a terminal profile that runs `wsl.exe` and `claude` inside WSL.
+Setup: vault at `/home/<user>/<vault>` in WSL2, opened in Windows Obsidian as `\\wsl$\<distro>\...` (or `\\wsl.localhost\...`). kyle-hub adds a "WSL (<distro>)" shell profile for it.
 
+- [ ] `npm run deploy` lists `deployed -> \\wsl.localhost\Ubuntu\home\...\kyle-hub`; in WSL, `ls ~/locked-away/.obsidian/plugins/kyle-hub` shows `main.js`, `helper/`, `hooks/` and `node_modules/@lydell/node-pty-win32-x64`. Reload kyle-hub: terminals start (the helper loads node-pty from the share).
+- [ ] New terminal in the vault: the pane title or profile reads "WSL (Ubuntu)"; `pwd` prints `/home/<user>/<vault>`.
+- [ ] Right-click a subfolder > "New Claude session here": WSL shell, `pwd` is that subfolder's Linux path, and `claude` runs from WSL (`command -v claude` gives `/home/<user>/.local/bin/claude`; `/status` shows Linux `~/.claude`).
+- [ ] Restart Obsidian with a Claude session open: it restores in WSL; Resume types `claude --resume <id>` in the same Linux folder.
+- [ ] Sessions saved in the old Windows copy (cwd `C:\...`) restore in WSL at the vault root.
+- [ ] A saved folder or Claude start folder on `C:\` still opens with the Windows default profile (PowerShell).
 - [ ] Run "Install hooks": the diff replaces each `node "C:\...\kyle-hook.js" <Event>` with `node "${CLAUDE_PROJECT_DIR}/.obsidian/plugins/kyle-hub/hooks/kyle-hook.js" <Event>`, one per event and no duplicates. Run it again: "already installed".
 - [ ] "Run doctor" (settings) and `kh doctor` report kyle-hook ok. Before migrating, they warn "uses an absolute path".
 - [ ] In a WSL terminal, `echo $KYLE_TERM_SESSION $KYLE_TERM_PORT $KYLE_TERM_WSL_HOST` prints all three (the last is `<ip>:<port>`; if it is empty, open a new terminal once WSL is running).

@@ -14,6 +14,8 @@ The vault can live in WSL2 (`/home/<user>/<vault>`), opened by Windows Obsidian 
 - On Windows the PTY env lists `KYLE_TERM_*` and `KH_*` in `WSLENV` (`/u`), so `wsl.exe` shells see the session, port and token.
 - When the vault path is a WSL share, the hook server also listens on the `vEthernet (WSL)` adapter address (the WSL side's default gateway), with the same token check, and passes `KYLE_TERM_WSL_HOST=<ip>:<port>`. `kyle-hook.js` tries 127.0.0.1 first, and only inside WSL (`WSL_DISTRO_NAME`) falls back to that address.
 
+- Terminals for a WSL-share vault open inside WSL: a "WSL (<distro>)" profile (`wsl.exe -d <distro> --cd <linux path>`, the UNC path converted to Linux) is listed first. Any session whose folder is on the share uses it, so Claude is the Linux `claude` with Linux `~/.claude`. Folders on a Windows drive keep the saved Windows default. Restored sessions reopen in WSL, and a saved Windows cwd falls back to the vault root. `wsl.exe` starts a login shell, so `~/.local/bin` is on PATH. The deploy script copies to the UNC vault path as-is, and the Windows helper loads node-pty from the share.
+
 ## Consequences
 
 - One settings entry works from Windows, macOS and WSL. Hooks only fire when Claude starts in the vault root, because `CLAUDE_PROJECT_DIR` is the session's start folder. That was already the case for a vault-scoped `settings.local.json`.

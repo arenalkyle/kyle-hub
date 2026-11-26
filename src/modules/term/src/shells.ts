@@ -2,13 +2,15 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-export type ProfileId = "powershell" | "pwsh" | "gitbash" | "cmd" | "login" | "zsh" | "bash";
+export type ProfileId = "powershell" | "pwsh" | "gitbash" | "cmd" | "login" | "zsh" | "bash" | "wsl";
 
 export interface ShellProfile {
   id: ProfileId;
   name: string;
   shell: string;
   args: string[];
+  /** WSL distro for the vault-on-WSL profile (`wsl.exe -d <distro> --cd <linux path>`, see `wsl.ts`). */
+  distro?: string;
 }
 
 export interface DetectDeps {

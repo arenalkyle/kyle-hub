@@ -87,7 +87,7 @@ describe("SessionService", () => {
     const listeners = new Set<(s: Session, prev: SessionState) => void>();
     m.onStateChange((s, prev) => listeners.forEach((l) => l(s, prev)));
     return createSessionService(
-      { getSessions: () => m, defaultProfileId: () => "powershell", vaultRoot: () => "C:\\vault", activateView: async () => void activated++ },
+      { getSessions: () => m, profileFor: () => "powershell", vaultRoot: () => "C:\\vault", activateView: async () => void activated++ },
       (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
     );
   };
@@ -133,7 +133,7 @@ describe("SessionService", () => {
       makeTerm: (h) => Object.assign(new MockTerm(h), { serialize: () => `${esc}[32mPS C:\\v>${esc}[0m \r\n` }),
     });
     const svc2 = createSessionService(
-      { getSessions: () => m, defaultProfileId: () => "powershell", vaultRoot: () => "C:\\v", activateView: async () => {} },
+      { getSessions: () => m, profileFor: () => "powershell", vaultRoot: () => "C:\\v", activateView: async () => {} },
       () => () => {},
     );
     void svc;

@@ -8,7 +8,7 @@ import { loadSettingsFile, planHookInstall, planHookUninstall, writeSettingsFile
 import { HookDiffModal } from "./hook-diff-modal";
 import { createSessionService, wireSessionEvents } from "./service";
 import { HookServer } from "./hook-server";
-import { isWslUncPath, wslAdapterAddress } from "./wsl";
+import { adaptRestored, chooseProfileId, isWslUncPath, wslAdapterAddress, wslProfile } from "./wsl";
 import { forwardHookToLogs } from "./hook-logs";
 import xtermCss from "@xterm/xterm/css/xterm.css";
 import { PtyManager } from "./pty-manager";
@@ -82,8 +82,10 @@ export default class TermHost {
 
   /** Registers everything with the module context; `stop()` undoes what the context does not. */
   async start(): Promise<SessionService> {
-    this.savedSessions = this.settings.sessions;
-    this.profiles = detectProfiles();
+    // Vault on the WSL share: offer "WSL (<distro>)" first; folders on the share open in it (see chooseProfileId).
+    const wsl = process.platform === "win32" ? wslProfile(this.vaultRoot()) : null;
+    this.profiles = wsl ? [wsl, ...detectProfiles()] : detectProfiles();
+    this.savedSessions = adaptRestored(this.settings.sessions, this.vaultRoot());
     this.styleEl = document.head.createEl("style", { text: xtermCss });
     const server = new HookServer((m) => {
       this.sessions?.handleHook(m.session, m.event, m.payload);
@@ -524,8 +526,9 @@ export default class TermHost {
     return a instanceof FileSystemAdapter ? a.getBasePath() : process.cwd();
   }
 
-  defaultProfileId(): string {
-    return pickProfileId(this.settings.defaultProfile, this.profiles);
+  /** Profile for a session in `cwd`: WSL for a folder on the WSL share, else the saved default. */
+  profileFor(cwd: string): string {
+    return chooseProfileId(cwd, pickProfileId(this.settings.defaultProfile, this.profiles), this.profiles);
   }
 
   /** Returns the session manager, or an error message string if Node can't be found. */
@@ -619,7 +622,8 @@ export default class TermHost {
   async newShell(reveal = false, cwd?: string): Promise<void> {
     const m = this.getSessions();
     if (typeof m === "string") return void new Notice(m);
-    m.create({ kind: "shell", profileId: this.defaultProfileId(), cwd: cwd ?? this.vaultRoot() });
+    const dir = cwd ?? this.vaultRoot();
+    m.create({ kind: "shell", profileId: this.profileFor(dir), cwd: dir });
     if (reveal) await this.activateView();
   }
 
@@ -627,10 +631,11 @@ export default class TermHost {
     const m = this.getSessions();
     if (typeof m === "string") return void new Notice(m);
     const base = this.settings.claudeCommand || "claude";
+    const cwd = opts.cwd || this.settings.claudeStartFolder || this.vaultRoot();
     const s = m.create({
       kind: "claude",
-      profileId: this.defaultProfileId(),
-      cwd: opts.cwd || this.settings.claudeStartFolder || this.vaultRoot(),
+      profileId: this.profileFor(cwd),
+      cwd,
       command: opts.args ? `${base} ${opts.args}` : base,
     });
     if (reveal) await this.activateView();

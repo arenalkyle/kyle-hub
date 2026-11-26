@@ -5,7 +5,8 @@ import type { Session, SessionManager } from "./session-manager";
 export interface ServiceHost {
   /** The session manager, or an error message when it cannot start (e.g. Node missing). */
   getSessions(): SessionManager | string;
-  defaultProfileId(): string;
+  /** Shell profile for a session started in `cwd` (WSL for a folder on the WSL share). */
+  profileFor(cwd: string): string;
   vaultRoot(): string;
   /** Reveals the terminal view. */
   activateView(): Promise<void>;
@@ -54,7 +55,7 @@ export function createSessionService(host: ServiceHost, addStateListener: (cb: (
       const command = opts.command ? [opts.command, ...(opts.args ?? []).map(quote)].join(" ") : undefined;
       const s = m.create({
         kind: command ? "claude" : "shell",
-        profileId: host.defaultProfileId(),
+        profileId: host.profileFor(opts.cwd ?? host.vaultRoot()),
         cwd: opts.cwd ?? host.vaultRoot(),
         command,
         env: opts.env,
