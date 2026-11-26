@@ -9,6 +9,8 @@ const WHEEL_MODES = [1000, 1002, 1003] as const;
 const SGR_ENCODING = 1006;
 /** Pixels of wheel travel per report: a 100 px mouse notch is 3 lines, and trackpad deltas add up proportionally. */
 const WHEEL_STEP_PX = 33;
+/** Every wheel event counts for at least this much, so tiny deltas (smooth-scroll wheels, Linux) still move the view. */
+const MIN_EVENT_PX = 16;
 /** Reports per wheel event, so one huge delta can't flood the app. */
 const MAX_REPORTS = 15;
 const DOM_DELTA_PIXEL = 0;
@@ -50,7 +52,7 @@ export function keepMouseLocal(term: Terminal): void {
 
     if (Math.sign(e.deltaY) !== Math.sign(travel)) travel = 0;
     // Line and page deltas are always whole notches.
-    travel += e.deltaMode === DOM_DELTA_PIXEL ? e.deltaY : Math.sign(e.deltaY) * WHEEL_STEP_PX;
+    travel += Math.sign(e.deltaY) * (e.deltaMode === DOM_DELTA_PIXEL ? Math.max(MIN_EVENT_PX, Math.abs(e.deltaY)) : WHEEL_STEP_PX);
     const count = Math.min(MAX_REPORTS, Math.floor(Math.abs(travel) / WHEEL_STEP_PX));
     if (count === 0) return false;
     // Keep the remainder so the distance scrolled matches the distance asked for.

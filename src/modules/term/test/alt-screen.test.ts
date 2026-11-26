@@ -75,6 +75,12 @@ describe("wheel", () => {
     expect(sent).toEqual(["\x1b[<65;3;3M"]);
   });
 
+  it("counts tiny deltas as at least half a line each", async () => {
+    const { sent, wheel } = await setup(APP);
+    for (let i = 0; i < 6; i++) wheel(1);
+    expect(sent.length).toBe(2);
+  });
+
   it("clamps to the grid", async () => {
     const { sent, wheel } = await setup(APP);
     wheel(100, { clientX: 9999, clientY: 0 });
