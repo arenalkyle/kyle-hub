@@ -7,8 +7,8 @@ const MOUSE_MODES = new Set([9, 1000, 1002, 1003, 1005, 1006, 1015, 1016]);
 /** Tracking modes whose protocol includes the wheel (9 is press-only). */
 const WHEEL_MODES = [1000, 1002, 1003] as const;
 const SGR_ENCODING = 1006;
-/** Pixels of wheel travel per report: a 100 px mouse notch is 6 lines, and trackpad deltas add up proportionally. */
-const WHEEL_STEP_PX = 16;
+/** Pixels of wheel travel per report: a 100 px mouse notch is 5 lines, and trackpad deltas add up proportionally. */
+const WHEEL_STEP_PX = 20;
 /** Every wheel event counts for at least this much (a full line), so tiny deltas (smooth-scroll wheels, Linux) still move the view. */
 const MIN_EVENT_PX = 32;
 /** Reports per wheel event, so one huge delta can't flood the app. */
