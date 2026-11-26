@@ -30,7 +30,7 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1â€
 - **Known gaps**
   - Tile layout is not persisted.
   - macOS terminals are unit-tested only (not run on a Mac yet); `kh schedule` stays Windows-only.
-  - Sessions with no hook events (plain shells, other CLIs) can show working/finished on a focus or resize redraw after typing.
+  - Plain shells (no hook events) can show working on a focus or resize redraw after typing; they never glow, count as "need you" or play sounds.
   - `kh` CLI changes to Done are not gated on acceptance criteria.
   - Usage "official reading" is an unverified best-effort.
   - Retro patcher on CRLF files is untested.

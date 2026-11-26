@@ -163,12 +163,14 @@ export function reduceAgent(info: AgentInfo, ev: AgentEvent): AgentInfo {
       return info.state === "needs-input" || info.state === "finished" ? { ...info, state: "idle", activity: undefined } : info;
     case "hook":
       return reduceHook(info, ev.event, ev.payload, ev.at);
+    // Plain shells (never hooked) only show busy/quiet. Bells and quiet output are guesses, so they never raise
+    // needs-input or finished: no glow, no status-bar count, no sound. Only Claude's hooks ask for attention.
     case "bell":
-      return info.hasHookEvents ? info : { ...info, state: "needs-input", activity: "Needs input" };
+      return info;
     case "output":
       return info.hasHookEvents || info.state === "needs-input" ? info : { ...info, state: "working" };
     case "idle":
-      return info.hasHookEvents || info.state !== "working" ? info : { ...info, state: "finished" };
+      return info.hasHookEvents || info.state !== "working" ? info : { ...info, state: "idle" };
   }
 }
 

@@ -93,15 +93,15 @@ describe("terminal reports", () => {
       expect(s.agent.state).toBe(initial);
     });
 
-    it("doesn't turn a finished session back to working when the app redraws", () => {
+    it("doesn't turn a quiet session back to working when the app redraws", () => {
       const s = shell();
       terms[0]!.h.onInput("x");
       output();
       vi.advanceTimersByTime(10_000);
-      expect(s.agent.state).toBe("finished");
+      expect(s.agent.state).toBe("idle");
       terms[0]!.h.onInput(WHEEL);
       output();
-      expect(s.agent.state).toBe("finished");
+      expect(s.agent.state).toBe("idle");
       clock += 1000;
       output();
       expect(s.agent.state).toBe("working");
@@ -115,7 +115,7 @@ describe("terminal reports", () => {
       output();
       expect(s.agent.state).toBe("working");
       vi.advanceTimersByTime(10_000);
-      expect(s.agent.state).toBe("finished");
+      expect(s.agent.state).toBe("idle");
     });
   });
 
@@ -361,15 +361,19 @@ describe("agent state integration", () => {
     expect(n).toBe(2);
     expect(s.agent.activity).toBe("Running c9");
   });
-  it("bell and idle fallback apply only to never-hooked sessions", () => {
+  it("plain shells never ask for attention: bells are ignored, quiet goes back to idle", () => {
     const s = shell();
+    const seen: string[] = [];
+    m.onStateChange((_s, _a, b) => seen.push(b));
     terms[0]!.h.onBell();
-    expect(s.agent.state).toBe("needs-input");
+    expect(s.agent.state).toBe("idle");
     terms[0]!.h.onInput("y");
     pty.listeners.get("p1")!.onData("output");
     expect(s.agent.state).toBe("working");
     vi.advanceTimersByTime(10_001);
-    expect(s.agent.state).toBe("finished");
+    expect(s.agent.state).toBe("idle");
+    expect(seen).not.toContain("needs-input");
+    expect(seen).not.toContain("finished");
     const h = shell();
     hook(h.id, "SessionStart", { session_id: "c1" });
     terms[1]!.h.onBell();

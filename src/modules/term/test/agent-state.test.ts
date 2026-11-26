@@ -57,11 +57,11 @@ describe("state transitions", () => {
 });
 
 describe("bell/idle fallback", () => {
-  it("bell -> needs-input, output -> working, idle -> finished (never-hooked only)", () => {
-    expect(run([{ type: "bell" }]).state).toBe("needs-input");
+  it("plain shells only go working -> idle; bells and quiet never ask for attention", () => {
+    expect(run([{ type: "bell" }]).state).toBe("idle");
     expect(run([{ type: "output" }]).state).toBe("working");
-    expect(run([{ type: "output" }, { type: "idle" }]).state).toBe("finished");
-    expect(run([{ type: "bell" }, { type: "output" }]).state).toBe("needs-input");
+    expect(run([{ type: "output" }, { type: "idle" }]).state).toBe("idle");
+    expect(run([{ type: "output" }, { type: "bell" }]).state).toBe("working");
   });
   it("is ignored once a hook event has been received", () => {
     const hooked = run([hook("SessionStart", { session_id: "s" })]);
