@@ -58,11 +58,14 @@ export function brainInventory(opts: { repoRoots: string[]; repoDocs: number; va
   const rel = opts.vaultBrainRel ?? DEFAULT_BRAIN_FOLDER;
   const claudeDirs = [...opts.repoRoots.map((r) => path.join(r, ".claude")), path.join(os.homedir(), ".claude"), ...(opts.extraClaudeDirs ?? [])];
   const vaultExcluded = createExcludeMatcher(opts.vaultExclude ?? []);
+  const vaultRel = (p: string): string => `${rel}/${path.relative(opts.vaultBrainDir ?? "", p).replaceAll("\\", "/")}`;
   const skipVaultCode = (dir: string, names: string[]): boolean =>
-    dir !== opts.vaultBrainDir && (hasCodeMarker(names) || vaultExcluded(`${rel}/${path.relative(opts.vaultBrainDir ?? "", dir).replaceAll("\\", "/")}`));
+    dir !== opts.vaultBrainDir && (hasCodeMarker(names) || vaultExcluded(vaultRel(dir)));
+  // Files are matched too, as the lint does: a `dir/**` glob matches `dir/a.md` but not the folder `dir` itself.
+  const isVaultDoc = (f: string): boolean => f.endsWith(".md") && !vaultExcluded(vaultRel(f));
   const uniq = [...new Set(claudeDirs.map((d) => path.resolve(d)))];
   return {
-    docs: opts.repoDocs + (opts.vaultBrainDir ? countFiles(opts.vaultBrainDir, 6, (f) => f.endsWith(".md"), skipVaultCode) : 0),
+    docs: opts.repoDocs + (opts.vaultBrainDir ? countFiles(opts.vaultBrainDir, 6, isVaultDoc, skipVaultCode) : 0),
     scripts: opts.repoRoots.reduce((n, r) => n + countFiles(path.join(r, "scripts"), 3, (f) => SCRIPT_EXT.has(path.extname(f))), 0),
     skills: uniq.reduce((n, d) => n + countSkills(path.join(d, "skills")), 0),
     agents: uniq.reduce((n, d) => n + countFiles(path.join(d, "agents"), 1, (f) => f.endsWith(".md")), 0),

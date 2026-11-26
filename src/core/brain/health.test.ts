@@ -80,7 +80,7 @@ describe("BrainService health", () => {
     write(vault, "docs/adr/0001-unrelated.md", "# no frontmatter\n");
     write(vault, "docs/plugins/zones.md", "# no frontmatter\n");
     write(vault, "docs/brain/lessons/good.md", "---\ndoctype: lesson\naudience: agent\nreviewed: 2026-11-20\n---\n# Lesson\n\n## Lesson\nx\n");
-    write(vault, ".kyle-hub/grading.json", JSON.stringify({ exclude: ["docs/brain/skip", "docs/brain/skip/**"] }));
+    write(vault, ".kyle-hub/grading.json", JSON.stringify({ exclude: ["docs/brain/skip/**"] }));
     write(vault, "docs/brain/skip/bad.md", "# excluded by the vault grading.json\n");
     const svc = createBrainService({
       repos: () => ({}),
@@ -88,6 +88,18 @@ describe("BrainService health", () => {
       vaultBrainDir: () => path.join(vault, "docs", "brain"),
       vaultBrainRel: () => "docs/brain",
     });
+    svc.refreshHealth();
+    expect(svc.health().vault).toMatchObject({ lintErrors: 0, score: 100 });
+    expect(svc.inventory().docs).toBe(1);
+  });
+
+  it("a dir/** exclude glob hides the same files from health and the Docs count", () => {
+    write(vault, "Brain/lessons/good.md", "---\ndoctype: lesson\naudience: agent\nreviewed: 2026-11-20\n---\n# Lesson\n\n## Lesson\nx\n");
+    write(vault, "Brain/drafts/a.md", "# no frontmatter\n");
+    write(vault, "Brain/drafts/deep/b.md", "# no frontmatter\n");
+    write(vault, "Brain/notes/c.md", "# no frontmatter\n");
+    write(vault, ".kyle-hub/grading.json", JSON.stringify({ exclude: ["Brain/drafts/**", "Brain/notes/*.md"] }));
+    const svc = createBrainService({ repos: () => ({}), ignoreSymbols: () => [], vaultBrainDir: () => path.join(vault, "Brain") });
     svc.refreshHealth();
     expect(svc.health().vault).toMatchObject({ lintErrors: 0, score: 100 });
     expect(svc.inventory().docs).toBe(1);
