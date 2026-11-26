@@ -53,8 +53,12 @@ export class XtermSession implements TermLike {
     term.onTitleChange(h.onTitle);
     term.onBell(h.onBell);
     this.el.className = "kh-term-term";
+    // Chromium on Linux can deliver one right-click as two contextmenu events (mousedown and mouseup): paste once.
+    let lastRightPaste = 0;
     this.el.addEventListener("contextmenu", (e) => {
       e.preventDefault();
+      if (e.timeStamp - lastRightPaste < 400) return;
+      lastRightPaste = e.timeStamp;
       this.pasteClipboard();
     });
     // Cmd+C (macOS) and menu copy: same cleanup as Ctrl+C.
