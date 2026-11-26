@@ -7,6 +7,7 @@ import { rotateSpeedOf } from "../../core/domain/autoRotate";
 import { normalizeOrbitColor, normalizeOrbitMode, normalizeOrbitOpacity, normalizeOrbitSpeed, normalizeToasts } from "../../core/domain/brainMenu";
 import { isThemeId, DEFAULT_THEME } from "../../core/domain/brainTheme";
 import { newShapeCache, SHAPES, type ShapeCache, type ShapeId } from "../../core/domain/brainShape";
+import { pruneLayoutKeys } from "../../core/domain/brainPaths";
 import type { BrainOptions, BrainSource } from "./scene";
 
 export const DEFAULT_BLOOM = 1.1;
@@ -55,7 +56,9 @@ export function createBrainSource(hub: Hub, ctx: ModuleContext): BrainSource {
   let saveTimer = 0;
   const saveNow = (): void => {
     const all = { ...(ctx.settings.get<{ layoutCache?: CacheStore }>().layoutCache ?? {}) };
-    all[vaultKey] = Object.fromEntries(layoutCache);
+    // Drop positions of notes and folders that no longer exist (e.g. the old Brain/ tree after the brain folder moved).
+    // Pruned here, not on load: saves only happen once the scene has the indexed vault.
+    all[vaultKey] = pruneLayoutKeys(Object.fromEntries(layoutCache), (p) => app.vault.getAbstractFileByPath(p) !== null);
     const shapes = { ...(ctx.settings.get<{ shapeCache?: ShapeStore }>().shapeCache ?? {}) };
     shapes[vaultKey] = { slots: Object.fromEntries(shapeCache.slots), weights: Object.fromEntries(shapeCache.weights) };
     void ctx.settings.update({ layoutCache: all, shapeCache: shapes });

@@ -1,9 +1,10 @@
 import { createTwoFilesPatch } from "diff";
 import { fmToJs, parseFrontmatter, splitFrontmatter } from "./frontmatter";
 import { DEFAULT_PUBLIC_HOSTS, scrub, type ScrubOptions, type ScrubResult } from "./scrub";
+import { DEFAULT_BRAIN_FOLDER, lessonPath } from "./brainPaths";
 
 export interface PromotePlan {
-  /** Path under the home vault, forward slashes (`Brain/lessons/<name>.md`). */
+  /** Path under the home vault, forward slashes (`<brain folder>/lessons/<name>.md`, default `Brain/lessons/`). */
   targetRel: string;
   before: string;
   after: string;
@@ -39,12 +40,14 @@ export function promoteFileName(sourceName: string): string {
   return `${base || "lesson"}.md`;
 }
 
-export function planPromote(sourceName: string, text: string, opts: ScrubOptions): PromotePlan {
+/** `brainFolder` is the home vault's brain folder (vault-relative). */
+export function planPromote(sourceName: string, text: string, opts: ScrubOptions, brainFolder: string = DEFAULT_BRAIN_FOLDER): PromotePlan {
   const r = scrub(text, opts);
   const name = promoteFileName(sourceName);
-  const patch = createTwoFilesPatch(`work/${name}`, `home/Brain/lessons/${name}`, text, r.text, undefined, undefined, { context: 3 });
+  const targetRel = lessonPath(brainFolder, name);
+  const patch = createTwoFilesPatch(`work/${name}`, `home/${targetRel}`, text, r.text, undefined, undefined, { context: 3 });
   return {
-    targetRel: `Brain/lessons/${name}`,
+    targetRel,
     before: text,
     after: r.text,
     diff: patch.replace(/^=+\r?\n/, ""),

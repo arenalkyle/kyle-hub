@@ -335,3 +335,12 @@ Setup: vault at `/home/<user>/<vault>` in WSL2, opened in Windows Obsidian as `\
 - [ ] Windows 11 only: with `networkingMode=mirrored` in `%USERPROFILE%\.wslconfig`, lights work without the firewall rule (loopback path).
 - [ ] The same vault opened from a Windows path still works: Claude on Windows (Git Bash and PowerShell-only) shows lights with the portable entry.
 - [ ] Claude started in a vault subfolder: note whether it loads the vault's `.claude/settings.local.json`. If it does, `${CLAUDE_PROJECT_DIR}` is the subfolder and the hook fails silently (no lights); report it.
+
+## Configurable brain folder
+
+- [ ] kyle-hub settings > Brain: "Brain folder" is empty (placeholder `Brain`) and "Conventions folder" is empty (placeholder `Brain/conventions`).
+- [ ] In locked-away, set "Conventions folder" to `docs/conventions` and leave "Brain folder" alone (pointing it at `docs` would lint all 107 notes there, including ADRs and plugin docs). "Create style conventions" then reports the files already exist.
+- [ ] Set "Brain folder" to a folder of brain docs (e.g. `docs/brain`). Within about a second the Brain Vitals health and the Docs count reflect only that folder. New doc > lesson > vault creates `docs/brain/lesson/<slug>.md`.
+- [ ] `kh lint docs --vault` lints the configured brain folder (read from the vault's `data.json`), not `Brain/`.
+- [ ] Promote to home writes to the home vault's own brain folder (`<home>/<its brain folder>/lessons/`); `kh promote --brain-folder <dir>` overrides it.
+- [ ] After the brain scene saves its layout once, `data.json` has no `layoutCache` keys under the old `Brain/` tree.

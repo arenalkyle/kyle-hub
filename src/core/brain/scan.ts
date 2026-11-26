@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createExcludeMatcher, hasCodeMarker } from "../domain/codeRoots";
+import { DEFAULT_BRAIN_FOLDER } from "../domain/brainPaths";
 import fs from "node:fs";
 import path from "node:path";
 import { docMeta, lintDoc, type LintIssue } from "./lint";
@@ -109,10 +110,10 @@ export function checkRepo(root: string, opts: ScanOptions = {}): { issues: LintI
 }
 
 /**
- * Lints every .md under a vault `Brain/` folder (paths are reported as `Brain/...`, so no path inference).
+ * Lints every .md under the vault brain folder. Paths are reported vault-relative (`<rel>/...`, default `Brain/...`).
  * Code under it (a folder with a code marker, or matching a vault-relative `exclude` glob) is skipped (LOCK-74).
  */
-export function lintVaultBrain(brainDir: string, exclude: readonly string[] = []): LintIssue[] {
+export function lintVaultBrain(brainDir: string, exclude: readonly string[] = [], rel: string = DEFAULT_BRAIN_FOLDER): LintIssue[] {
   const files: string[] = [];
   const excluded = createExcludeMatcher(exclude);
   const walk = (dir: string): void => {
@@ -120,12 +121,12 @@ export function lintVaultBrain(brainDir: string, exclude: readonly string[] = []
     if (dir !== brainDir && hasCodeMarker(entries.map((e) => e.name))) return;
     for (const ent of entries) {
       const abs = path.join(dir, ent.name);
-      const rel = toRel(path.relative(brainDir, abs));
-      if (excluded(`Brain/${rel}`)) continue;
+      const sub = toRel(path.relative(brainDir, abs));
+      if (excluded(`${rel}/${sub}`)) continue;
       if (ent.isDirectory()) walk(abs);
-      else if (ent.name.endsWith(".md")) files.push(rel);
+      else if (ent.name.endsWith(".md")) files.push(sub);
     }
   };
   walk(brainDir);
-  return files.sort().flatMap((f) => lintDoc(`Brain/${f}`, fs.readFileSync(path.join(brainDir, f), "utf8")));
+  return files.sort().flatMap((f) => lintDoc(`${rel}/${f}`, fs.readFileSync(path.join(brainDir, f), "utf8")));
 }

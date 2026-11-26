@@ -9,10 +9,10 @@ export function localDate(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-export type NewDocLocation = { kind: "repo"; root: string; adrFileNames: readonly string[] } | { kind: "vault" };
+export type NewDocLocation = { kind: "repo"; root: string; adrFileNames: readonly string[] } | { kind: "vault"; brainFolder?: string };
 
 export interface NewDocPlan {
-  /** Repo-relative (repo) or `Brain/...` (vault) path. */
+  /** Repo-relative (repo) or `<brain folder>/...` (vault) path. */
   path: string;
   content: string;
   issues: LintIssue[];
@@ -21,8 +21,8 @@ export interface NewDocPlan {
 /** Pure: the file `New doc` would create and what lint says about it. Throws when the type is not allowed in repos. */
 export function planNewDoc(type: DocType, title: string, date: string, location: NewDocLocation): NewDocPlan {
   const number = location.kind === "repo" && type === "adr" ? nextAdrNumber(location.adrFileNames) : undefined;
-  const path = location.kind === "repo" ? repoDocPath(type, title, location.adrFileNames) : vaultDocPath(type, title);
-  if (path === undefined) throw new Error(`${type} docs live in the vault Brain/ folder, not in a repo (ADR-0007)`);
+  const path = location.kind === "repo" ? repoDocPath(type, title, location.adrFileNames) : vaultDocPath(type, title, location.brainFolder);
+  if (path === undefined) throw new Error(`${type} docs live in the vault brain folder, not in a repo (ADR-0007)`);
   const content = renderTemplate(TEMPLATES[type], { title, date, ...(number !== undefined ? { number } : {}) });
   return { path, content, issues: lintDoc(path, content) };
 }

@@ -4,6 +4,7 @@ import type { NewIssueInput } from "../domain/create";
 import type { TicketActor } from "../services";
 import { DOC_BUDGET_TOKENS, CHARS_PER_TOKEN, type SelectedDoc } from "../domain/packDocs";
 import type { LintIssue } from "./lint";
+import { DEFAULT_BRAIN_FOLDER } from "../domain/brainPaths";
 import { checkRepo, lintVaultBrain, type ScanOptions } from "./scan";
 import type { Finding } from "./checks";
 import { DEFAULT_HEALTH_WEIGHTS, healthScore, sumCounts, type HealthCounts, type HealthWeights } from "./health";
@@ -26,7 +27,7 @@ export interface RepoHealth extends HealthCounts {
   score: number;
 }
 
-/** `vault` aggregates every repo plus the vault `Brain/` folder. */
+/** `vault` aggregates every repo plus the vault brain folder. */
 export interface BrainHealth {
   vault: RepoHealth;
   repos: Record<string, RepoHealth>;
@@ -44,7 +45,7 @@ export interface BrainService {
   check(repoKey: string): BrainReport;
   /** Lintable repo docs (repo-relative paths) for one repo-map key. */
   docs(repoKey: string): string[];
-  /** Checks every repo and the vault Brain/ folder, then recomputes health. */
+  /** Checks every repo and the vault brain folder, then recomputes health. */
   refreshHealth(): BrainHealth;
   /** Last computed health snapshot (computed on first call when nothing was checked yet). */
   health(): BrainHealth;
@@ -58,8 +59,10 @@ export interface BrainServiceDeps {
   repos(): Record<string, RepoEntry>;
   ignoreSymbols(repoKey: string): readonly string[];
   scan?: Pick<ScanOptions, "useRipgrep" | "now">;
-  /** `<vault>/Brain`; undefined when no vault is known (vault health then counts nothing). */
+  /** `<vault>/<brain folder>`; undefined when no vault is known (vault health then counts nothing). */
   vaultBrainDir?(): string | undefined;
+  /** The brain folder, vault-relative (`Brain` by default); used for reported paths and `exclude` globs. */
+  vaultBrainRel?(): string;
   weights?(): HealthWeights;
   /** Receives `brain:health-changed` (wired to the event bus by the module). */
   emit?(event: HealthChangedPayload): void;
@@ -83,10 +86,12 @@ export function createBrainService(deps: BrainServiceDeps): BrainService {
   const lastScores = new Map<string, number>();
   let snapshot: BrainHealth | undefined;
 
-  /** `exclude` globs of the vault `grading.json` (the vault is the parent of `Brain/`). */
+  const brainRel = (): string => deps.vaultBrainRel?.() ?? DEFAULT_BRAIN_FOLDER;
+  /** `exclude` globs of the vault `grading.json` (the vault is the brain folder minus its relative path). */
   const vaultExclude = (brainDir: string): string[] => {
+    const vaultRoot = path.resolve(brainDir, ...brainRel().split("/").map(() => ".."));
     try {
-      return parseGradingConfig(fs.readFileSync(path.join(path.dirname(brainDir), ".kyle-hub", "grading.json"), "utf8")).config.exclude;
+      return parseGradingConfig(fs.readFileSync(path.join(vaultRoot, ".kyle-hub", "grading.json"), "utf8")).config.exclude;
     } catch {
       return [];
     }
@@ -95,7 +100,7 @@ export function createBrainService(deps: BrainServiceDeps): BrainService {
   const vaultBrainCounts = (): HealthCounts => {
     const dir = deps.vaultBrainDir?.();
     if (!dir || !fs.existsSync(dir)) return { lintErrors: 0, lintWarnings: 0, stalenessIssues: 0 };
-    const issues = lintVaultBrain(dir, vaultExclude(dir));
+    const issues = lintVaultBrain(dir, vaultExclude(dir), brainRel());
     return countsOf(issues, []);
   };
 
@@ -159,7 +164,7 @@ export function createBrainService(deps: BrainServiceDeps): BrainService {
         }
       }
       const vaultBrainDir = deps.vaultBrainDir?.();
-      return brainInventory({ repoRoots, repoDocs, ...(vaultBrainDir ? { vaultBrainDir, vaultExclude: vaultExclude(vaultBrainDir) } : {}) });
+      return brainInventory({ repoRoots, repoDocs, ...(vaultBrainDir ? { vaultBrainDir, vaultBrainRel: brainRel(), vaultExclude: vaultExclude(vaultBrainDir) } : {}) });
     },
     selectDocs(ticket, project, budgetTokens = DOC_BUDGET_TOKENS) {
       const docs = selectBrainDocs({

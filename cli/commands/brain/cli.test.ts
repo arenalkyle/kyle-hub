@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Io } from "../tickets/cli";
-import { runBrainCheck, runLintDocs, type HubDataView } from "./cli";
+import { readHubData, runBrainCheck, runLintDocs, type HubDataView } from "./cli";
 
 let root: string;
 let vault: string;
@@ -41,6 +41,17 @@ describe("kh lint docs", () => {
     write(vault, "Brain/lesson/bare.md", "# Bare\n\n## Lesson\nx\n");
     expect(runLintDocs(["--vault"], io(), data())).toBe(1);
     expect(out.join("\n")).toMatch(/Brain\/lesson\/bare.md: missing frontmatter/);
+  });
+
+  it("--vault lints the configured brain folder only, reading it from data.json", () => {
+    write(vault, "Brain/lesson/bare.md", "# stale old folder\n");
+    write(vault, "docs/adr/0001.md", "# unrelated\n");
+    write(vault, "docs/brain/lesson/bare.md", "# Bare\n");
+    write(vault, ".obsidian/plugins/kyle-hub/data.json", JSON.stringify({ modules: { brain: { brainFolder: "docs/brain" } } }));
+    expect(runLintDocs(["--vault"], io(), readHubData({ KYLE_HUB_VAULTS: vault }))).toBe(1);
+    const text = out.join("\n");
+    expect(text).toMatch(/docs\/brain\/lesson\/bare.md: missing frontmatter/);
+    expect(text).not.toMatch(/Brain\/lesson|docs\/adr/);
   });
 });
 

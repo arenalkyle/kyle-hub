@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
+import { normalizeVaultFolder } from "../../../src/core/domain/brainPaths";
+import { readVaultBrainFolders } from "../../../src/core/brain/folders";
 import { planPromote, promoteEligible, scrubOptionsFrom } from "../../../src/core/domain/promote";
 import type { ScrubOptions } from "../../../src/core/domain/scrub";
 import { EXIT, KtError, type Io } from "../tickets/cli";
 
-const USAGE = "kh promote <file> --to <homeVault> [--dry-run]";
+const USAGE = "kh promote <file> --to <homeVault> [--brain-folder <dir>] [--dry-run]";
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** Scrub settings (`core.promote`, repo map) from the first configured vault's plugin data.json (read-only). */
@@ -23,12 +25,15 @@ export function readScrubOptions(env: Record<string, string | undefined>): Scrub
   return scrubOptionsFrom(isObj(core.promote) ? core.promote : undefined, isObj(core.repos) ? (core.repos as Record<string, { github?: unknown }>) : undefined);
 }
 
-/** `kh promote`: scrub a work lesson / applied proposal and write it to `<homeVault>/Brain/lessons/`. `--dry-run` prints the diff only. */
+/**
+ * `kh promote`: scrub a work lesson / applied proposal and write it to `<homeVault>/<brain folder>/lessons/`. The brain
+ * folder is `--brain-folder`, else the home vault's kyle-hub setting, else `Brain`. `--dry-run` prints the diff only.
+ */
 export function runPromote(argv: string[], io: Io, opts: ScrubOptions = readScrubOptions(io.env)): number {
-  let values: { to?: string; "dry-run"?: boolean };
+  let values: { to?: string; "brain-folder"?: string; "dry-run"?: boolean };
   let positionals: string[];
   try {
-    const r = parseArgs({ args: argv, options: { to: { type: "string" }, "dry-run": { type: "boolean" } }, strict: true, allowPositionals: true });
+    const r = parseArgs({ args: argv, options: { to: { type: "string" }, "brain-folder": { type: "string" }, "dry-run": { type: "boolean" } }, strict: true, allowPositionals: true });
     values = r.values as typeof values;
     positionals = r.positionals;
   } catch (e) {
@@ -45,8 +50,10 @@ export function runPromote(argv: string[], io: Io, opts: ScrubOptions = readScru
   }
   const ok = promoteEligible(text);
   if (!ok.ok) throw new KtError(EXIT.validation, ok.reason);
-  const plan = planPromote(path.basename(src), text, opts);
-  const target = path.join(path.resolve(io.cwd, values.to), ...plan.targetRel.split("/"));
+  const home = path.resolve(io.cwd, values.to);
+  const brainFolder = normalizeVaultFolder(values["brain-folder"]) || readVaultBrainFolders(home).brainFolder;
+  const plan = planPromote(path.basename(src), text, opts, brainFolder);
+  const target = path.join(home, ...plan.targetRel.split("/"));
   io.out(plan.diff.trimEnd());
   const summary = Object.entries(plan.counts).map(([k, n]) => `${k}: ${n}`).join(", ") || "nothing to scrub";
   if (values["dry-run"]) {

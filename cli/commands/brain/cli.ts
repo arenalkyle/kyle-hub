@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { lintDoc, type LintIssue } from "../../../src/core/brain/lint";
+import { brainFolders, type BrainFolders } from "../../../src/core/domain/brainPaths";
 import { checkRepo, lintVaultBrain, repoDocPaths } from "../../../src/core/brain/scan";
 import { fileFindings, type RepoEntry } from "../../../src/core/brain/service";
 import type { Finding } from "../../../src/core/brain/checks";
@@ -17,12 +18,14 @@ export interface HubDataView {
   ignoreSymbols: Record<string, string[]>;
   autoFindings: boolean;
   vault?: string;
+  /** The vault's brain folders (`modules.brain`); defaults when absent. */
+  folders?: BrainFolders;
 }
 
 /** Read-only view of the first configured vault's plugin data.json (repo map, brain settings). */
 export function readHubData(env: Record<string, string | undefined>): HubDataView {
   const vault = (env.KYLE_HUB_VAULTS ?? env.KYLE_TICKETS_VAULTS ?? "").split(";").map((s) => s.trim()).find((s) => s.length > 0);
-  const empty: HubDataView = { repos: {}, ignoreSymbols: {}, autoFindings: false, ...(vault ? { vault } : {}) };
+  const empty: HubDataView = { repos: {}, ignoreSymbols: {}, autoFindings: false, folders: brainFolders(undefined), ...(vault ? { vault } : {}) };
   if (!vault) return empty;
   try {
     const data: unknown = JSON.parse(fs.readFileSync(path.join(vault, ".obsidian", "plugins", "kyle-hub", "data.json"), "utf8"));
@@ -33,6 +36,7 @@ export function readHubData(env: Record<string, string | undefined>): HubDataVie
     if (isObj(brain.ignoreSymbols)) for (const [k, v] of Object.entries(brain.ignoreSymbols)) if (Array.isArray(v)) ignoreSymbols[k] = v.map(String);
     return {
       ...empty,
+      folders: brainFolders(brain),
       repos: isObj(core.repos) ? (core.repos as Record<string, RepoEntry>) : {},
       ignoreSymbols,
       autoFindings: brain.autoFindings === true,
@@ -63,7 +67,9 @@ export function runLintDocs(argv: string[], io: Io, data: HubDataView = readHubD
   const issues: (LintIssue & { repo: string })[] = [];
   if (v.vault === true) {
     if (!data.vault) throw new KtError(EXIT.usage, "No vault configured (KYLE_HUB_VAULTS / KYLE_TICKETS_VAULTS).");
-    issues.push(...lintVaultBrain(path.join(data.vault, "Brain")).map((i) => ({ ...i, repo: "vault" })));
+    const rel = (data.folders ?? brainFolders(undefined)).brainFolder;
+    const dir = path.join(data.vault, ...rel.split("/"));
+    if (fs.existsSync(dir)) issues.push(...lintVaultBrain(dir, [], rel).map((i) => ({ ...i, repo: "vault" })));
   } else {
     const keys = v.repo !== undefined ? [String(v.repo)] : Object.keys(data.repos);
     for (const key of keys) {

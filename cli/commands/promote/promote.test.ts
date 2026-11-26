@@ -43,6 +43,20 @@ describe("kh promote", () => {
     expect(await runKh(["promote", src, "--to", home], io())).not.toBe(0);
   });
 
+  it("uses the home vault's brain folder setting, and --brain-folder overrides it", async () => {
+    const src = path.join(tmp, "lesson.md");
+    fs.writeFileSync(src, LESSON);
+    const home = path.join(tmp, "home-vault");
+    const dataDir = path.join(home, ".obsidian", "plugins", "kyle-hub");
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, "data.json"), JSON.stringify({ modules: { brain: { brainFolder: "docs", conventionsFolder: "docs/conventions" } } }));
+    expect(await runKh(["promote", src, "--to", home], io())).toBe(0);
+    expect(fs.existsSync(path.join(home, "docs", "lessons", "lesson.md"))).toBe(true);
+    expect(await runKh(["promote", src, "--to", home, "--brain-folder", "notes/brain"], io())).toBe(0);
+    expect(fs.existsSync(path.join(home, "notes", "brain", "lessons", "lesson.md"))).toBe(true);
+    expect(fs.existsSync(path.join(home, "Brain"))).toBe(false);
+  });
+
   it("rejects non-lesson files and bad usage", async () => {
     const src = path.join(tmp, "adr.md");
     fs.writeFileSync(src, "---\ntype: adr\n---\nx\n");

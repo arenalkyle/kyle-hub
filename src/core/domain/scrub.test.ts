@@ -74,6 +74,11 @@ describe("promote", () => {
     expect(p.diff).toContain("+See <path> in <repo>.");
     expect(p.changed).toBe(true);
   });
+  it("plans the lesson under the home vault's brain folder when set", () => {
+    const p = planPromote("My Lesson.md", lesson, opts, "docs");
+    expect(p.targetRel).toBe("docs/lessons/My Lesson.md");
+    expect(p.diff).toContain("+++ home/docs/lessons/My Lesson.md");
+  });
 
   it("seeds the denylist with repo keys and GitHub orgs", () => {
     const o = scrubOptionsFrom({ denylist: ["x"] }, { api: { github: "AcmeOrg/api" }, web: {} });

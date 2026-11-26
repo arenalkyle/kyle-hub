@@ -76,6 +76,30 @@ describe("BrainService health", () => {
     expect(svc.health().vault.score).toBeLessThan(100);
   });
 
+  it("with a nested brain folder, only that folder counts (siblings like docs/adr are ignored) and inventory matches", () => {
+    write(vault, "docs/adr/0001-unrelated.md", "# no frontmatter\n");
+    write(vault, "docs/plugins/zones.md", "# no frontmatter\n");
+    write(vault, "docs/brain/lessons/good.md", "---\ndoctype: lesson\naudience: agent\nreviewed: 2026-11-20\n---\n# Lesson\n\n## Lesson\nx\n");
+    write(vault, ".kyle-hub/grading.json", JSON.stringify({ exclude: ["docs/brain/skip", "docs/brain/skip/**"] }));
+    write(vault, "docs/brain/skip/bad.md", "# excluded by the vault grading.json\n");
+    const svc = createBrainService({
+      repos: () => ({}),
+      ignoreSymbols: () => [],
+      vaultBrainDir: () => path.join(vault, "docs", "brain"),
+      vaultBrainRel: () => "docs/brain",
+    });
+    svc.refreshHealth();
+    expect(svc.health().vault).toMatchObject({ lintErrors: 0, score: 100 });
+    expect(svc.inventory().docs).toBe(1);
+  });
+
+  it("pointing the brain folder at a general docs/ folder would lint unrelated notes (why conventions have their own setting)", () => {
+    write(vault, "docs/adr/0001-unrelated.md", "# no frontmatter\n");
+    const svc = createBrainService({ repos: () => ({}), ignoreSymbols: () => [], vaultBrainDir: () => path.join(vault, "docs"), vaultBrainRel: () => "docs" });
+    svc.refreshHealth();
+    expect(svc.health().vault.lintErrors + svc.health().vault.lintWarnings).toBeGreaterThan(0);
+  });
+
   it("selectDocs reads the repo and honours the token budget", () => {
     write(root, "docs/PLAN.md", "# Plan\n\n" + "x".repeat(200) + "\n");
     const { svc } = make();

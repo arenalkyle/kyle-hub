@@ -3,6 +3,8 @@ import type { HubModule, ModuleSettingsDef } from "../../core";
 import { createBrainService, type RepoEntry } from "../../core/brain/service";
 import { DEFAULT_HEALTH_WEIGHTS, type HealthWeights } from "../../core/brain/health";
 import { createConventionDocs } from "./conventions";
+import { brainFolders, DEFAULT_BRAIN_FOLDER, normalizeVaultFolder, type BrainFolders } from "../../core/domain/brainPaths";
+import { readVaultBrainFolders } from "../../core/brain/folders";
 import { NewDocModal } from "./newDocModal";
 import { Notice, Setting, TFile } from "obsidian";
 import { planPromote, promoteEligible, scrubOptionsFrom } from "../../core/domain/promote";
@@ -38,6 +40,8 @@ export const brainSettings: ModuleSettingsDef = {
     healthWeights: { ...DEFAULT_HEALTH_WEIGHTS },
     bloomStrength: DEFAULT_BLOOM,
     nodeSize: DEFAULT_NODE_SIZE,
+    brainFolder: DEFAULT_BRAIN_FOLDER,
+    conventionsFolder: "",
     layoutCache: {},
     shapeCache: {},
     theme: DEFAULT_THEME,
@@ -68,14 +72,16 @@ export const brainModule: HubModule = {
       return map[key] ?? [];
     };
     const weights = (): HealthWeights => ({ ...DEFAULT_HEALTH_WEIGHTS, ...((hub.settings.module("brain").healthWeights ?? {}) as Partial<HealthWeights>) });
+    const folders = (): BrainFolders => brainFolders(ctx.settings.get<{ brainFolder?: unknown; conventionsFolder?: unknown }>());
     const vaultBrainDir = (): string | undefined => {
       const base = (hub.app.vault.adapter as { getBasePath?: () => string }).getBasePath?.();
-      return base ? path.join(base, "Brain") : undefined;
+      return base ? path.join(base, ...folders().brainFolder.split("/")) : undefined;
     };
     const svc = createBrainService({
       repos,
       ignoreSymbols,
       vaultBrainDir,
+      vaultBrainRel: () => folders().brainFolder,
       weights,
       emit: (p) => hub.events.emit("brain:health-changed", p),
     });
@@ -92,8 +98,10 @@ export const brainModule: HubModule = {
       if (vaultProfileOf(core) !== "work") return "Promote runs from a work vault; this vault's profile is home.";
       const ok = promoteEligible(text);
       if (!ok.ok) return ok.reason;
-      const plan = planPromote(name, text, scrubOptionsFrom(core.promote, core.repos));
-      new PromoteModal(hub.app, plan, core.promote?.homeVaultPath?.trim() ?? "").open();
+      const home = core.promote?.homeVaultPath?.trim() ?? "";
+      // Lessons land in the home vault's own brain folder (its data.json), not this vault's.
+      const plan = planPromote(name, text, scrubOptionsFrom(core.promote, core.repos), home ? readVaultBrainFolders(home, hub.app.vault.configDir).brainFolder : DEFAULT_BRAIN_FOLDER);
+      new PromoteModal(hub.app, plan, home).open();
       return undefined;
     };
     hub.services.register("promote", { open: openPromote });
@@ -126,6 +134,21 @@ export const brainModule: HubModule = {
     ctx.addSettingsSection({
       render(el) {
         const cur = brainOptions(ctx.settings.get());
+        const f = folders();
+        let rescan = 0;
+        const saveFolder = (patch: Record<string, string>): void => {
+          void ctx.settings.update(patch);
+          window.clearTimeout(rescan);
+          rescan = window.setTimeout(() => { try { svc.refreshHealth(); } catch { /* advisory */ } }, 800);
+        };
+        new Setting(el)
+          .setName("Brain folder")
+          .setDesc("Vault folder of brain docs (every note in it is linted and counted). New vault docs and promoted lessons go here. Default Brain.")
+          .addText((t) => t.setPlaceholder(DEFAULT_BRAIN_FOLDER).setValue(f.brainFolder === DEFAULT_BRAIN_FOLDER ? "" : f.brainFolder).onChange((v) => saveFolder({ brainFolder: v.trim() })));
+        new Setting(el)
+          .setName("Conventions folder")
+          .setDesc("Vault folder for the style conventions (agent.md, human.md). Empty = <brain folder>/conventions. Not scanned as brain docs unless it is inside the brain folder.")
+          .addText((t) => t.setPlaceholder(`${f.brainFolder}/conventions`).setValue(normalizeVaultFolder(ctx.settings.get<{ conventionsFolder?: unknown }>().conventionsFolder)).onChange((v) => saveFolder({ conventionsFolder: v.trim() })));
         new Setting(el)
           .setName("Brain bloom strength")
           .setDesc("Glow of the 3D brain. Applies live.")
@@ -196,13 +219,13 @@ export const brainModule: HubModule = {
     ctx.addCommand({
       id: "new-doc",
       name: "New doc",
-      callback: () => new NewDocModal(hub.app, { repos, now: () => new Date() }).open(),
+      callback: () => new NewDocModal(hub.app, { repos, now: () => new Date(), brainFolder: () => folders().brainFolder }).open(),
     });
     ctx.addCommand({
       id: "create-conventions",
       name: "Create style conventions",
       callback: () => {
-        void createConventionDocs(hub.app, new Date().toISOString().slice(0, 10)).then((created) =>
+        void createConventionDocs(hub.app, new Date().toISOString().slice(0, 10), folders()).then((created) =>
           new Notice(created.length ? `Created ${created.join(", ")}` : "Convention docs already exist"),
         );
       },

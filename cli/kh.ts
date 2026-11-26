@@ -21,7 +21,7 @@ const MAIN = [
   "  lint docs [--repo <key>|--vault] [--json]     validate doc frontmatter and sections; exit 1 on errors",
   "  brain check [--repo <key>] [--json] [--tickets]   lint + staleness per repo; --tickets files findings",
   "  status draft --repo <key> [--dir <tickets folder>]   STATUS.md skeleton to stdout (writes nothing)",
-  "  promote <file> --to <homeVault> [--dry-run]   scrub a work lesson into <homeVault>/Brain/lessons (--dry-run writes nothing)",
+  "  promote <file> --to <homeVault> [--brain-folder <dir>] [--dry-run]   scrub a work lesson into <homeVault>/<brain folder>/lessons (default: the home vault's setting, else Brain; --dry-run writes nothing)",
   "  account <list|add|login|use|remove> [...]   Claude accounts, one CLAUDE_CONFIG_DIR each (kh account --help)",
   "  gaps [--json]                      grade vault notes, empty searches, missing notes (writes .kyle-hub/gaps/latest.json)",
   "  templates <list|show <id>> [--vault <path>]   editable templates: vault override or shipped default (list marks overrides)",

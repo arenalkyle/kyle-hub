@@ -8,6 +8,8 @@ import { localDate, planNewDoc } from "./newDoc";
 export interface NewDocDeps {
   repos: () => Record<string, RepoEntry>;
   now: () => Date;
+  /** Vault-relative brain folder (setting). */
+  brainFolder: () => string;
 }
 
 export async function ensureVaultDir(app: App, dir: string): Promise<void> {
@@ -18,7 +20,7 @@ export async function ensureVaultDir(app: App, dir: string): Promise<void> {
   }
 }
 
-/** Form: type, location (vault `Brain/` or a repo-map repo), title. Creates the file from its template. */
+/** Form: type, location (the vault brain folder or a repo-map repo), title. Creates the file from its template. */
 export class NewDocModal extends Modal {
   constructor(app: App, private readonly deps: NewDocDeps) {
     super(app);
@@ -27,7 +29,7 @@ export class NewDocModal extends Modal {
   override onOpen(): void {
     const { contentEl } = this;
     const repos = this.deps.repos();
-    const locations: Record<string, string> = { vault: "Vault: Brain/" };
+    const locations: Record<string, string> = { vault: `Vault: ${this.deps.brainFolder()}/` };
     for (const k of Object.keys(repos)) locations[`repo:${k}`] = `Repo: ${k}`;
     let type: DocType = "lesson";
     let location = "vault";
@@ -52,7 +54,7 @@ export class NewDocModal extends Modal {
     const date = localDate(this.deps.now());
     try {
       if (location === "vault") {
-        const plan = planNewDoc(type, title, date, { kind: "vault" });
+        const plan = planNewDoc(type, title, date, { kind: "vault", brainFolder: this.deps.brainFolder() });
         if (plan.issues.some((i) => i.severity === "error")) throw new Error(plan.issues[0]!.message);
         if (await this.app.vault.adapter.exists(plan.path)) throw new Error(`${plan.path} already exists`);
         await ensureVaultDir(this.app, path.posix.dirname(plan.path));

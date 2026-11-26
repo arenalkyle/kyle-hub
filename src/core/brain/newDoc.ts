@@ -1,4 +1,5 @@
 import { REPO_DOC_TYPES, type DocType } from "./doctypes";
+import { DEFAULT_BRAIN_FOLDER } from "../domain/brainPaths";
 
 export interface TemplateVars {
   title: string;
@@ -47,7 +48,7 @@ export function repoDocPath(type: DocType, title: string, adrFileNames: readonly
   }
 }
 
-/** Vault path for a new doc, under the `Brain/` folder. */
-export function vaultDocPath(type: DocType, title: string): string {
-  return `Brain/${type}/${slugify(title)}.md`;
+/** Vault path for a new doc, under the brain folder (default `Brain`). */
+export function vaultDocPath(type: DocType, title: string, brainFolder: string = DEFAULT_BRAIN_FOLDER): string {
+  return `${brainFolder}/${type}/${slugify(title)}.md`;
 }

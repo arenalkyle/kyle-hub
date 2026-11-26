@@ -25,6 +25,10 @@ describe("New doc templates", () => {
     expect(() => planNewDoc("overview", "O", DATE, { kind: "repo", root: "/x", adrFileNames: [] })).toThrow(/vault/);
   });
 
+  it("vault docs go under the brain folder setting", () => {
+    expect(planNewDoc("lesson", "Deep Work", DATE, { kind: "vault", brainFolder: "docs/brain" }).path).toBe("docs/brain/lesson/deep-work.md");
+  });
+
   it("status template is the repo STATUS.md location", () => {
     expect(planNewDoc("status", "Anything", DATE, { kind: "repo", root: "/x", adrFileNames: [] }).path).toBe("STATUS.md");
   });

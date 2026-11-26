@@ -2,9 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createExcludeMatcher, hasCodeMarker } from "../domain/codeRoots";
+import { DEFAULT_BRAIN_FOLDER } from "../domain/brainPaths";
 
 export interface BrainInventory {
-  /** Markdown docs the brain reads: repo docs plus the vault `Brain/` folder. */
+  /** Markdown docs the brain reads: repo docs plus the vault brain folder. */
   docs: number;
   scripts: number;
   skills: number;
@@ -53,11 +54,12 @@ const countSkills = (dir: string): number => {
 };
 
 /** Counts what the brain draws on. `repoDocs` is the already-linted doc total; `claudeDirs` are `.claude` folders to scan for skills and agents. */
-export function brainInventory(opts: { repoRoots: string[]; repoDocs: number; vaultBrainDir?: string; extraClaudeDirs?: string[]; vaultExclude?: string[] }): BrainInventory {
+export function brainInventory(opts: { repoRoots: string[]; repoDocs: number; vaultBrainDir?: string; vaultBrainRel?: string; extraClaudeDirs?: string[]; vaultExclude?: string[] }): BrainInventory {
+  const rel = opts.vaultBrainRel ?? DEFAULT_BRAIN_FOLDER;
   const claudeDirs = [...opts.repoRoots.map((r) => path.join(r, ".claude")), path.join(os.homedir(), ".claude"), ...(opts.extraClaudeDirs ?? [])];
   const vaultExcluded = createExcludeMatcher(opts.vaultExclude ?? []);
   const skipVaultCode = (dir: string, names: string[]): boolean =>
-    dir !== opts.vaultBrainDir && (hasCodeMarker(names) || vaultExcluded(`Brain/${path.relative(opts.vaultBrainDir ?? "", dir).replaceAll("\\", "/")}`));
+    dir !== opts.vaultBrainDir && (hasCodeMarker(names) || vaultExcluded(`${rel}/${path.relative(opts.vaultBrainDir ?? "", dir).replaceAll("\\", "/")}`));
   const uniq = [...new Set(claudeDirs.map((d) => path.resolve(d)))];
   return {
     docs: opts.repoDocs + (opts.vaultBrainDir ? countFiles(opts.vaultBrainDir, 6, (f) => f.endsWith(".md"), skipVaultCode) : 0),
