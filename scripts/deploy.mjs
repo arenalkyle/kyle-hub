@@ -32,8 +32,8 @@ export function readVaults() {
   return vaults;
 }
 
-/** npm installs only this machine's prebuild; the deployed plugin also carries macOS ones so a synced vault works there. */
-const EXTRA_PREBUILDS = ["darwin-arm64", "darwin-x64"];
+/** npm installs only this machine's prebuild; the deployed plugin also carries macOS and Linux x64 ones (Linux Obsidian in WSLg, ADR-0014). */
+const EXTRA_PREBUILDS = ["darwin-arm64", "darwin-x64", "linux-x64"];
 
 /** Fetch missing prebuild packages into node_modules (npm pack + tar). Best effort: a failure only warns. */
 function fetchPrebuilds(lydell) {

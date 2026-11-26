@@ -28,5 +28,6 @@ describe("PtyManager env for WSL shells", () => {
   });
   it("elsewhere, leaves WSLENV alone", () => {
     expect(capture("darwin").env.WSLENV ?? "").toBe("");
+    expect(capture("linux").env.WSLENV ?? "").toBe("");
   });
 });

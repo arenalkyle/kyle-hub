@@ -319,6 +319,8 @@ Before you start: close Obsidian and run `npm run deploy` once, so the locked no
 
 ## WSL2 vault (ADR-0014)
 
+> **Windows 10:** Windows Obsidian can't open the WSL share there (`fs.watch` fails with `EISDIR` on `\\wsl.localhost`, `\\wsl$` and mapped drives), so these checks only apply where Windows Obsidian can open it (e.g. Windows 11 with mirrored networking). On Windows 10, use the "Linux Obsidian in WSLg" section instead ([ADR-0014](adr/0014-wsl2-vaults.md)).
+
 Setup: vault at `/home/<user>/<vault>` in WSL2, opened in Windows Obsidian as `\\wsl$\<distro>\...` (or `\\wsl.localhost\...`). kyle-hub adds a "WSL (<distro>)" shell profile for it.
 
 - [ ] `npm run deploy` lists `deployed -> \\wsl.localhost\Ubuntu\home\...\kyle-hub`; in WSL, `ls ~/locked-away/.obsidian/plugins/kyle-hub` shows `main.js`, `helper/`, `hooks/` and `node_modules/@lydell/node-pty-win32-x64`. Reload kyle-hub: terminals start (the helper loads node-pty from the share).
@@ -344,3 +346,16 @@ Setup: vault at `/home/<user>/<vault>` in WSL2, opened in Windows Obsidian as `\
 - [ ] `kh lint docs --vault` lints the configured brain folder (read from the vault's `data.json`), not `Brain/`.
 - [ ] Promote to home writes to the home vault's own brain folder (`<home>/<its brain folder>/lessons/`); `kh promote --brain-folder <dir>` overrides it.
 - [ ] After the brain scene saves its layout once, `data.json` has no `layoutCache` keys under the old `Brain/` tree.
+
+## Linux Obsidian in WSLg (ADR-0014, Windows 10)
+
+Setup: Linux Obsidian installed in WSL2 and launched through WSLg (`DISPLAY=:0`), opening `/home/<user>/<vault>`. The deploy target in `.env.local` is still `\\wsl.localhost\Ubuntu\home\<user>\<vault>`.
+
+- [ ] `npm run deploy` lists the WSL target; `ls ~/<vault>/.obsidian/plugins/kyle-hub/node_modules/@lydell` shows `node-pty-linux-x64`.
+- [ ] Enable kyle-hub in Linux Obsidian; a new terminal starts (the helper uses `/usr/bin/node`, or the Node path setting). The profile is "Login shell (bash)", and there is no "WSL (...)" profile.
+- [ ] Launch Obsidian from the WSLg Start-menu entry (minimal env) and open a terminal: `command -v claude node` prints `~/.local/bin/claude` and `/usr/bin/node`.
+- [ ] New Claude session: types `claude` into the Linux shell; `/status` shows Linux `~/.claude`.
+- [ ] In a terminal, `echo $KYLE_TERM_SESSION $KYLE_TERM_PORT` prints both, and `$KYLE_TERM_WSL_HOST` and `$WSLENV` are empty.
+- [ ] Run "Install hooks" from Linux Obsidian: entries become `node "${CLAUDE_PROJECT_DIR}/.obsidian/plugins/kyle-hub/hooks/kyle-hook.js" <Event>` (replacing the old `/home/...` absolute ones); doctor reports kyle-hook ok.
+- [ ] A Claude session shows working/needs-input/finished lights (hooks reach 127.0.0.1; no firewall rule needed).
+- [ ] Sessions restored from the old Windows `data.json` (cwd `C:\...`) start in the vault root with the login shell.

@@ -96,3 +96,22 @@ describe("WSL shell profile", () => {
     expect(adaptRestored(saved, String.raw`C:\Development\locked-away`)).toBe(saved);
   });
 });
+
+describe("Linux Obsidian in WSLg (plain Linux vault path): no WSL bridging", () => {
+  const vault = "/home/pepzii/locked-away";
+  const linux: ShellProfile[] = [{ id: "login", name: "Login shell (bash)", shell: "/bin/bash", args: ["-l"] }];
+  it("no WSL profile, no share path, no adapter host", () => {
+    expect(isWslUncPath(vault)).toBe(false);
+    expect(parseWslUnc(vault)).toBeNull();
+    expect(wslProfile(vault)).toBeNull();
+  });
+  it("sessions use the login shell and keep their args", () => {
+    expect(chooseProfileId(vault, "powershell", linux)).toBe("login");
+    expect(chooseProfileId(`${vault}/docs`, "login", linux)).toBe("login");
+    expect(spawnArgs(linux[0]!, `${vault}/docs`)).toEqual(["-l"]);
+  });
+  it("restored sessions are left as saved (a Windows cwd falls back later via cwdExists)", () => {
+    const saved = [{ id: "a", profileId: "powershell", cwd: String.raw`C:\Development\locked-away` }];
+    expect(adaptRestored(saved, vault)).toBe(saved);
+  });
+});

@@ -167,3 +167,7 @@ Vault in WSL2, opened from Windows Obsidian via `\\wsl$`, Claude running in WSL.
 ## Configurable brain folder (no ticket)
 
 Brain settings "Brain folder" (default `Brain`) and "Conventions folder" (default `<brain folder>/conventions`) replace the hard-coded `Brain/` in scan, inventory, health, New doc, conventions, promote (the home vault's own setting, or `kh promote --brain-folder`) and `kh lint docs --vault`. They are separate because every note under the brain folder is linted: pointing it at a general `docs/` folder would count ADRs and other notes as brain docs. Stale layout-cache entries for notes that no longer exist are dropped on the next layout save. State: built and unit-tested, not deployed.
+
+## Linux Obsidian in WSLg (no ticket, [ADR-0014](adr/0014-wsl2-vaults.md))
+
+On Windows 10, Windows Obsidian can't watch the WSL share (`EISDIR`), so the vault runs in Linux Obsidian through WSLg. Deploy ships the `node-pty-linux-x64` prebuild (N-API). Tests confirm a plain Linux vault path turns none of the share bridging on. Login-shell PATH, loopback hooks and `${CLAUDE_PROJECT_DIR}` were checked in WSL. State: deployed; manual checks pending (section "Linux Obsidian in WSLg").

@@ -18,7 +18,7 @@ Option 2. The plugin spawns `node helper/pty-host.js`; messages are newline-deli
 
 ## Consequences
 
-- No Electron-ABI rebuilds; prebuilds cover win-x64, darwin-arm64/x64.
+- No Electron-ABI rebuilds; prebuilds cover win-x64, darwin-arm64/x64, linux-x64 (N-API, loaded in the system Node, so independent of Obsidian's Electron ABI).
 - Requires Node ≥ 18 on the machine (acceptable: Claude Code users have it).
 - Not compatible with community-plugin distribution (personal use only).
 - Helper is a child of Obsidian; killed on plugin unload.

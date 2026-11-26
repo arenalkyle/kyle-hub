@@ -23,3 +23,15 @@ The vault can live in WSL2 (`/home/<user>/<vault>`), opened by Windows Obsidian 
 - The adapter exists only while WSL runs. The plugin retries on each terminal spawn, so the first session started right after WSL boots can miss events until the next spawn.
 - With mirrored networking (Windows 11), loopback works directly and the fallback is never used.
 - Rejected: binding to 0.0.0.0 (exposes the server to the LAN), relaying through a Windows `node.exe` via interop (it adds hundreds of ms to every hook, and PreToolUse/PostToolUse fire constantly), and a file spool on the `\wsl$` share (file watching over 9P is unreliable).
+
+## Update 2026-11-26: on Windows 10, run Linux Obsidian in WSLg
+
+Windows Obsidian cannot open a vault on the WSL share on Windows 10: `fs.watch` fails with `EISDIR` on `\\wsl.localhost\...`, `\\wsl$\...` and on a drive letter mapped to them (it fails in plain Node too, so no plugin-side fix exists). Without a working watcher Obsidian cannot track vault changes.
+
+The supported Windows 10 setup is therefore **Linux Obsidian inside WSL2 through WSLg** (tested with WSLg 1.0.79, `DISPLAY=:0`), opening `/home/<user>/<vault>` natively:
+
+- The vault path is a plain Linux path, so none of the bridging above activates: no "WSL (<distro>)" profile, no `WSLENV`, no `vEthernet (WSL)` listener, no `KYLE_TERM_WSL_HOST`. Terminals use the login shell (`$SHELL -l`, else bash), which reads `~/.profile`, so `claude` (`~/.local/bin`) and `node` resolve even when WSLg starts Obsidian with a minimal env. The helper runs on the system Node (`/usr/bin/node`).
+- Hooks reach the server on 127.0.0.1 (same Linux network namespace). The `${CLAUDE_PROJECT_DIR}` command was checked with Claude Code 2.1.332 on Linux: it expands to the project root for both `SessionStart` and `Stop`.
+- `npm run deploy` also ships the `@lydell/node-pty-linux-x64` prebuild. It is an N-API module, and the helper loads it in the system Node rather than Obsidian's Electron (term ADR-0001), so it does not depend on Linux Obsidian's Electron ABI. Deploy still copies over the `\\wsl.localhost` share from Windows.
+
+The Windows-side bridging (the WSL profile, `WSLENV` and the adapter listener) stays, for Windows builds where Windows Obsidian can open the share, such as Windows 11 with mirrored networking.
