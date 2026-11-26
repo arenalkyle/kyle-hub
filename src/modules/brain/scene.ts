@@ -179,6 +179,14 @@ export function layoutFor(graph: BrainGraph, cache: Map<string, [number, number,
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 /** The 3D brain: one reusable component, mounted by the Command Center and the Brain tab. */
+const SOFT_FPS = 8;
+
+function isSoftwareGl(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
+  const ext = gl.getExtension("WEBGL_debug_renderer_info");
+  const name = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+  return /swiftshader|llvmpipe|softpipe|software/i.test(name);
+}
+
 export class BrainScene implements BrainHandle {
   private readonly win: Window;
   private readonly doc: Document;
@@ -210,6 +218,8 @@ export class BrainScene implements BrainHandle {
   private raf = 0;
   private last = 0;
   private fps: number;
+  /** Software GL (SwiftShader/llvmpipe): render at reduced cost so it does not stall Obsidian. */
+  private readonly soft: boolean;
   private intersecting = true;
   private running = false;
   private disposed = false;
@@ -248,7 +258,9 @@ export class BrainScene implements BrainHandle {
     this.shape = src.options().shape;
     host.addClass("kh-brain-canvas-host");
     this.renderer = new WebGLRenderer({ antialias: false, alpha: false, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(this.win.devicePixelRatio || 1, 2));
+    this.soft = isSoftwareGl(this.renderer.getContext());
+    this.renderer.setPixelRatio(this.soft ? 0.5 : Math.min(this.win.devicePixelRatio || 1, 2));
+    if (this.soft) this.fps = Math.min(this.fps, SOFT_FPS);
     // Background via scene.background, not setClearColor: the clear colour is colour-space converted for whichever
     // target is bound when it is set, so inside the composer it landed sRGB-encoded (0.15) in the linear buffer,
     // crossed the bloom threshold and bloomed the whole canvas to white.
@@ -369,7 +381,7 @@ export class BrainScene implements BrainHandle {
     const vis = (): void => this.syncRunning();
     this.doc.addEventListener("visibilitychange", vis);
     this.cleanups.push(() => this.doc.removeEventListener("visibilitychange", vis));
-    this.cleanups.push(src.onFps((f) => (this.fps = f || DEFAULT_FPS)));
+    this.cleanups.push(src.onFps((f) => { const v = f || DEFAULT_FPS; this.fps = this.soft ? Math.min(v, SOFT_FPS) : v; }));
     this.cleanups.push(src.onGraphChange(() => this.scheduleRebuild()));
     let heatDebounce = 0;
     this.cleanups.push(
@@ -490,7 +502,8 @@ export class BrainScene implements BrainHandle {
     this.lastT = t;
     this.controls.update(dt);
     this.agentLayer.frame(t, { mode: o.orbitMode, color: o.orbitColor, opacity: o.orbitOpacity, speed: o.orbitSpeed });
-    this.composer.render();
+    if (this.soft) this.renderer.render(this.scene, this.camera); // no bloom chain on software GL
+    else this.composer.render();
     this.paintLabels();
     this.paintRegions();
   }
