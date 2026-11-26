@@ -302,18 +302,17 @@ export default class TermHost {
     this.player?.play(sound, volume);
   }
 
-  /** Obsidian focused, terminal tab active, and this session is the visible one. */
+  /** Obsidian focused and this session's tile on screen in some terminal view. */
   private isViewing(s: Session): boolean {
     if (!document.hasFocus()) return false;
-    const view = this.app.workspace.getActiveViewOfType(TermView);
-    return !!view && this.sessions?.active?.id === s.id;
+    return this.app.workspace.getLeavesOfType(VIEW_TYPE).some((l) => l.view instanceof TermView && l.view.shows(s.id));
   }
 
   private alert(event: AlertEvent, s: Session): void {
     const now = Date.now();
     const d = decideAlert({
       event, sessionId: s.id, now, sounds: this.settings.sounds,
-      viewing: this.isViewing(s), lastPlayed: this.lastPlayed,
+      viewing: this.isViewing(s), fromClaude: s.agent.hasHookEvents, lastPlayed: this.lastPlayed,
     });
     if (!d) return;
     this.lastPlayed.bySession[sessionKey(event, s.id)] = now;

@@ -164,6 +164,22 @@ export function withAlpha(color: string, opacityPct: number): string {
   return `rgba(${Math.round(c[0])}, ${Math.round(c[1])}, ${Math.round(c[2])}, ${Math.round(a * 1000) / 1000})`;
 }
 
+/** Relative luminance, 0 (black) to 1 (white), ignoring alpha. */
+export function luminance(color: string): number {
+  const c = parseColor(color);
+  if (!c) return 0;
+  const lin = (v: number): number => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+}
+
+/** A translucent colour painted over an opaque `base`, as "#rrggbb". Opaque colours come back unchanged. */
+export function flatten(color: string, base: string): string {
+  const c = parseColor(color);
+  const b = parseColor(base);
+  if (!c || c[3] >= 1 || !b) return color;
+  return "#" + [0, 1, 2].map((i) => Math.round(c[i]! * c[3] + b[i]! * (1 - c[3])).toString(16).padStart(2, "0")).join("");
+}
+
 /** "#rrggbb" for an <input type=color>; falls back to black. */
 export function toHex(color: string): string {
   const c = parseColor(color);
@@ -205,9 +221,13 @@ export function obsidianPalette(read: (cssVar: string) => string): Palette {
   ansi[8] = g("--color-base-50", "#666666");
   // The base scale runs from background (00) to text (100) in both light and dark themes.
   ansi[15] = g("--color-base-100", "#ffffff");
+  const foreground = g("--text-normal", "#dcddde");
+  // macOS "translucent window" makes the background see-through. Dropping its alpha would leave black behind dark
+  // text (and tell Claude the wrong background), so paint it over a plain base that matches the text.
+  const base = luminance(foreground) > 0.4 ? "#1e1e1e" : "#ffffff";
   return {
-    background: g("--background-primary", "#1e1e1e"),
-    foreground: g("--text-normal", "#dcddde"),
+    background: flatten(g("--background-primary", "#1e1e1e"), base),
+    foreground,
     cursor: g("--text-accent", "#7f6df2"),
     selection: g("--text-selection", "rgba(100,100,255,0.35)"),
     ansi,

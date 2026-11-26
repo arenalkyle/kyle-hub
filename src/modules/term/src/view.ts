@@ -378,6 +378,11 @@ export class TermView extends ItemView {
     }
   }
 
+  /** True when this session's tile is on screen (not in a background tab, not hidden behind an expanded tile). */
+  shows(id: string): boolean {
+    return this.tiles.some((t) => t.id === id && t.el.isShown());
+  }
+
   private fitTiles(): void {
     for (const t of this.tiles) this.mgr?.term(t.id)?.fit();
   }

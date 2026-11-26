@@ -27,7 +27,7 @@ One Obsidian plugin (tickets, terminals, logs, retros, brain) built from modules
 
 - Modules import only `core`. Cross-module calls go through `hub.services.get(...)` (may be `undefined` when that module is off) and the typed event bus. ESLint `no-restricted-imports` fails CI otherwise.
 - `src/core/domain/` must not import `obsidian`, React or UI code; it is unit-tested and shared with the CLI.
-- Windows 10 only, desktop only. No macOS/mobile code paths.
+- Desktop only. Windows 10 is the primary platform; macOS is supported in the terminal module (ADR-0013: login shell, zsh/bash). Keep platform branches small and unit-tested. No mobile code paths.
 - No personal paths in source; vault paths come only from `.env.local`.
 - Native code lives only in the helper process (`src/modules/term/helper/`); never bundle or `require` node-pty from the plugin (term ADR-0001). `patch-xterm` must keep working.
 - `hooks/kyle-hook.js` must never block or fail Claude Code.

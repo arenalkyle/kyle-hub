@@ -17,9 +17,10 @@ const ENTER_ALT = "\x1b[?1049h\x1b[H";
 export const WHEEL_REPORT = /^\x1b\[<6[45];\d+;\d+M$/;
 
 /**
- * The mouse stays with the terminal (drag to select, right-click to paste), so apps can't capture it. Only the wheel is
- * passed on, to full-screen apps that asked for the mouse. In others it does nothing: xterm's default there is Up/Down,
- * which would cycle prompt history.
+ * Apps that ask for the mouse get it, so clicks reach them (Claude expands a tool call when it is clicked). Shift-drag
+ * (Option-drag on macOS) still selects text. The wheel is sent here, one report per notch, to full-screen apps that
+ * asked for the mouse; in other full-screen apps it does nothing: xterm's default there is Up/Down, which would cycle
+ * prompt history.
  */
 export function keepMouseLocal(term: Terminal): void {
   const requested = new Set<number>();
@@ -27,7 +28,7 @@ export function keepMouseLocal(term: Terminal): void {
 
   term.parser.registerCsiHandler({ prefix: "?", final: "h" }, (params) => {
     for (const p of params) if (typeof p === "number" && MOUSE_MODES.has(p)) requested.add(p);
-    return params.every((p) => typeof p === "number" && MOUSE_MODES.has(p));
+    return false;
   });
   term.parser.registerCsiHandler({ prefix: "?", final: "l" }, (params) => {
     for (const p of params) if (typeof p === "number") requested.delete(p);

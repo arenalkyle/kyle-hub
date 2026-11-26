@@ -2,6 +2,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { WebglAddon } from "@xterm/addon-webgl";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import type { TermHandlers, TermLike } from "./session-manager";
 import { keepMouseLocal, serializeFlat } from "./alt-screen";
 import { decideKey } from "./keys";
@@ -36,10 +37,14 @@ export class XtermSession implements TermLike {
       cursorBlink: true,
       allowProposedApi: true,
       scrollback: 5000,
+      // While an app has the mouse, Shift-drag selects; macOS uses Option instead.
+      macOptionClickForcesSelection: true,
     });
     this.term = term;
     term.loadAddon(this.fitAddon);
     term.loadAddon(this.serializer);
+    // Clicking a URL opens it in the system browser (Obsidian routes window.open there).
+    term.loadAddon(new WebLinksAddon((e, uri) => { e.preventDefault(); window.open(uri); }));
     keepMouseLocal(term);
     term.onData(h.onInput);
     term.onResize(({ cols, rows }) => h.onResize(cols, rows));

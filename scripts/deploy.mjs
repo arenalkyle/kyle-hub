@@ -1,4 +1,6 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,10 +32,39 @@ export function readVaults() {
   return vaults;
 }
 
+/** npm installs only this machine's prebuild; the deployed plugin also carries macOS ones so a synced vault works there. */
+const EXTRA_PREBUILDS = ["darwin-arm64", "darwin-x64"];
+
+/** Fetch missing prebuild packages into node_modules (npm pack + tar). Best effort: a failure only warns. */
+function fetchPrebuilds(lydell) {
+  const version = JSON.parse(fs.readFileSync(path.join(lydell, "node-pty", "package.json"), "utf8")).version;
+  for (const plat of EXTRA_PREBUILDS) {
+    const dest = path.join(lydell, `node-pty-${plat}`);
+    if (fs.existsSync(path.join(dest, "package.json"))) continue;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kh-pty-"));
+    try {
+      const pack = spawnSync("npm", ["pack", `@lydell/node-pty-${plat}@${version}`, "--pack-destination", tmp, "--silent"], { encoding: "utf8", shell: process.platform === "win32" });
+      const tgz = pack.status === 0 && fs.readdirSync(tmp).find((f) => f.endsWith(".tgz"));
+      if (!tgz) throw new Error(pack.stderr?.trim() || "npm pack failed");
+      fs.mkdirSync(dest, { recursive: true });
+      // Windows: the in-box bsdtar; Git Bash's GNU tar reads "C:" as a remote host.
+      const tar = process.platform === "win32" ? path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe") : "tar";
+      const untar = spawnSync(tar, ["-xzf", tgz, "-C", dest, "--strip-components=1"], { cwd: tmp, encoding: "utf8" });
+      if (untar.status !== 0) throw new Error(untar.stderr?.trim() || "tar failed");
+    } catch (e) {
+      fs.rmSync(dest, { recursive: true, force: true });
+      console.warn(`warning: could not fetch @lydell/node-pty-${plat} (${e.message}); terminals won't start on that platform`);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
+}
+
 /** Runtime deps of the helper: @lydell/node-pty plus its platform package(s). */
 function helperDeps() {
   const lydell = path.join(root, "node_modules", "@lydell");
   if (!fs.existsSync(path.join(lydell, "node-pty"))) throw new Error("@lydell/node-pty not installed; run npm install");
+  fetchPrebuilds(lydell);
   return fs.readdirSync(lydell).filter((d) => d === "node-pty" || d.startsWith("node-pty-")).map((d) => path.join("@lydell", d));
 }
 

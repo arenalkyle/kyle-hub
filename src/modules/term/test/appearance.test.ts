@@ -83,3 +83,14 @@ describe("sanitizeFontList", () => {
     expect(sanitizeFontList("??")).toContain("Consolas");
   });
 });
+
+describe("translucent Obsidian background (macOS)", () => {
+  it("is painted over a base that matches the text, never left black", () => {
+    const light = obsidianPalette((v) => ({ "--background-primary": "rgba(255, 255, 255, 0.5)", "--text-normal": "#222222" })[v] ?? "");
+    expect(light.background).toBe("#ffffff");
+    const clear = obsidianPalette((v) => ({ "--background-primary": "rgba(0, 0, 0, 0)", "--text-normal": "#222222" })[v] ?? "");
+    expect(clear.background).toBe("#ffffff");
+    const dark = obsidianPalette((v) => ({ "--background-primary": "rgba(0, 0, 0, 0)", "--text-normal": "#dddddd" })[v] ?? "");
+    expect(dark.background).toBe("#1e1e1e");
+  });
+});

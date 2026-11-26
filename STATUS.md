@@ -1,6 +1,6 @@
 # STATUS
 
-_Last updated: 2026-11-22_
+_Last updated: 2026-11-26_
 
 Plan: [docs/PLAN.md](docs/PLAN.md) · Phases: [docs/PHASES.md](docs/PHASES.md) · ADRs: [docs/adr/](docs/adr/) · Glossary: [GLOSSARY.md](GLOSSARY.md) · Manual checks: [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md)
 
@@ -10,10 +10,11 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
   - Phases 1–9 (LOCK-43…60) built and pushed; all 18 tickets are Done in Linear.
   - Queue sidebar: Triage/Todo tabs, parent progress, launch button, Shift for account picker.
   - Tiled terminals (up to 4 columns x 2 stacked): drag to split, expand, state outlines. Splitting doesn't duplicate Claude's screen (bundled ConPTY, [term ADR-0003](src/modules/term/docs/ADR/0003-bundled-conpty.md)), the wheel scrolls Claude, bright white is readable. Each new session gets a unique colour tag, shown on its sidebar stripe and pane header.
+  - Terminals: clicks reach Claude (expand tool calls; Shift-drag, Option-drag on macOS, selects), URLs are clickable, sounds play only for Claude sessions you can't see, macOS supported (login shell/zsh/bash, [ADR-0013](docs/adr/0013-macos-terminals.md)), translucent macOS backgrounds no longer hide text.
   - kyle-hook lives in the vault's `.claude/settings.local.json` (9 events); removed from global `~/.claude/settings.json` (backup kept). `kh doctor` hooks ok.
   - Vault `Brain/conventions/agent.md` and `human.md` created from the shipped templates.
   - Old kyle-tickets and kyle-term plugins are disabled in the vault.
-  - Health: build passes, 1064 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2395 KB (minified, three.js included) (limit 3072 KB). Command Center CDP smoke passes 8/8 in the real vault.
+  - Health: build passes, 1066 tests pass (1 skipped), lint 0 errors (3 warnings), `main.js` 2400 KB (minified, three.js included) (limit 3072 KB). Command Center CDP smoke passes 8/8 in the real vault.
 - **In progress**: verification in the real vault. Latest build (`84f6a34`, Brain v3 plus Claude tag name fix and orbit speed) is deployed (reload kyle-hub to pick it up) and running there; the terminal fixes were tested in throwaway vaults only. All 195 boxes in [docs/MANUAL-CHECKS.md](docs/MANUAL-CHECKS.md) are unticked.
 - **Blocked**: ticket launch and per-repo brain checks, because the vault's repo map is empty (launch fails with "No repos in the repo map").
 - **Command Center v2** (LOCK-61): all 13 tickets (LOCK-62–74) built, verified (build/test/lint/check-size) and Done; LOCK-61 closed. Deployed to the real vault. Post-review rework (done, pushed): brain no longer renders white (bloom/clear-colour fix); brain is a full-view backdrop behind translucent cards; Spend is a slim strip at the top; folder hubs connect every note and frontmatter references count as links; hover card (title, folder, snippet), click opens the note, folder picker/focus, agent name tags. Awaiting your review of the new look ("theme" assumed to mean the Hivemynd reference). v2 manual checks unticked.
@@ -28,6 +29,7 @@ Linear parents: [LOCK-42](https://linear.app/divinity/issue/LOCK-42) (Phases 1�
   7. Run the remaining manual checks and CDP smoke scripts; calibrate usage caps against `/usage`.
 - **Known gaps**
   - Tile layout is not persisted.
+  - macOS terminals are unit-tested only (not run on a Mac yet); `kh schedule` stays Windows-only.
   - Sessions with no hook events (plain shells, other CLIs) can show working/finished on a focus or resize redraw after typing.
   - `kh` CLI changes to Done are not gated on acceptance criteria.
   - Usage "official reading" is an unverified best-effort.

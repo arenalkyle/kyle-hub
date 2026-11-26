@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { decideAlert, nextAttention, DEFAULT_SOUNDS, type AlertInput } from "../src/alert";
 
 const base = (o: Partial<AlertInput> = {}): AlertInput => ({
-  event: "needs-input", sessionId: "a", now: 10_000, sounds: structuredClone(DEFAULT_SOUNDS), viewing: false,
+  event: "needs-input", sessionId: "a", now: 10_000, sounds: structuredClone(DEFAULT_SOUNDS), viewing: false, fromClaude: true,
   lastPlayed: { bySession: {}, byEvent: {} }, ...o,
 });
 

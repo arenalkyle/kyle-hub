@@ -10,6 +10,19 @@ try {
   process.exit(1);
 }
 
+// macOS: node-pty spawns shells through `spawn-helper`, which loses its execute bit when copied or synced on Windows.
+if (process.platform !== "win32") {
+  try {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const dir = path.dirname(require.resolve(`@lydell/node-pty-${process.platform}-${process.arch}/package.json`));
+    for (const sub of ["", "prebuilds", path.join("prebuilds", `${process.platform}-${process.arch}`)]) {
+      const helper = path.join(dir, sub, "spawn-helper");
+      if (fs.existsSync(helper)) fs.chmodSync(helper, 0o755);
+    }
+  } catch { /* best effort */ }
+}
+
 const sessions = new Map();
 const out = (m) => process.stdout.write(JSON.stringify(m) + "\n");
 

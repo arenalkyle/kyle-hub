@@ -38,6 +38,8 @@ export interface AlertInput {
   sounds: SoundSettings;
   /** True when Obsidian has focus, the terminal tab is active and this session is visible. */
   viewing: boolean;
+  /** True when Claude's hooks drive this session's state. Plain shells only guess (quiet output, bells), so they stay silent. */
+  fromClaude: boolean;
   /** Last time a sound played, per `${event}:${sessionId}` and per event. */
   lastPlayed: { bySession: Record<string, number>; byEvent: Partial<Record<AlertEvent, number>> };
 }
@@ -54,7 +56,7 @@ const clamp = (n: number): number => Math.max(0, Math.min(100, Number.isFinite(n
 
 /** Pure: should this transition play a sound, and which? */
 export function decideAlert(i: AlertInput): AlertDecision | null {
-  if (i.sounds.muted || i.viewing) return null;
+  if (i.sounds.muted || i.viewing || !i.fromClaude) return null;
   const cfg = i.sounds.events[i.event];
   if (!cfg || cfg.sound === "none") return null;
   const s = i.lastPlayed.bySession[sessionKey(i.event, i.sessionId)];

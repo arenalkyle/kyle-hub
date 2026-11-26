@@ -7,11 +7,11 @@ const make = () => new Terminal({ cols: 40, rows: 6, allowProposedApi: true });
 const write = (t: Terminal, d: string) => new Promise<void>((resolve) => t.write(d, resolve));
 
 describe("alt screen", () => {
-  it("ignores mouse capture but honours the alternate screen", async () => {
+  it("lets apps capture the mouse so clicks reach them", async () => {
     const t = make();
     keepMouseLocal(t);
     await write(t, "\x1b[?1049h\x1b[?1000h\x1b[?1002;1006h\x1b[?1003h\x1b[?2004h");
-    expect(t.modes.mouseTrackingMode).toBe("none");
+    expect(t.modes.mouseTrackingMode).toBe("any");
     expect(t.modes.bracketedPasteMode).toBe(true);
     expect(t.buffer.active.type).toBe("alternate");
   });
