@@ -61,12 +61,11 @@ describe("wheel", () => {
     expect(clear).toHaveBeenCalledTimes(2);
   });
 
-  it("adds up trackpad deltas and starts over when the direction changes", async () => {
+  it("drops the remainder when the direction changes", async () => {
     const { sent, wheel } = await setup(APP);
-    for (const d of [15, 15, -15, -15]) wheel(d);
-    expect(sent).toEqual([]);
-    wheel(-15);
-    expect(sent).toEqual(["\x1b[<64;3;3M"]);
+    wheel(40);
+    wheel(-40);
+    expect(sent).toEqual([...Array(2).fill("[<65;3;3M"), ...Array(2).fill("[<64;3;3M")]);
   });
 
   it("treats a line delta as a notch", async () => {
@@ -75,10 +74,10 @@ describe("wheel", () => {
     expect(sent).toEqual(["\x1b[<65;3;3M"]);
   });
 
-  it("counts tiny deltas as at least half a line each", async () => {
+  it("counts tiny deltas as at least a line each", async () => {
     const { sent, wheel } = await setup(APP);
     for (let i = 0; i < 6; i++) wheel(1);
-    expect(sent.length).toBe(2);
+    expect(sent.length).toBe(6);
   });
 
   it("clamps to the grid", async () => {
