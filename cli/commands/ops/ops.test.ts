@@ -60,13 +60,21 @@ describe("cleanupPeriodDays check", () => {
     expect(checkCleanupPeriod(JSON.stringify({ cleanupPeriodDays: 30 }))).toMatchObject({ status: "ok" });
   });
   it("detects the kyle-hook command", () => {
-    const hook = '{"hooks":{"Stop":[{"command":"node kyle-hook.js"}]}}';
+    const hook = '{"hooks":{"Stop":[{"hooks":[{"command":"node \\"${CLAUDE_PROJECT_DIR}/.obsidian/plugins/kyle-hub/hooks/kyle-hook.js\\" Stop"}]}]}}';
     expect(checkHooks("{}", [hook]).status).toBe("ok");
     expect(checkHooks(undefined, [hook]).status).toBe("ok");
     expect(checkHooks("{}", [undefined]).status).toBe("warn");
     expect(checkHooks("{}").status).toBe("warn");
     expect(checkHooks(hook, [hook]).message).toContain("stale");
     expect(checkHooks(hook).status).toBe("warn");
+  });
+  it("accepts the portable command and flags absolute paths as needing migration", () => {
+    const abs = JSON.stringify({ hooks: { Stop: [{ hooks: [{ command: 'node "C:\\V\\.obsidian\\plugins\\kyle-hub\\hooks\\kyle-hook.js" Stop' }] }] } });
+    const shellVar = JSON.stringify({ hooks: { Stop: [{ hooks: [{ command: 'node "$CLAUDE_PROJECT_DIR/.obsidian/plugins/kyle-hub/hooks/kyle-hook.js" Stop' }] }] } });
+    const r = checkHooks(undefined, [abs]);
+    expect(r.status).toBe("warn");
+    expect(r.message).toContain("absolute path");
+    expect(checkHooks(undefined, [shellVar]).status).toBe("ok");
   });
 });
 
@@ -127,7 +135,7 @@ describe("kh doctor", () => {
   const vaultHook = (): string => {
     const vault = path.join(tmp, "vault");
     fs.mkdirSync(path.join(vault, ".claude"), { recursive: true });
-    fs.writeFileSync(path.join(vault, ".claude", "settings.local.json"), JSON.stringify({ hooks: { Stop: [{ command: "kyle-hook.js" }] } }));
+    fs.writeFileSync(path.join(vault, ".claude", "settings.local.json"), JSON.stringify({ hooks: { Stop: [{ hooks: [{ command: 'node "${CLAUDE_PROJECT_DIR}/.obsidian/plugins/kyle-hub/hooks/kyle-hook.js" Stop' }] }] } }));
     return vault;
   };
 

@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { encode, LineDecoder, type FromHelper, type ToHelper } from "./protocol";
+import { withWslEnv } from "./wsl";
 
 export interface SpawnOptions {
   shell: string;
@@ -81,7 +82,8 @@ export class PtyManager {
     this.listeners.set(id, listener);
     const env: Record<string, string> = {};
     for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
-    Object.assign(env, opts.env);
+    // On Windows, list our keys in WSLENV so they also reach a Linux shell started by wsl.exe.
+    Object.assign(env, process.platform === "win32" && opts.env ? withWslEnv(opts.env, process.env.WSLENV) : opts.env);
     this.send({ t: "spawn", id, shell: opts.shell, args: opts.args, cwd: opts.cwd, cols: opts.cols, rows: opts.rows, env });
     return id;
   }

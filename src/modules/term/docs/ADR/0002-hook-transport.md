@@ -20,3 +20,7 @@ The sidebar must show working / needs-input / finished state, sub-agents, and li
 - Exact state for Claude Code; best-effort for other CLIs.
 - Hook script must never block or fail Claude (short timeout, swallow errors).
 - Port/token rotate per Obsidian launch; restored sessions get new env on restart.
+
+## Amendments
+
+- 2026-11-26 ([ADR-0014](../../../../../docs/adr/0014-wsl2-vaults.md)): hook entries run `${CLAUDE_PROJECT_DIR}/.../kyle-hook.js` (no absolute paths). For a vault on the WSL share, the server also listens on the `vEthernet (WSL)` address; the script falls back to it inside WSL. Env reaches WSL shells through `WSLENV`.

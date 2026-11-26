@@ -17,6 +17,38 @@ function shrink(v, depth) {
   return out;
 }
 
+// Targets in order: loopback (native Windows, macOS, WSL2 mirrored networking), then the Windows host's WSL adapter
+// address the plugin passes as KYLE_TERM_WSL_HOST ("ip:port"), used only inside WSL where 127.0.0.1 is the Linux VM.
+function targets(port) {
+  const list = [{ host: "127.0.0.1", port }];
+  const wsl = process.env.KYLE_TERM_WSL_HOST;
+  if (wsl && process.env.WSL_DISTRO_NAME) {
+    const i = wsl.lastIndexOf(":");
+    const p = Number(wsl.slice(i + 1));
+    if (i > 0 && p) list.push({ host: wsl.slice(0, i), port: p });
+  }
+  return list;
+}
+
+function post(target, body, onFail) {
+  let failed = false;
+  const fail = () => { if (!failed) { failed = true; onFail(); } };
+  const req = require("node:http").request(
+    {
+      host: target.host, port: target.port, path: "/event", method: "POST", timeout: 500,
+      headers: {
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(body),
+        "x-kyle-token": process.env.KYLE_TERM_TOKEN || "",
+      },
+    },
+    (res) => { res.resume(); res.on("end", done); res.on("error", done); },
+  );
+  req.on("error", fail);
+  req.on("timeout", () => { req.destroy(); fail(); });
+  req.end(body);
+}
+
 function send(payload) {
   try {
     const port = Number(process.env.KYLE_TERM_PORT);
@@ -26,20 +58,9 @@ function send(payload) {
     const env = {};
     for (const k of Object.keys(process.env)) if (k.startsWith("KH_")) env[k] = String(process.env[k]).slice(0, 500);
     const body = JSON.stringify({ session, event, payload: shrink(payload || {}, 0), ...(Object.keys(env).length ? { env } : {}) });
-    const req = require("node:http").request(
-      {
-        host: "127.0.0.1", port, path: "/event", method: "POST", timeout: 500,
-        headers: {
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(body),
-          "x-kyle-token": process.env.KYLE_TERM_TOKEN || "",
-        },
-      },
-      (res) => { res.resume(); res.on("end", done); res.on("error", done); },
-    );
-    req.on("error", done);
-    req.on("timeout", () => { req.destroy(); done(); });
-    req.end(body);
+    const list = targets(port);
+    const next = (i) => (i < list.length ? post(list[i], body, () => next(i + 1)) : done());
+    next(0);
   } catch {
     done();
   }

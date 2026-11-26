@@ -159,3 +159,7 @@ Brain that looks like a brain, Hivemynd themes and shapes, agents that always or
 **19.2 Retro card and scrolling lists (H, LOCK-80)**: Perform Retro moves from the terminal sidebar to the Retro card; a scrollable box shows last-retro results, then doc gaps (the Gaps side panel and the terminal sidebar Gaps tab are removed). Every Command Center list is a capped-height card that scrolls inside itself. Docs updated.
 
 Order: 17.1 → 17.2 → 18.1 → 18.2. 19.2 can run beside 17.1. 19.1 touches `scene.ts` (folder select), so it runs after 17.2 or in its own worktree with a rebase.
+
+## WSL2 vaults (no ticket, [ADR-0014](adr/0014-wsl2-vaults.md))
+
+Vault in WSL2, opened from Windows Obsidian via `\\wsl$`, Claude running in WSL. Hook entries use `${CLAUDE_PROJECT_DIR}` instead of absolute paths, and install migrates any old `kyle-hook.js` entry to that form. Doctor flags absolute-path entries. `WSLENV` forwards the hook env into WSL shells. For a WSL-share vault, the hook server also listens on the `vEthernet (WSL)` address, and `kyle-hook.js` falls back to it inside WSL. State: built and unit-tested; manual checks pending (section "WSL2 vault").

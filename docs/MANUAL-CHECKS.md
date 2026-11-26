@@ -316,3 +316,16 @@ Before you start: close Obsidian and run `npm run deploy` once, so the locked no
 - [ ] Box lists doc gaps worst first under the cutoff (setting, default 70); clicking a note opens it in a new tab.
 - [ ] Terminal sidebar Queue has only Triage and Todo tabs; there is no Gaps side panel anywhere.
 - [ ] With 40 proposals and 40 gaps, the Command Center page height does not change; each list card scrolls inside itself.
+
+## WSL2 vault (ADR-0014)
+
+Setup: vault at `/home/<user>/<vault>` in WSL2, opened in Windows Obsidian as `\\wsl$\<distro>\...` (or `\\wsl.localhost\...`), with a terminal profile that runs `wsl.exe` and `claude` inside WSL.
+
+- [ ] Run "Install hooks": the diff replaces each `node "C:\...\kyle-hook.js" <Event>` with `node "${CLAUDE_PROJECT_DIR}/.obsidian/plugins/kyle-hub/hooks/kyle-hook.js" <Event>`, one per event and no duplicates. Run it again: "already installed".
+- [ ] "Run doctor" (settings) and `kh doctor` report kyle-hook ok. Before migrating, they warn "uses an absolute path".
+- [ ] In a WSL terminal, `echo $KYLE_TERM_SESSION $KYLE_TERM_PORT $KYLE_TERM_WSL_HOST` prints all three (the last is `<ip>:<port>`; if it is empty, open a new terminal once WSL is running).
+- [ ] Claude in WSL: no `MODULE_NOT_FOUND` hook errors (`claude --debug`, or check `/hooks`).
+- [ ] Allow Obsidian through Windows Firewall on the WSL adapter. Accept the prompt for Public networks, or run in admin PowerShell: `New-NetFirewallRule -DisplayName "kyle-hub WSL hooks" -Direction Inbound -InterfaceAlias "vEthernet (WSL)" -Program "$env:LOCALAPPDATA\Programs\Obsidian\Obsidian.exe" -Action Allow`. Status lights then change for the WSL Claude session.
+- [ ] Windows 11 only: with `networkingMode=mirrored` in `%USERPROFILE%\.wslconfig`, lights work without the firewall rule (loopback path).
+- [ ] The same vault opened from a Windows path still works: Claude on Windows (Git Bash and PowerShell-only) shows lights with the portable entry.
+- [ ] Claude started in a vault subfolder: note whether it loads the vault's `.claude/settings.local.json`. If it does, `${CLAUDE_PROJECT_DIR}` is the subfolder and the hook fails silently (no lights); report it.

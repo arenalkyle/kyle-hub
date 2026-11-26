@@ -42,6 +42,21 @@ describe("HookServer", () => {
     });
     expect(addr).toBe("ok");
   });
+  it("listenOn adds a second listener with the same token check, falling back to a free port", async () => {
+    const got: HookMessage[] = [];
+    server = new HookServer((m) => got.push(m));
+    const port = await server.start();
+    // 127.0.0.1 is taken on `port` by the loopback listener, so this exercises the free-port fallback.
+    const extra = await server.listenOn("127.0.0.1");
+    expect(extra).not.toBe(port);
+    expect(await server.listenOn("127.0.0.1")).toBe(extra);
+    const body = JSON.stringify({ session: "s2", event: "Stop" });
+    expect(await post(extra, "wrong", body)).toBe(401);
+    expect(await post(extra, server.token, body)).toBe(204);
+    expect(got.map((m) => m.session)).toEqual(["s2"]);
+    server.stop();
+    await expect(post(extra, server.token, body)).rejects.toThrow();
+  });
 });
 
 describe("hooks/kyle-hook.js", () => {
@@ -94,5 +109,30 @@ describe("hooks/kyle-hook.js", () => {
       child.stdin.end("{}");
     });
     expect(got[0]!.env).toEqual({ KH_TICKET: "KH-7", KH_RUN: "r1" });
+  });
+
+  /** Runs the hook with loopback pointed at a dead port and KYLE_TERM_WSL_HOST at the live server. */
+  const viaWslHost = async (extraEnv: Record<string, string>): Promise<HookMessage[]> => {
+    const got: HookMessage[] = [];
+    server = new HookServer((m) => got.push(m));
+    const port = await server.start();
+    const dead = await new Promise<number>((resolve) => {
+      const s = http.createServer().listen(0, "127.0.0.1", () => { const p = (s.address() as { port: number }).port; s.close(() => resolve(p)); });
+    });
+    await new Promise<void>((resolve) => {
+      const child = require("node:child_process").spawn(process.execPath, [script, "Stop"], {
+        env: { PATH: process.env.PATH ?? "", KYLE_TERM_SESSION: "wsl", KYLE_TERM_PORT: String(dead), KYLE_TERM_TOKEN: server!.token, KYLE_TERM_WSL_HOST: `127.0.0.1:${port}`, ...extraEnv },
+      });
+      child.on("exit", () => resolve());
+      child.stdin.end("{}");
+    });
+    return got;
+  };
+  it("inside WSL, falls back to KYLE_TERM_WSL_HOST when loopback is unreachable", async () => {
+    const got = await viaWslHost({ WSL_DISTRO_NAME: "Ubuntu" });
+    expect(got.map((m) => m.session)).toEqual(["wsl"]);
+  });
+  it("outside WSL, ignores KYLE_TERM_WSL_HOST", async () => {
+    expect(await viaWslHost({})).toEqual([]);
   });
 });

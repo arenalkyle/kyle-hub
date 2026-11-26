@@ -8,6 +8,7 @@ import { loadSettingsFile, planHookInstall, planHookUninstall, writeSettingsFile
 import { HookDiffModal } from "./hook-diff-modal";
 import { createSessionService, wireSessionEvents } from "./service";
 import { HookServer } from "./hook-server";
+import { isWslUncPath, wslAdapterAddress } from "./wsl";
 import { forwardHookToLogs } from "./hook-logs";
 import xtermCss from "@xterm/xterm/css/xterm.css";
 import { PtyManager } from "./pty-manager";
@@ -62,6 +63,7 @@ export default class TermHost {
   private styleEl: HTMLStyleElement | null = null;
   private hookServer: HookServer | null = null;
   private hookEnv: Record<string, string> = {};
+  private wslPending = false;
   private player: SoundPlayer | null = null;
   private statusEl: HTMLElement | null = null;
   private xterms = new Set<XtermSession>();
@@ -93,6 +95,7 @@ export default class TermHost {
       await server.start();
       this.hookServer = server;
       this.hookEnv = { KYLE_TERM_PORT: String(server.port), KYLE_TERM_TOKEN: server.token };
+      this.ensureWslListener();
     } catch (e) {
       console.error("[kyle-hub] terminal hook server failed to start", e);
     }
@@ -499,6 +502,23 @@ export default class TermHost {
     await workspace.revealLeaf(leaf);
   }
 
+  /**
+   * Vault on the WSL share (Claude runs in WSL2): also listen on the `vEthernet (WSL)` address and pass it as
+   * `KYLE_TERM_WSL_HOST`, which kyle-hook.js tries when 127.0.0.1 fails (NAT networking). Retried on each spawn,
+   * since the adapter only exists once WSL has started. Windows Firewall must allow Obsidian on that adapter.
+   */
+  private ensureWslListener(): void {
+    const server = this.hookServer;
+    if (!server || this.wslPending || process.platform !== "win32" || this.hookEnv.KYLE_TERM_WSL_HOST || !isWslUncPath(this.vaultRoot())) return;
+    const host = wslAdapterAddress(os.networkInterfaces());
+    if (!host) return;
+    this.wslPending = true;
+    server.listenOn(host).then(
+      (port) => { this.hookEnv.KYLE_TERM_WSL_HOST = `${host}:${port}`; },
+      (e) => console.error("[kyle-hub] WSL hook listener failed", e),
+    ).finally(() => { this.wslPending = false; });
+  }
+
   vaultRoot(): string {
     const a = this.app.vault.adapter;
     return a instanceof FileSystemAdapter ? a.getBasePath() : process.cwd();
@@ -525,7 +545,7 @@ export default class TermHost {
         return t;
       },
       profiles: () => this.profiles,
-      env: () => ({ ...this.hookEnv }),
+      env: () => { this.ensureWslListener(); return { ...this.hookEnv }; },
       idleMs: () => this.settings.idleSeconds * 1000,
       resumeCommand: (id) => `${this.settings.claudeCommand || "claude"} --resume ${id}`,
       cwdExists: (p) => fs.existsSync(p),
@@ -571,7 +591,7 @@ export default class TermHost {
       }
       const loaded = loadSettingsFile(step.file);
       if (!loaded.ok) return void new Notice(`kyle-hub: ${loaded.message}`, 12000);
-      const plan = step.mode === "install" ? planHookInstall(loaded.current, this.hookScript()) : planHookUninstall(loaded.current);
+      const plan = step.mode === "install" ? planHookInstall(loaded.current, this.hookScriptRel()) : planHookUninstall(loaded.current);
       if (!plan.changed) return run(i + 1);
       changedAny = true;
       const before = loaded.raw === null ? "" : JSON.stringify(loaded.current, null, 2);
@@ -585,9 +605,9 @@ export default class TermHost {
     run(0);
   }
 
-  /** The deployed hook script (`.obsidian/plugins/kyle-hub/hooks/kyle-hook.js`). */
-  hookScript(): string {
-    return path.join(this.pluginDir(), "hooks", "kyle-hook.js");
+  /** The deployed hook script relative to the vault (`.obsidian/plugins/kyle-hub/hooks/kyle-hook.js`), forward slashes. */
+  hookScriptRel(): string {
+    return [this.app.vault.configDir, "plugins", PLUGIN_ID, "hooks", "kyle-hook.js"].join("/");
   }
 
   /** Absolute folder for a vault entry; for a note, its parent folder. */

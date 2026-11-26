@@ -4,11 +4,20 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applyToFile, HOOK_EVENTS, hookCommand, installHooks, loadSettingsFile, planHookInstall, planHookUninstall, uninstallHooks } from "../src/hook-installer";
 
-const script = "C:\\Vault\\.obsidian\\plugins\\kyle-hub\\hooks\\kyle-hook.js";
+const script = ".obsidian/plugins/kyle-hub/hooks/kyle-hook.js";
+const portable = (event: string): string => `node "\${CLAUDE_PROJECT_DIR}/${script}" ${event}`;
+const winScript = "C:\\Vault\\.obsidian\\plugins\\kyle-hub\\hooks\\kyle-hook.js";
+const linuxScript = "/home/me/vault/.obsidian/plugins/kyle-hub/hooks/kyle-hook.js";
 const oldScript = "C:\\Vault\\.obsidian\\plugins\\kyle-term\\hooks\\kyle-hook.js";
 const other = { hooks: { Stop: [{ hooks: [{ type: "command", command: "echo done" }] }], PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "guard.sh" }] }] }, model: "x", env: { A: "1" } };
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 const count = (s: Record<string, unknown>): number => JSON.stringify(s).split("kyle-hook.js").length - 1;
+/** Settings as an older kyle-term / kyle-hub wrote them: one absolute-path entry per event, appended to `base`. */
+const legacy = (base: Record<string, unknown>, abs: string): Record<string, unknown> => {
+  const hooks: Record<string, unknown[]> = { ...((clone(base).hooks as Record<string, unknown[]> | undefined) ?? {}) };
+  for (const e of HOOK_EVENTS) hooks[e] = [...(hooks[e] ?? []), { hooks: [{ type: "command", command: `node "${abs}" ${e}`, timeout: 5 }] }];
+  return { ...clone(base), hooks };
+};
 
 describe("installHooks / uninstallHooks", () => {
   it("empty settings get every event", () => {
@@ -16,7 +25,7 @@ describe("installHooks / uninstallHooks", () => {
     expect(Object.keys(r.hooks).sort()).toEqual([...HOOK_EVENTS].sort());
     expect(r.hooks.PreToolUse![0]!.matcher).toBe("*");
     expect(r.hooks.Stop![0]!.matcher).toBeUndefined();
-    expect(r.hooks.Stop![0]!.hooks[0]).toEqual({ type: "command", command: `node "${script}" Stop`, timeout: 5 });
+    expect(r.hooks.Stop![0]!.hooks[0]).toEqual({ type: "command", command: portable("Stop"), timeout: 5 });
   });
   it("keeps other settings and hooks untouched", () => {
     const r = installHooks(clone(other), script) as typeof other & { hooks: Record<string, unknown[]> };
@@ -29,9 +38,6 @@ describe("installHooks / uninstallHooks", () => {
   it("is idempotent and replaces entries from another vault", () => {
     const once = installHooks(clone(other), script);
     expect(installHooks(clone(once), script)).toEqual(once);
-    const moved = installHooks(clone(once), "D:\\v2\\.obsidian\\plugins\\kyle-hub\\hooks\\kyle-hook.js");
-    expect(count(moved)).toBe(HOOK_EVENTS.length);
-    expect(JSON.stringify(moved)).not.toContain("C:\\\\Vault");
   });
   it("uninstall round-trips back to the original", () => {
     expect(uninstallHooks(installHooks(clone(other), script))).toEqual(other);
@@ -41,7 +47,7 @@ describe("installHooks / uninstallHooks", () => {
     expect(uninstallHooks(installHooks({ model: "x" }, script))).toEqual({ model: "x" });
   });
   it("uninstall keeps sibling hooks inside a shared group", () => {
-    const shared = { hooks: { Stop: [{ hooks: [{ type: "command", command: "mine" }, { type: "command", command: `node "${script}" Stop` }] }] } };
+    const shared = { hooks: { Stop: [{ hooks: [{ type: "command", command: "mine" }, { type: "command", command: portable("Stop") }] }] } };
     expect(uninstallHooks(shared)).toEqual({ hooks: { Stop: [{ hooks: [{ type: "command", command: "mine" }] }] } });
   });
 });
@@ -84,13 +90,57 @@ describe("applyToFile (temp files only)", () => {
 });
 
 describe("hook command", () => {
-  it("double-quotes the path", () => {
-    expect(hookCommand("C:\\a b\\kyle-hook.js", "Stop")).toBe('node "C:\\a b\\kyle-hook.js" Stop');
+  it("runs the script through ${CLAUDE_PROJECT_DIR}, double-quoted", () => {
+    expect(hookCommand(script, "Stop")).toBe('node "${CLAUDE_PROJECT_DIR}/.obsidian/plugins/kyle-hub/hooks/kyle-hook.js" Stop');
+  });
+  it("normalises backslashes and a leading ./ or / so the command is the same on every OS", () => {
+    for (const rel of [".obsidian\\plugins\\kyle-hub\\hooks\\kyle-hook.js", "./.obsidian/plugins/kyle-hub/hooks/kyle-hook.js", "/.obsidian/plugins/kyle-hub/hooks/kyle-hook.js"]) {
+      expect(hookCommand(rel, "Stop")).toBe(portable("Stop"));
+    }
+  });
+  it("keeps a custom config dir and a path with spaces", () => {
+    expect(hookCommand("my config/plugins/kyle-hub/hooks/kyle-hook.js", "SessionEnd"))
+      .toBe('node "${CLAUDE_PROJECT_DIR}/my config/plugins/kyle-hub/hooks/kyle-hook.js" SessionEnd');
+  });
+  it("contains no absolute path", () => {
+    expect(hookCommand(script, "Stop")).not.toMatch(/[A-Za-z]:\\|\/home\//);
+  });
+});
+
+describe("migrating absolute-path entries", () => {
+  const cases: Array<[string, string]> = [
+    ["Windows kyle-hub", winScript],
+    ["Windows kyle-term", oldScript],
+    ["Linux", linuxScript],
+    ["WSL share", "\\\\wsl$\\Ubuntu\\home\\me\\v\\.obsidian\\plugins\\kyle-hub\\hooks\\kyle-hook.js"],
+  ];
+  for (const [label, abs] of cases) {
+    it(`replaces ${label} entries with the portable form, once per event`, () => {
+      const p = planHookInstall(legacy(other, abs), script);
+      expect(p.changed).toBe(true);
+      expect(count(p.next)).toBe(HOOK_EVENTS.length);
+      const hooks = (p.next as typeof other & { hooks: Record<string, Array<{ hooks: Array<{ command: string }> }>> }).hooks;
+      const ours = HOOK_EVENTS.flatMap((e) => hooks[e]!.flatMap((g) => g.hooks.map((h) => h.command)).filter((c) => c.includes("kyle-hook")));
+      expect(ours).toEqual(HOOK_EVENTS.map(portable));
+      expect(hooks.Stop[0]).toEqual(other.hooks.Stop[0]);
+      expect(hooks.PreToolUse[0]).toEqual(other.hooks.PreToolUse[0]);
+    });
+  }
+  it("migrates a file holding both a Windows and a Linux entry to one portable entry per event", () => {
+    const both = legacy(legacy(other, winScript), linuxScript);
+    expect(count(both)).toBe(2 * HOOK_EVENTS.length);
+    const p = planHookInstall(both, script);
+    expect(count(p.next)).toBe(HOOK_EVENTS.length);
+    expect(planHookInstall(clone(p.next), script).changed).toBe(false);
+  });
+  it("leaves an already-portable file untouched", () => {
+    const done = installHooks(clone(other), script);
+    expect(planHookInstall(clone(done), script).changed).toBe(false);
   });
 });
 
 describe("planHookInstall / planHookUninstall (fixture settings)", () => {
-  const fixtureOld = () => installHooks(clone(other), oldScript);
+  const fixtureOld = () => legacy(other, oldScript);
 
   it("fresh install adds all events and reports a change", () => {
     const p = planHookInstall(clone(other), script);
@@ -122,9 +172,9 @@ describe("planHookInstall / planHookUninstall (fixture settings)", () => {
     expect(p.next).toEqual(other);
     expect(planHookUninstall(clone(other)).changed).toBe(false);
   });
-  it("does not treat a similarly named foreign hook as ours", () => {
-    const foreign = { hooks: { Stop: [{ hooks: [{ type: "command", command: "node other-tool/kyle-hook.js Stop" }] }] } };
-    expect(planHookUninstall(clone(foreign)).changed).toBe(false);
+  it("treats any kyle-hook.js command as ours, wherever it lives", () => {
+    const anywhere = { hooks: { Stop: [{ hooks: [{ type: "command", command: "node /opt/x/kyle-hook.js Stop" }] }] } };
+    expect(planHookUninstall(clone(anywhere)).changed).toBe(true);
   });
 });
 
@@ -149,7 +199,7 @@ describe("vault-scoped install (temp dirs only)", () => {
       const globalFile = path.join(dir, "home", "settings.json");
       const vaultFile = path.join(dir, "vault", ".claude", "settings.local.json");
       fs.mkdirSync(path.dirname(globalFile), { recursive: true });
-      fs.writeFileSync(globalFile, JSON.stringify(installHooks({ model: "x" }, script)));
+      fs.writeFileSync(globalFile, JSON.stringify(legacy({ model: "x" }, winScript)));
       expect(applyToFile(vaultFile, "install", script).changed).toBe(true);
       expect(applyToFile(globalFile, "uninstall", script).changed).toBe(true);
       expect(JSON.parse(fs.readFileSync(globalFile, "utf8"))).toEqual({ model: "x" });

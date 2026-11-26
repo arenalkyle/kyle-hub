@@ -17,6 +17,8 @@ export class HookServer {
   readonly token = crypto.randomBytes(24).toString("hex");
   port = 0;
   private server: http.Server | null = null;
+  /** Extra listeners on non-loopback addresses (only the WSL adapter, see `listenOn`), keyed by host. */
+  private extra = new Map<string, { server: http.Server; port: number }>();
 
   constructor(private onMessage: (m: HookMessage) => void) {}
 
@@ -30,6 +32,25 @@ export class HookServer {
         resolve(this.port);
       });
     });
+  }
+
+  /**
+   * Also listens on `host` (the Windows side of the WSL2 NAT network) so a hook script running inside WSL can reach us
+   * when 127.0.0.1 there is not Windows. Same token check as loopback. Prefers the loopback port; resolves to the port.
+   */
+  listenOn(host: string): Promise<number> {
+    const have = this.extra.get(host);
+    if (have) return Promise.resolve(have.port);
+    const tryPort = (port: number): Promise<number> => new Promise((resolve, reject) => {
+      const server = http.createServer((req, res) => this.handle(req, res));
+      server.once("error", reject);
+      server.listen(port, host, () => {
+        const p = (server.address() as AddressInfo).port;
+        this.extra.set(host, { server, port: p });
+        resolve(p);
+      });
+    });
+    return tryPort(this.port).catch(() => tryPort(0));
   }
 
   private handle(req: http.IncomingMessage, res: http.ServerResponse): void {
@@ -62,5 +83,7 @@ export class HookServer {
   stop(): void {
     this.server?.close();
     this.server = null;
+    for (const { server } of this.extra.values()) server.close();
+    this.extra.clear();
   }
 }

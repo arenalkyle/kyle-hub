@@ -2,8 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const HOOK_MARKER = "kyle-hook.js";
-/** Plugin folders whose hook entries count as ours: the old kyle-term plugin and kyle-hub itself. */
-export const OWNER_DIRS = ["kyle-term", "kyle-hub"] as const;
+/**
+ * Claude Code substitutes this placeholder in hook commands with the project root where the session started, and also
+ * exports it as an env var, so sh, Git Bash and PowerShell all resolve it. One entry then works for a vault opened from
+ * Windows (`C:\...`) and the same vault reached from WSL (`/home/...`).
+ */
+export const PROJECT_DIR_PLACEHOLDER = "${CLAUDE_PROJECT_DIR}";
 export const HOOK_EVENTS = [
   "SessionStart",
   "UserPromptSubmit",
@@ -20,12 +24,13 @@ const MATCHER_EVENTS = new Set<string>(["PreToolUse", "PostToolUse"]);
 type Json = Record<string, unknown>;
 interface Group { matcher?: string; hooks?: Array<{ command?: unknown }> }
 
-/** A command that runs kyle-hook.js from a kyle-term or kyle-hub plugin folder. */
-export const isOurs = (h: { command?: unknown }): boolean => {
-  if (typeof h?.command !== "string") return false;
-  const c = h.command.toLowerCase();
-  return c.includes(HOOK_MARKER) && OWNER_DIRS.some((d) => c.includes(d));
-};
+/** Any command that runs kyle-hook.js is ours (kyle-term, kyle-hub, absolute Windows or Linux path, or portable). */
+export const isOurs = (h: { command?: unknown }): boolean =>
+  typeof h?.command === "string" && h.command.toLowerCase().includes(HOOK_MARKER);
+
+/** True when a hook command resolves the script through the project dir instead of an absolute path. */
+export const isPortableCommand = (command: string): boolean =>
+  command.includes(PROJECT_DIR_PLACEHOLDER) || command.includes("$CLAUDE_PROJECT_DIR");
 
 /** Removes only our hook commands (kyle-term and kyle-hub); tidies empty groups, arrays and the hooks object. */
 export function uninstallHooks(settings: Json): Json {
@@ -52,19 +57,26 @@ export function uninstallHooks(settings: Json): Json {
   return result;
 }
 
-/** Command line for one hook event (Windows: double-quoted path). */
-export function hookCommand(scriptPath: string, event: string): string {
-  return `node "${scriptPath}" ${event}`;
+/**
+ * Command line for one hook event. `scriptRel` is the script's path relative to the vault (the Claude project root),
+ * e.g. `.obsidian/plugins/kyle-hub/hooks/kyle-hook.js`; backslashes and leading slashes are normalised away.
+ */
+export function hookCommand(scriptRel: string, event: string): string {
+  const rel = scriptRel.replace(/\\/g, "/").replace(/^\.?\/+/, "");
+  return `node "${PROJECT_DIR_PLACEHOLDER}/${rel}" ${event}`;
 }
 
-/** Adds kyle-hub's entries, replacing any previous ones (kyle-term or kyle-hub) so repeated installs never duplicate. */
-export function installHooks(settings: Json, scriptPath: string): Json {
+/**
+ * Adds kyle-hub's entries, replacing every previous kyle-hook entry (kyle-term, absolute Windows or Linux paths) with
+ * the portable form, so repeated installs never duplicate and an old entry is migrated instead of left beside it.
+ */
+export function installHooks(settings: Json, scriptRel: string): Json {
   const clean = uninstallHooks(settings);
   const hooks: Json = { ...((clean.hooks as Json | undefined) ?? {}) };
   for (const event of HOOK_EVENTS) {
     const group: Json = {
       ...(MATCHER_EVENTS.has(event) ? { matcher: "*" } : {}),
-      hooks: [{ type: "command", command: hookCommand(scriptPath, event), timeout: 5 }],
+      hooks: [{ type: "command", command: hookCommand(scriptRel, event), timeout: 5 }],
     };
     const existing = Array.isArray(hooks[event]) ? (hooks[event] as unknown[]) : [];
     hooks[event] = [...existing, group];
