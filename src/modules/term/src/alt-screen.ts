@@ -62,7 +62,8 @@ export function keepMouseLocal(term: Terminal): void {
     if (!cell) return false;
     // The text moves under a selection, which would then copy something other than what was selected.
     term.clearSelection();
-    term.input(`\x1b[<${e.deltaY < 0 ? 64 : 65};${cell.col};${cell.row}M`, false);
+    const report = `\x1b[<${e.deltaY < 0 ? 64 : 65};${cell.col};${cell.row}M`;
+    for (let i = 0; i < count; i++) term.input(report, false);
     return false;
   });
 }

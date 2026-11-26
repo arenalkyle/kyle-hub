@@ -52,20 +52,23 @@ describe("wheel", () => {
     return { t, sent, clear, wheel };
   }
 
-  it("sends one report per notch, at the cell under the pointer", async () => {
+  it("sends reports in proportion to the delta, at the cell under the pointer", async () => {
     const { sent, clear, wheel } = await setup(APP);
     expect(wheel(-100)).toBe(false);
-    wheel(72);
-    expect(sent).toEqual(["\x1b[<64;3;3M", "\x1b[<65;3;3M"]);
+    expect(sent).toEqual(Array(6).fill("[<64;3;3M"));
+    wheel(48);
+    expect(sent.slice(6)).toEqual(Array(3).fill("[<65;3;3M"));
     expect(sent.every((d) => WHEEL_REPORT.test(d))).toBe(true);
     expect(clear).toHaveBeenCalledTimes(2);
   });
 
-  it("drops the remainder when the direction changes", async () => {
+  it("carries the remainder and drops it when the direction changes", async () => {
     const { sent, wheel } = await setup(APP);
     wheel(40);
+    wheel(40);
+    expect(sent.length).toBe(5);
     wheel(-40);
-    expect(sent).toEqual([...Array(2).fill("[<65;3;3M"), ...Array(2).fill("[<64;3;3M")]);
+    expect(sent.slice(5)).toEqual(Array(2).fill("[<64;3;3M"));
   });
 
   it("treats a line delta as a notch", async () => {
@@ -74,10 +77,10 @@ describe("wheel", () => {
     expect(sent).toEqual(["\x1b[<65;3;3M"]);
   });
 
-  it("counts tiny deltas as at least a line each", async () => {
+  it("counts tiny deltas as two lines each", async () => {
     const { sent, wheel } = await setup(APP);
     for (let i = 0; i < 6; i++) wheel(1);
-    expect(sent.length).toBe(6);
+    expect(sent.length).toBe(12);
   });
 
   it("clamps to the grid", async () => {
