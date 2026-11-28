@@ -10,6 +10,17 @@ import { clampFont, type XtermTheme } from "./appearance";
 import { imageFrom, quotePaths, saveImage } from "./paste-file";
 import { cleanCopy } from "./copy-text";
 
+/** Open a URL in the system browser; Electron's shell is reliable where window.open can be swallowed. */
+function openExternal(uri: string): void {
+  if (!/^https?:\/\//i.test(uri)) return;
+  try {
+    const { shell } = require("electron") as { shell: { openExternal(u: string): Promise<void> } };
+    void shell.openExternal(uri);
+  } catch {
+    window.open(uri);
+  }
+}
+
 export interface TermLook {
   theme: XtermTheme;
   fontFamily: string;
@@ -41,12 +52,14 @@ export class XtermSession implements TermLike {
       scrollback: 5000,
       // While an app has the mouse, Shift-drag selects; macOS uses Option instead.
       macOptionClickForcesSelection: true,
+      // OSC 8 hyperlinks (agents print URLs this way). xterm's default calls a bare window.open(), which Obsidian blocks.
+      linkHandler: { activate: (e, uri) => { e.preventDefault(); openExternal(uri); } },
     });
     this.term = term;
     term.loadAddon(this.fitAddon);
     term.loadAddon(this.serializer);
-    // Clicking a URL opens it in the system browser (Obsidian routes window.open there).
-    term.loadAddon(new WebLinksAddon((e, uri) => { e.preventDefault(); window.open(uri); }));
+    // Clicking a plain-text URL opens it in the system browser.
+    term.loadAddon(new WebLinksAddon((e, uri) => { e.preventDefault(); openExternal(uri); }));
     keepMouseLocal(term);
     term.onData(h.onInput);
     term.onResize(({ cols, rows }) => h.onResize(cols, rows));
